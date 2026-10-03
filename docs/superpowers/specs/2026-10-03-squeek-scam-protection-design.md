@@ -1,12 +1,12 @@
-# Clickey scam protection: design and build proposal
+# Squeek scam protection: design and build proposal
 
-Status: revised design proposal for a single-install Electron app. No product code or live API integration has been implemented.
+Status: design for a single-install Electron app. Development has started with the TypeScript observation contract and a self-contained Windows helper probe; real-browser extraction, Electron UI, detection, and live API integration remain unverified or unimplemented. Follow the [implementation plan](../plans/2026-10-03-squeek-implementation.md) and [Windows feasibility check](../../development/windows-observation-check.md).
 
-Cost and security decisions are included below. A plain-language version for teammates is available in [Clickey explained](../../clickey-explained.md).
+Cost and security decisions are included below. A plain-language version for teammates is available in [Squeek explained](../../squeek-explained.md).
 
 ## Purpose and assumptions
 
-Build a Windows Clickey companion for older and vulnerable users that notices scam signals during computer use and explains them aloud. Use one Electron installer with a bundled Windows observer, without a browser extension. Enforced action review is limited to Clickey-controlled demo surfaces; observation of external apps provides warnings and voluntary review. Its assistance stays within scam detection, prevention, and education.
+Build a Windows Squeek companion for older and vulnerable users that notices scam signals during computer use and explains them aloud. Use one Electron installer with a bundled Windows observer, without a browser extension. Enforced action review is limited to Squeek-controlled demo surfaces; observation of external apps provides warnings and voluntary review. Its assistance stays within scam detection, prevention, and education.
 
 Use the SWIVEL challenge wording supplied by the user as the brief. Public research found the current RowdyHacks site and an older challenge; it did not independently verify the quoted current track. Do not substitute the older challenge.
 
@@ -17,7 +17,7 @@ Working assumptions pending correction:
 - One installer includes Electron and its Windows helper/runtime. No extension, browser developer mode, remote-debugging port, or separately installed runtime is part of onboarding.
 - Browser email, messages, phishing links, and a controlled payment demo are the initial surfaces.
 - Spoken warnings are required. Listening to the user or live calls is a separate feature.
-- No existing Clickey implementation or assets are present in this repository. Reuse requires separately supplied source/assets.
+- No existing Squeek implementation or assets are present in this repository. Reuse requires separately supplied source/assets.
 - Team size, deadline, API access, and available voice assets have not been supplied. Milestones below are dependency ordered, not time estimates.
 - Broad scam categories are a roadmap. Universal detection and prevention are not acceptance criteria for this prototype.
 
@@ -27,9 +27,9 @@ Working assumptions pending correction:
 | --- | --- | --- |
 | Electron plus bundled Windows accessibility observer and local OCR, recommended | One install; works alongside familiar apps; event-driven text extraction where supported | Native helper and compatibility work; incomplete accessible text/events; hidden destinations and pre-action enforcement are not assured |
 | Electron with local screenshots and OCR only | One install; fewer accessibility-provider dependencies | More CPU/battery use, OCR errors, and weaker structural context; still cannot enforce arbitrary external payments |
-| Electron app with its own protected browsing surface | One install and greater control within the app | Users must move browsing into Clickey; login/site compatibility; protects only its own surface |
+| Electron app with its own protected browsing surface | One install and greater control within the app | Users must move browsing into Squeek; login/site compatibility; protects only its own surface |
 
-Build and verify the bundled observer first. Use accessibility text as the primary input and local cropped OCR as a fallback. Keep a manual check available when automatic observation is incomplete. Do not replace the user's browser or add an extension as a fallback without a new user decision. If enforced pre-action review becomes essential, assess a Clickey-owned browsing/payment surface separately.
+Build and verify the bundled observer first. Use accessibility text as the primary input and local cropped OCR as a fallback. Keep a manual check available when automatic observation is incomplete. Do not replace the user's browser or add an extension as a fallback without a new user decision. If enforced pre-action review becomes essential, assess a Squeek-owned browsing/payment surface separately.
 
 ## Benefits and product risks
 
@@ -48,11 +48,11 @@ Risks and responses:
 
 ## User flow
 
-1. User installs Clickey once, enables supported-app monitoring, reviews cloud-data use, and selects speech settings. Respect any Windows capture prompts required by the selected capture API.
+1. User installs Squeek once, enables supported-app monitoring, reviews cloud-data use, and selects speech settings. Respect any Windows capture prompts required by the selected capture API.
 2. Opening a supported email or changing relevant visible content triggers a bounded scan through the bundled observer without requiring a prompt.
 3. The companion shows the current assessment; substantial risk opens a readable panel and speaks once.
 4. The panel displays evidence from the actual message, link, or action and a relevant protective step.
-5. External apps receive warnings and user-initiated review. Only a Clickey-controlled demo action can be held before submission; there the user can cancel, examine evidence, or deliberately continue after review.
+5. External apps receive warnings and user-initiated review. Only a Squeek-controlled demo action can be held before submission; there the user can cancel, examine evidence, or deliberately continue after review.
 6. The user may request trusted-contact review when that integration is available. Sharing requires explicit action.
 
 New warning wording and fixtures need user approval before inclusion in the product. Preserve provided wording and assets. Do not generate biographies, taglines, testimonials, invented achievements, or decorative copy. Functional labels should remain plain. Use technical state identifiers below as internal contracts, not polished user-facing text.
@@ -122,7 +122,7 @@ Sources: [Windows UI Automation](https://learn.microsoft.com/en-us/windows/win32
 - Record the minimum text needed for a decision. Actual link destinations, sender addresses, and current-page URLs may be unavailable through accessibility/OCR; never infer them from link labels or fabricated metadata. OCR observations include quality/coverage limits.
 - Skip protected/password controls and known sensitive regions before extraction or capture. Exclude account/card numbers, verification codes, and recovery phrases from transmitted content. If a region cannot be safely scoped, mark it unsupported rather than capturing it broadly. Redaction is defense in depth, not perfect anonymization.
 - Retain relevant context in memory for the current interaction only; give it a short expiry and explicit clearing on navigation, tab change, or pause.
-- Keep background tabs/windows and Clickey's own UI from feeding the foreground assessment. Discard old results after foreground, document, observation, or controlled-action changes.
+- Keep background tabs/windows and Squeek's own UI from feeding the foreground assessment. Discard old results after foreground, document, observation, or controlled-action changes.
 - Follow the pointer locally using Electron screen coordinates; clamp to display work areas and account for DPI scaling. Never make a model request on pointer movement.
 - Keep the companion click-through and non-focus-stealing. Put buttons in a separate interactive panel.
 - Do not use an Electron window as an OS-wide click blocker. It cannot reliably enforce protections across arbitrary apps.
@@ -138,7 +138,7 @@ Use event-driven local observation. The cursor's position and appearance stay lo
 2. Run local redaction and independent protective rules. Exclude decorative changes such as clocks, loading animations, cursor movement, and unrelated layout mutations from assessment triggers. Do not require scam keywords before assessing a new relevant message.
 3. Coalesce bursts of relevant changes with an initial 400 ms debounce and a 1 second maximum coalescing window. These are proposed defaults to validate, not measured latency. Keep requests bounded and discard results for old document revisions.
 4. Hash relevant assessment inputs in memory. Reuse an assessment only while its foreground source, content, context quality, model/policy version, and known action details still match. Use an initial 60 second cache expiry. Clear affected entries on pause, foreground/document changes, changed observed content, or changed controlled-action details. Never treat a cache hash as anonymization.
-5. Clickey-controlled demo actions run immediate local checks and request a fresh assessment when recipient, amount, destination, or context differs. External app observations cannot guarantee that an impending payment will be seen or held; warn when evidence is available and expose uncertainty. No automatic financial submission or replay is allowed.
+5. Squeek-controlled demo actions run immediate local checks and request a fresh assessment when recipient, amount, destination, or context differs. External app observations cannot guarantee that an impending payment will be seen or held; warn when evidence is available and expose uncertainty. No automatic financial submission or replay is allowed.
 
 Accessibility is the primary input in the first release. Some apps expose incomplete information or unreliable events; unsupported surfaces must remain visibly unsupported. For image-only or inaccessible content in approved supported regions, use local cropped OCR after relevant changes. An initial maximum of one local change-check per two seconds may be evaluated where events are inadequate, pausing it when the source is not foreground or monitoring is paused. Compare crops locally, ignore cursor/decorative changes, and run OCR only for changed relevant regions. Capture frequency must be measured against CPU, battery use, and detection coverage. Local OCR has no cloud inference charge, but is not resource-free.
 
@@ -196,7 +196,7 @@ Use FTC guidance as a curated source for rules involving impersonation, unexpect
 
 Implement enforced pre-action review only inside the controlled local demo, with the demo application explicitly cooperating. Cover mouse and keyboard activation, form submission, changed content, and navigation. Bind any continue decision to source/document revision, target, action, and expiry. Invalidate it on recipient, amount, or target changes. Never automatically retry or replay a financial submission; the user initiates a fresh action after review.
 
-Accessibility notifications describe UI activity but are not a universal cancellable before-click event. Reading a payment button or noticing focus does not establish reliable interception. Clickey's external-app overlay provides warning and voluntary review; it cannot guarantee stopping a click, credential submission, navigation, or bank transfer. Do not introduce global input blocking or claim an advisory overlay enforces payment authorization. Clearly identify the cooperating demo and distinguish its control from external-app coverage.
+Accessibility notifications describe UI activity but are not a universal cancellable before-click event. Reading a payment button or noticing focus does not establish reliable interception. Squeek's external-app overlay provides warning and voluntary review; it cannot guarantee stopping a click, credential submission, navigation, or bank transfer. Do not introduce global input blocking or claim an advisory overlay enforces payment authorization. Clearly identify the cooperating demo and distinguish its control from external-app coverage.
 
 ## Voice and accessible UI
 
@@ -316,7 +316,7 @@ The demonstration should prove the complete observation-to-intervention loop. Do
 - Approve this design, initial warning wording, and test/demo examples.
 - Confirm whether two-way voice and real trusted-contact review are required for the first version.
 - Establish deadline/team capacity and provision TypeSafe access without exposing credentials.
-- Supply earlier Clickey assets/source if continuity with that project is required.
+- Supply earlier Squeek assets/source if continuity with that project is required.
 
 ## Research and verification status
 

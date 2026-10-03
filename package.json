@@ -1,0 +1,17 @@
+{
+  "name": "squeek",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "observer:build": "pwsh -NoProfile -File scripts/build-observer.ps1",
+    "observer:probe": "node scripts/observer-probe.ts"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "typescript": "7.0.2"
+  },
+  "engines": { "node": ">=24.0.0" }
+}
