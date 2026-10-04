@@ -39,8 +39,6 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Squeek uses the camera to scan the code shown by Squeek on your computer.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Squeek reads the words in a screenshot you choose, on your iPhone, to check it for scams.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>SqueekAppBundleId</key>

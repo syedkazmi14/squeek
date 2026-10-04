@@ -86,7 +86,6 @@ targets:
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [$(SQUEEK_BUNDLE_ID).refresh]
         NSCameraUsageDescription: Squeek uses the camera to scan the code shown by Squeek on your computer.
-        NSPhotoLibraryUsageDescription: Squeek reads the words in a screenshot you choose, on your iPhone, to check it for scams.
         ITSAppUsesNonExemptEncryption: false
 
   SqueekWidgets:

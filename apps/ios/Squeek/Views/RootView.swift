@@ -28,6 +28,7 @@ struct RootView: View {
 
 struct MainTabs: View {
   @EnvironmentObject private var model: AppModel
+  @AppStorage("squeek.onboarded") private var onboarded = false
 
   private var unreviewed: Int {
     model.incidents.filter { $0.level == .danger && $0.userAction == nil }.count
@@ -38,19 +39,18 @@ struct MainTabs: View {
       Tab("Home", systemImage: "house.fill", value: AppTab.home) {
         NavigationStack { HomeView() }
       }
-      Tab("Warnings", systemImage: "exclamationmark.triangle.fill", value: AppTab.warnings) {
-        NavigationStack { HistoryView() }
+      Tab("Activity", systemImage: "list.bullet.rectangle.fill", value: AppTab.activity) {
+        NavigationStack { ActivityView() }
       }
       .badge(unreviewed)
-      Tab("Blocked", systemImage: "hand.raised.fill", value: AppTab.blocked) {
-        NavigationStack { BlockedView() }
+      Tab("My Person", systemImage: "person.2.fill", value: AppTab.person) {
+        NavigationStack { MyPersonView() }
       }
-      Tab("Family", systemImage: "person.2.fill", value: AppTab.family) {
-        NavigationStack { FamilyView() }
-      }
-      Tab("Settings", systemImage: "gearshape.fill", value: AppTab.settings) {
-        NavigationStack { SettingsView() }
-      }
+    }
+    .fullScreenCover(
+      isPresented: Binding(get: { !onboarded && !model.isDemo }, set: { if !$0 { onboarded = true } })
+    ) {
+      NavigationStack { GuardSetupView(isOnboarding: true) }
     }
   }
 }
@@ -64,16 +64,6 @@ extension View {
     } else {
       self
     }
-  }
-
-  /// Home draws its own header, so it hides the empty navigation bar.
-  @ViewBuilder
-  func hiddenNavigationBar() -> some View {
-    #if os(iOS)
-      toolbar(.hidden, for: .navigationBar)
-    #else
-      self
-    #endif
   }
 }
 

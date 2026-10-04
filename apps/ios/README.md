@@ -6,17 +6,16 @@ A development build of Squeek for iPhone (not set up for the App Store). The des
 
 | Feature | Where | Needs |
 | --- | --- | --- |
-| Check a pasted message, a link, or a screenshot; result read aloud | `Squeek/Views/CheckView.swift` | Works offline with local rules; full check when signed in |
-| "Check with Squeek" in the Share sheet (text, links, images) | `ShareExtension/` | Turn on in the Share sheet's app row once |
+| Home: the four guards (calls, texts, websites, your person) and what's still off | `Squeek/Views/HomeView.swift`, `Squeek/Views/GuardSetupView.swift` | Setup opens on first launch |
+| "Check with Squeek" in the Share sheet (text, links, images): the manual fallback | `ShareExtension/` | Turn on in the Share sheet's app row once |
 | Block and label scam callers | `CallDirectoryExtension/` | Settings › Apps › Phone › Call Blocking & Identification |
 | Move scam texts from unknown senders to Junk | `MessageFilterExtension/` | Settings › Apps › Messages › Unknown & Spam |
 | Warn before dangerous links open in Safari | `SafariExtension/` | Settings › Apps › Safari › Extensions |
-| Block known malicious websites in every app (encrypted DNS) | A configuration profile served by `supabase/functions/dns-profile`, installed from the setup guide | Settings › Profile Downloaded › Install |
+| Block known malicious websites in every app (encrypted DNS) | A configuration profile served by `supabase/functions/dns-profile`, installed from setup | Settings › Profile Downloaded › Install |
 | Sign in (emailed link or code), sync with the PC app | `Squeek/AppModel.swift` | A Supabase project |
-| Family group: shared block lists, opt-in warning sharing, invite codes | `Squeek/Views/FamilyView.swift` | Signed in |
+| Trusted person (a family group underneath): shared block lists, opt-in warning sharing, invite codes | `Squeek/Views/MyPersonView.swift` | Signed in |
 | Live warnings from your PC or family, with notifications | Realtime while the app is open; Background App Refresh when it's closed (`AppModel.backgroundRefresh`) | Notifications allowed |
 | Connect the PC by scanning its QR code | `Squeek/Views/PairComputerView.swift` | Signed in; physical iPhone camera |
-| Shortcuts actions: Check a Message / Link / Screenshot | `Squeek/Intents/SqueekIntents.swift` | Optional Back Tap setup (see the in-app guide) |
 
 Shared logic lives in the `SqueekCore` Swift package: rules, redaction, link analysis, phone numbers, models and the App Group store. The app and every extension use it, and it reads the same `packages/detection/rules/rules.json` as the server.
 
@@ -59,18 +58,17 @@ Free-team installs expire after 7 days, and the iPhone must be connected to the 
 ### Reviewing screens without an account
 
 Debug builds accept launch arguments (Xcode › Product › Scheme › Edit Scheme › Arguments) that fill the app with sample data for screenshots. Release builds don't include them.
-- `-SqueekDemo`: sample warnings, block list and family group.
-- `-SqueekTab warnings`: open a tab (`warnings`, `blocked`, `family` or `settings`).
-- `-SqueekDemoCheck`: open a sample scam check on launch.
+- `-SqueekDemo YES`: sample warnings, block list and trusted person. Give it a value; a bare flag at the end of the arguments can be dropped.
+- `-SqueekTab activity`: open a tab (`activity` or `person`), or `settings` to open Settings.
 
 ## Demo script
 
 1. Sign in on the iPhone. In Supabase, run `seed.sql` so the demo numbers and websites exist.
-2. **Message check:** Home › Check a message, and paste: *"This is the IRS. A warrant for your arrest will be issued today. Pay with Google Play gift cards and do not tell anyone."* The result says "This looks like a scam", lists the evidence, and reads it aloud.
-3. **Link check:** check `paypal-account-verify.example/login`. The result says "Don't open this link" because it's on the seed block list.
+2. **Message check:** in Notes, select *"This is the IRS. A warrant for your arrest will be issued today. Pay with Google Play gift cards and do not tell anyone."*, then Share › Check with Squeek. The result says "This looks like a scam", lists the evidence, and reads it aloud.
+3. **Link check:** share `paypal-account-verify.example/login` to Squeek the same way. The result says "Don't open this link" because it's on the seed block list.
 4. **Calls:** replace a seed number in `supabase/seed.sql` with a teammate's phone, re-seed, and turn on call blocking. When the teammate calls, the screen shows "Squeek: reported scam". Turn on "Also block numbers reported by others" and the call is blocked.
-5. **Sync:** insert an `incidents` row for your user from the Supabase dashboard, with `platform` set to `windows`. It appears in Warnings within seconds with a "Squeek on your PC" notification. This stands in for the PC app until that exists.
-6. **Family:** create a family group, invite a second account, and block a number from either phone. It reaches both phones' call blockers.
+5. **Sync:** insert an `incidents` row for your user from the Supabase dashboard, with `platform` set to `windows`. It appears in Activity within seconds with a "Squeek on your PC" notification. This stands in for the PC app until that exists.
+6. **Trusted person:** in My Person, get an invite code, join from a second account, and block a number from either phone. It reaches both phones' call blockers.
 
 ## Verification status
 

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SettingsView: View {
   @EnvironmentObject private var model: AppModel
+  @Environment(\.dismiss) private var dismiss
   @AppStorage("squeek.localOnly") private var localOnly = false
   @State private var showSignIn = false
   @State private var confirmDelete = false
@@ -12,33 +13,6 @@ struct SettingsView: View {
       accountSection
       voiceSection
       if let profile = model.profile { displaySection(profile) }
-      Section("Protection") {
-        NavigationLink { SetupGuideView() } label: {
-          SettingsLabel("Set up protections", symbol: "checkmark.shield.fill", color: Theme.accentInk)
-        }
-        if model.showsAccountData {
-          NavigationLink { PairComputerView() } label: {
-            SettingsLabel("Connect a computer", symbol: "desktopcomputer", color: .blue)
-          }
-        }
-      }
-      .listRowBackground(Theme.card)
-      if !model.myDevices.isEmpty {
-        Section("Your devices") {
-          ForEach(model.myDevices) { device in
-            HStack(spacing: 12) {
-              IconBadge(symbol: Labels.platformSymbol(device.platform), size: 34)
-              VStack(alignment: .leading) {
-                Text(device.name ?? Labels.platform(device.platform)).font(.nunito(.body, .semibold))
-                if let status = device.monitoringStatus {
-                  Text(status).font(.nunito(.footnote)).foregroundStyle(Theme.secondaryInk)
-                }
-              }
-            }
-          }
-        }
-        .listRowBackground(Theme.card)
-      }
       Section("About") {
         LabeledContent("Version", value: SqueekConfig.appVersion)
         LabeledContent("Scam rules", value: CheckService.shared.checker?.engine.rules.version ?? "missing")
@@ -47,6 +21,9 @@ struct SettingsView: View {
     }
     .screenBackground()
     .navigationTitle("Settings")
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+    }
     .sheet(isPresented: $showSignIn) { EmailSignInView() }
     .confirmationDialog("Delete your Squeek account?", isPresented: $confirmDelete, titleVisibility: .visible) {
       Button("Delete account", role: .destructive) { Task { await model.deleteAccount() } }
@@ -71,7 +48,7 @@ struct SettingsView: View {
       } else {
         VStack(alignment: .leading, spacing: 6) {
           Text("Not signed in").font(.nunito(.headline))
-          Text("Checks run on this iPhone only. Sign in to sync with your computer and family.")
+          Text("Squeek works on this iPhone only. Sign in to connect your computer and your trusted person.")
             .font(.nunito(.subheadline))
             .foregroundStyle(Theme.secondaryInk)
         }

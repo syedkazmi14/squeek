@@ -4,7 +4,7 @@ import Supabase
 import SwiftUI
 
 enum AppTab: Hashable {
-  case home, warnings, blocked, family, settings
+  case home, activity, person
 }
 
 /// App state: account, synced data, and pushing block lists and settings to the extensions.
@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
   static let shared = AppModel()
 
   @Published var selectedTab: AppTab = .home
+  @Published var showingSettings = false
   @Published private(set) var notificationsOn = false
   /// DEBUG-only sample data for reviewing screens without an account (launch with -SqueekDemo).
   @Published var isDemo = false
@@ -30,6 +31,15 @@ final class AppModel: ObservableObject {
   @Published private(set) var isRefreshing = false
   @Published var errorMessage: String?
 
+  /// iOS doesn't tell apps whether text filtering or the Safari extension is on, so the person
+  /// ticks these off in setup.
+  @Published var textsGuardOn = UserDefaults.standard.bool(forKey: AppModel.textsGuardKey) {
+    didSet { UserDefaults.standard.set(textsGuardOn, forKey: Self.textsGuardKey) }
+  }
+  @Published var webGuardOn = UserDefaults.standard.bool(forKey: AppModel.webGuardKey) {
+    didSet { UserDefaults.standard.set(webGuardOn, forKey: Self.webGuardKey) }
+  }
+
   /// Settings used when signed out; mirrored into the App Group for the extensions.
   @Published private(set) var localSettings: SharedSettings
 
@@ -44,6 +54,13 @@ final class AppModel: ObservableObject {
   private static let localEntriesKey = "squeek.localBlockEntries"
   private static let alertedIncidentsKey = "squeek.alertedIncidentIds"
   private static let alertsSinceKey = "squeek.alertsSince"
+  private static let textsGuardKey = "squeek.setup.texts"
+  private static let webGuardKey = "squeek.setup.web"
+  private static let lastVisitKey = "squeek.lastVisit"
+
+  /// Home's summary covers what happened after this: the end of the person's last visit to the app.
+  @Published private(set) var summarySince = Date().addingTimeInterval(-24 * 3600)
+  private var activeSince: Date?
 
   private init() {
     store = SharedStore(appGroup: SqueekConfig.appGroup)
@@ -67,11 +84,19 @@ final class AppModel: ObservableObject {
   /// Whether account screens (warnings, family) have data to show.
   var showsAccountData: Bool { isSignedIn || isDemo }
 
-  /// Protections the app can see the state of: call blocking, sync and alerts.
-  var protectionsOn: Int {
-    [callBlockingStatus == .enabled, showsAccountData, notificationsOn].filter { $0 }.count
+  func isOn(_ guard: SqueekGuard) -> Bool {
+    switch `guard` {
+    // Call verdicts reach the person as notifications, so calls need both.
+    case .calls: return callBlockingStatus == .enabled && notificationsOn
+    case .texts: return textsGuardOn
+    case .web: return webGuardOn
+    case .person: return members.count > 1
+    }
   }
-  let protectionsTotal = 3
+
+  /// Guards that are on, for Home and the Live Activity.
+  var protectionsOn: Int { SqueekGuard.allCases.filter(isOn).count }
+  var protectionsTotal: Int { SqueekGuard.allCases.count }
 
   var deviceId: String {
     if let id = localSettings.deviceId { return id }
@@ -112,6 +137,26 @@ final class AppModel: ObservableObject {
   }
 
   // MARK: - Lifecycle
+
+  func appBecameActive() {
+    activeSince = Date()
+    guard !isDemo else { return }
+    // First visit: the last day.
+    summarySince = UserDefaults.standard.object(forKey: Self.lastVisitKey) as? Date ?? Date().addingTimeInterval(-24 * 3600)
+  }
+
+  /// Ends the visit. A glance of a few seconds doesn't count, so switching apps briefly doesn't
+  /// clear the summary.
+  func appWentToBackground() {
+    guard !isDemo, let activeSince, Date().timeIntervalSince(activeSince) >= 10 else { return }
+    UserDefaults.standard.set(Date(), forKey: Self.lastVisitKey)
+  }
+
+  func homeSummary() -> HomeSummary {
+    HomeSummary(
+      name: profile?.displayName, incidents: incidents, myUserId: userId, since: summarySince,
+      guardsOff: protectionsTotal - protectionsOn, memberName: memberName)
+  }
 
   func start() {
     #if DEBUG
@@ -342,6 +387,7 @@ final class AppModel: ObservableObject {
   }
 
   func refreshProtectionStatus() async {
+    guard !isDemo else { return }
     callBlockingStatus = await CallDirectorySync.status()
     notificationsOn = await Notifications.isAuthorized()
   }
@@ -358,6 +404,7 @@ final class AppModel: ObservableObject {
       helperDevices = devices
       self.profile = profile
       callBlockingStatus = .enabled
+      notificationsOn = true
     }
   #endif
 
@@ -524,8 +571,9 @@ final class AppModel: ObservableObject {
   // MARK: - Incidents
 
   func setAction(_ action: String, forIncident id: String?) async {
-    guard let id, let client, isSignedIn else { return }
+    guard let id else { return }
     if let index = incidents.firstIndex(where: { $0.id == id }) { incidents[index].userAction = action }
+    guard let client, isSignedIn, !isDemo else { return }
     do {
       try await client.from("incidents").update(["user_action": action]).eq("id", value: id).execute()
     } catch { report(error) }

@@ -1,193 +1,174 @@
 import SqueekCore
-import Pow
 import SwiftUI
-import UIKit
 
+/// Squeek himself greets the person and says what happened since their last visit. Below him,
+/// the four guards and the latest warnings. Squeek works in the background, so there's nothing to
+/// start here.
 struct HomeView: View {
   @EnvironmentObject private var model: AppModel
-  @State private var sheet: HomeSheet?
-  @State private var nothingToPaste = false
-
-  enum HomeSheet: Identifiable {
-    case check(CheckView.Mode, prefill: String)
-    case reportNumber
-    case setup
-
-    var id: String {
-      switch self {
-      case .check(let mode, let prefill): return "check-\(mode.rawValue)-\(prefill.hashValue)"
-      case .reportNumber: return "report"
-      case .setup: return "setup"
-      }
-    }
-  }
+  @State private var setupFocus: SqueekGuard?
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
-        header
-        ProtectionCard(onSetUp: { sheet = .setup })
-        pasteAndCheck
-        tiles
-        RecentWarnings()
+    let summary = model.homeSummary()
+    GeometryReader { geometry in
+      ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+          // Squeek fills most of the first screen; the guards peek in below so it's clear there's more.
+          VStack(spacing: 18) {
+            Spacer(minLength: 0)
+            MascotView(mood: summary.mood, height: min(170, geometry.size.width * 0.42))
+            SpeechBubble(summary: summary, onFinishSetup: { setupFocus = firstOffGuard })
+            Spacer(minLength: 0)
+          }
+          .frame(maxWidth: .infinity, minHeight: geometry.size.height * 0.68)
+
+          GuardList(onSetUp: { setupFocus = $0 })
+          RecentWarnings()
+        }
+        .padding(.horizontal, Theme.pagePadding)
+        .padding(.bottom, 24)
       }
-      .padding(.horizontal, Theme.pagePadding)
-      .padding(.bottom, 24)
     }
     .scrollIndicators(.hidden)
     .screenBackground()
-    .hiddenNavigationBar()
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        Button("Settings", systemImage: "gearshape.fill") { model.showingSettings = true }
+      }
+    }
     .refreshable { await model.refreshAll() }
-    .alert("Nothing to check yet", isPresented: $nothingToPaste) {
-      Button("OK", role: .cancel) {}
-    } message: {
-      Text("Copy a message or link first, then come back and tap Paste & check.")
+    .sheet(item: $setupFocus) { focus in
+      NavigationStack { GuardSetupView(focus: focus) }
     }
-    .onAppear {
-      #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-SqueekDemoCheck"), sheet == nil {
-          sheet = .check(.text, prefill: DemoData.scamText)
-        }
-      #endif
-    }
-    .sheet(item: $sheet) { sheet in
-      switch sheet {
-      case .check(let mode, let prefill): CheckView(mode: mode, initialText: prefill, autoRun: !prefill.isEmpty)
-      case .reportNumber: AddBlockView(kind: "phone")
-      case .setup: NavigationStack { SetupGuideView() }
-      }
+    .sheet(isPresented: $model.showingSettings) {
+      NavigationStack { SettingsView() }
     }
   }
 
-  private var header: some View {
-    HStack(spacing: 10) {
-      SqueekEmblem(size: 30)
-      Text("Squeek").font(.display(.title)).foregroundStyle(Theme.ink)
-      Spacer()
-    }
-    .padding(.top, 8)
-    .accessibilityElement(children: .combine)
-    .accessibilityAddTraits(.isHeader)
-  }
-
-  private var pasteAndCheck: some View {
-    Button {
-      let copied = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-      if copied.isEmpty {
-        nothingToPaste = true
-      } else {
-        sheet = .check(CheckView.Mode.guess(for: copied), prefill: copied)
-      }
-    } label: {
-      HStack(spacing: 14) {
-        Image(systemName: "doc.on.clipboard.fill")
-          .font(.system(size: 22, weight: .semibold))
-          .frame(width: 48, height: 48)
-          .background(Theme.onAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        VStack(alignment: .leading, spacing: 2) {
-          Text("Paste & check").font(.nunito(.title2, .bold))
-          Text("A message or link you copied").font(.nunito(.subheadline)).opacity(0.85)
-        }
-        Spacer(minLength: 0)
-        Image(systemName: "arrow.right").font(.headline)
-      }
-      .padding(.vertical, 6)
-      .foregroundStyle(Theme.onAccent)
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .buttonStyle(.glassProminent)
-    .buttonBorderShape(.roundedRectangle(radius: 28))
-    .controlSize(.extraLarge)
-    .tint(Theme.accent)
-    .accessibilityHint("Checks the message or link you copied for scam signs")
-  }
-
-  private var tiles: some View {
-    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-      tile("Message", "text.bubble.fill") { sheet = .check(.text, prefill: "") }
-      tile("Link", "link") { sheet = .check(.link, prefill: "") }
-      tile("Screenshot", "photo.fill") { sheet = .check(.screenshot, prefill: "") }
-      tile("Scam caller", "phone.down.fill", tint: Theme.danger, soft: Theme.dangerSoft) { sheet = .reportNumber }
-    }
-  }
-
-  private func tile(
-    _ title: String, _ symbol: String, tint: Color = Theme.accentInk, soft: Color = Theme.accentSoft,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button(action: action) {
-      VStack(alignment: .leading, spacing: 18) {
-        IconBadge(symbol: symbol, tint: tint, soft: soft)
-        Text(title).font(.nunito(.headline)).foregroundStyle(Theme.ink)
-      }
-      .card(padding: 16)
-    }
-    .buttonStyle(PressableStyle())
-    .accessibilityLabel(title == "Scam caller" ? "Block a scam caller" : "Check a \(title.lowercased())")
+  private var firstOffGuard: SqueekGuard {
+    SqueekGuard.allCases.first { !model.isOn($0) } ?? .calls
   }
 }
 
-/// Protection ring: how many of the protections Squeek can see are on, and what to do next.
-struct ProtectionCard: View {
-  @EnvironmentObject private var model: AppModel
-  var onSetUp: () -> Void
-
-  private var allOn: Bool { model.protectionsOn == model.protectionsTotal }
-
-  private var nextStep: String {
-    if model.callBlockingStatus != .enabled { return "Turn on call blocking" }
-    if !model.showsAccountData { return "Sign in to sync with your computer" }
-    if !model.notificationsOn { return "Allow family alerts" }
-    return "Review text and Safari protection"
-  }
+/// What Squeek says, in a bubble pointing up at him, with a button to hear it.
+private struct SpeechBubble: View {
+  let summary: HomeSummary
+  var onFinishSetup: () -> Void
 
   var body: some View {
-    HStack(spacing: 18) {
-      ProtectionRing(value: model.protectionsOn, total: model.protectionsTotal)
-        .changeEffect(.shine, value: model.protectionsOn)
-      VStack(alignment: .leading, spacing: 6) {
-        Text(allOn ? "You're protected" : "Almost there")
-          .font(.nunito(.title3, .bold))
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline) {
+        Text(summary.greeting)
+          .font(.nunito(.title2, .bold))
           .foregroundStyle(Theme.ink)
-        Text(allOn ? "Calls, sync and alerts are on." : "\(model.protectionsOn) of \(model.protectionsTotal) protections are on.")
-          .font(.nunito(.subheadline))
-          .foregroundStyle(Theme.secondaryInk)
-        Button(action: onSetUp) {
-          HStack(spacing: 4) {
-            Text(nextStep)
-            Image(systemName: "chevron.right").font(.caption.weight(.bold))
-          }
-          .font(.nunito(.subheadline, .semibold))
+        Spacer(minLength: 8)
+        Button("Read aloud", systemImage: "speaker.wave.2.fill") {
+          Speech.shared.speak(summary.spoken, force: true)
         }
-        .buttonStyle(.plain)
+        .labelStyle(.iconOnly)
+        .font(.title3)
         .foregroundStyle(Theme.accentInk)
       }
-      Spacer(minLength: 0)
+      Text(summary.message)
+        .font(.nunito(.title3))
+        .foregroundStyle(Theme.ink)
+        .fixedSize(horizontal: false, vertical: true)
+        .contentTransition(.opacity)
+      switch summary.action {
+      case .review(let incident):
+        NavigationLink { IncidentDetailView(incident: incident) } label: {
+          Text("See what happened")
+        }
+        .primaryAction()
+        .padding(.top, 4)
+      case .finishSetup:
+        Button("Finish setting me up", action: onFinishSetup)
+          .secondaryAction()
+          .padding(.top, 4)
+      case nil:
+        EmptyView()
+      }
     }
-    .card(padding: 20)
+    .card(padding: 20, tint: summary.mood == .concerned ? Theme.dangerSoft : nil)
+    .overlay(alignment: .top) {
+      BubbleTail()
+        .fill(summary.mood == .concerned ? Theme.dangerSoft : Theme.card)
+        .frame(width: 28, height: 14)
+        .offset(y: -13)
+        .accessibilityHidden(true)
+    }
+    .animation(.spring(duration: 0.4), value: summary.message)
   }
 }
 
-struct ProtectionRing: View {
-  let value: Int
-  let total: Int
+private struct BubbleTail: Shape {
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+    path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.minY), control: CGPoint(x: rect.midX - 2, y: rect.maxY))
+    path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.maxY), control: CGPoint(x: rect.midX + 2, y: rect.maxY))
+    path.closeSubpath()
+    return path
+  }
+}
+
+/// The four guards, each with its state. Tapping one that's off opens its setup steps.
+private struct GuardList: View {
+  @EnvironmentObject private var model: AppModel
+  var onSetUp: (SqueekGuard) -> Void
 
   var body: some View {
-    ZStack {
-      Circle().stroke(Theme.neutralSoft, lineWidth: 9)
-      Circle()
-        .trim(from: 0, to: total == 0 ? 0 : CGFloat(value) / CGFloat(total))
-        .stroke(Theme.accent, style: StrokeStyle(lineWidth: 9, lineCap: .round))
-        .rotationEffect(.degrees(-90))
-        .animation(.spring(duration: 0.8), value: value)
-      Text("\(value)/\(total)")
-        .font(.nunito(.title3, .bold))
-        .foregroundStyle(Theme.accentInk)
-        .contentTransition(.numericText(value: Double(value)))
+    VStack(alignment: .leading, spacing: 12) {
+      SectionHeader(title: "My guards") {
+        Text("\(model.protectionsOn) of \(model.protectionsTotal) on")
+          .font(.nunito(.subheadline, .semibold))
+          .foregroundStyle(Theme.secondaryInk)
+      }
+      rows
     }
-    .frame(width: 80, height: 80)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel("\(value) of \(total) protections on")
+  }
+
+  private var rows: some View {
+    VStack(spacing: 0) {
+      ForEach(Array(SqueekGuard.allCases.enumerated()), id: \.element) { index, item in
+        let on = model.isOn(item)
+        Button {
+          if item == .person && on { model.selectedTab = .person } else { onSetUp(item) }
+        } label: {
+          HStack(spacing: 14) {
+            IconBadge(
+              symbol: item.symbol, tint: on ? Theme.accentInk : Theme.secondaryInk,
+              soft: on ? Theme.accentSoft : Theme.neutralSoft)
+            VStack(alignment: .leading, spacing: 2) {
+              Text(item.title).font(.nunito(.headline)).foregroundStyle(Theme.ink)
+              Text(on ? item.onSummary : item.offSummary)
+                .font(.nunito(.subheadline))
+                .foregroundStyle(Theme.secondaryInk)
+            }
+            Spacer(minLength: 8)
+            if on {
+              Image(systemName: "checkmark.circle.fill")
+                .font(.title2)
+                .foregroundStyle(Theme.safe)
+                .accessibilityLabel("On")
+            } else {
+              Text("Turn on")
+                .font(.nunito(.subheadline, .bold))
+                .foregroundStyle(Theme.onAccent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Theme.accent, in: Capsule())
+            }
+          }
+          .padding(.vertical, 12)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityElement(children: .combine)
+        if index < SqueekGuard.allCases.count - 1 { Divider().padding(.leading, 56) }
+      }
+    }
+    .card(padding: 14)
   }
 }
 
@@ -199,7 +180,7 @@ struct RecentWarnings: View {
     if !recent.isEmpty {
       VStack(alignment: .leading, spacing: 12) {
         SectionHeader(title: "Recent") {
-          Button("See all") { model.selectedTab = .warnings }
+          Button("See all") { model.selectedTab = .activity }
             .font(.nunito(.subheadline, .semibold))
             .buttonStyle(.plain)
             .foregroundStyle(Theme.accentInk)
@@ -218,17 +199,5 @@ struct RecentWarnings: View {
         .card(padding: 14)
       }
     }
-  }
-}
-
-extension CheckView.Mode {
-  /// A single link becomes a link check; anything else is checked as a message.
-  static func guess(for text: String) -> CheckView.Mode {
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.contains(" "), !trimmed.contains("\n"),
-      let first = LinkAnalyzer.extractURLs(from: trimmed, limit: 1).first,
-      first.count >= trimmed.count - 1
-    else { return .text }
-    return .link
   }
 }

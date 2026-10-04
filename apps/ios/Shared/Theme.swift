@@ -422,6 +422,30 @@ enum Labels {
     }
   }
 
+  /// The trick behind a warning sign and what to do instead, in one or two plain sentences.
+  static func tactic(_ category: String) -> String? {
+    switch category {
+    case "impersonation":
+      return "Scammers pretend to be a bank, the government or family so you'll trust them. Hang up and call back on a number you look up yourself."
+    case "pressure": return "They're rushing you so you don't stop to think. Real banks and agencies give you time."
+    case "secrecy":
+      return "Being told to keep it quiet is a warning sign. Anyone genuine is happy for you to ask someone you trust."
+    case "payment":
+      return "Gift cards, crypto and wire transfers can't be taken back, which is why scammers ask for them. No real company or agency does."
+    case "credentials":
+      return "Nobody genuine asks for your passwords or the codes texted to you. Those codes let someone into your accounts."
+    case "remote_access":
+      return "Letting a stranger control your screen hands them your accounts. Real support teams don't contact you first."
+    case "prize": return "You can't win something you didn't enter. Paying a fee to collect a prize is the scam."
+    case "romance":
+      return "Someone you've never met in person asking for money is the most common romance scam, however real they seem."
+    case "delivery":
+      return "Fake delivery texts want a small fee or your card details. Check the courier's own app or website instead."
+    case "link": return "This link doesn't go where it claims to. Open the company's app, or type its address yourself."
+    default: return nil
+    }
+  }
+
   static func source(_ source: String) -> String {
     switch source {
     case "user": return "You"

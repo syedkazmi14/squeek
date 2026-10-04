@@ -84,27 +84,8 @@ struct BlockedView: View {
 
   @ViewBuilder
   private var callBlockingSection: some View {
-    Section {
-      HStack(spacing: 14) {
-        IconBadge(
-          symbol: model.callBlockingStatus == .enabled ? "checkmark.shield.fill" : "shield.slash.fill",
-          tint: model.callBlockingStatus == .enabled ? Theme.accentInk : Theme.ochre,
-          soft: model.callBlockingStatus == .enabled ? Theme.accentSoft : Theme.ochreSoft)
-        VStack(alignment: .leading, spacing: 2) {
-          Text(model.callBlockingStatus == .enabled ? "Call blocking is on" : "Call blocking is off")
-            .font(.nunito(.headline))
-          Text(model.callBlockingStatus == .enabled ? "Scam callers can't reach you." : "Turn it on in Settings to block calls.")
-            .font(.nunito(.subheadline))
-            .foregroundStyle(Theme.secondaryInk)
-        }
-      }
-      .listRowBackground(Theme.card)
-      if model.callBlockingStatus != .enabled {
-        Button("Turn on in Settings") { CallDirectorySync.openSettings() }
-          .font(.nunito(.headline))
-          .listRowBackground(Theme.card)
-      }
-      if let profile = model.profile {
+    if let profile = model.profile {
+      Section {
         Toggle(
           "Also block numbers reported by others",
           isOn: Binding(

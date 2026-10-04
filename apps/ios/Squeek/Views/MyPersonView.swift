@@ -1,12 +1,12 @@
 import SqueekCore
 import SwiftUI
 
-/// A family group shares blocked numbers and websites. Helpers can also see the protected person's
-/// warnings, but only if that person turns sharing on.
-struct FamilyView: View {
+/// The person you trust, or the people you look out for. Under the hood this is a family group:
+/// members share blocked numbers and websites, and helpers see the protected person's warnings
+/// only if that person turns sharing on.
+struct MyPersonView: View {
   @EnvironmentObject private var model: AppModel
-  @State private var groupName = "My family"
-  @State private var role = "protected"
+  @State private var showSignIn = false
   @State private var joinCode = ""
   @State private var invite: (code: String, role: String)?
   @State private var inviteRole = "helper"
@@ -16,11 +16,11 @@ struct FamilyView: View {
     Group {
       if !model.showsAccountData {
         ContentUnavailableView {
-          Label("Protect each other", systemImage: "person.2.fill")
+          Label("Bring in someone you trust", systemImage: "person.2.fill")
         } description: {
-          Text("Sign in to share blocked numbers with family and let someone you trust see your warnings.")
+          Text("Sign in so a family member or friend can help you check things and see when Squeek warns you.")
         } actions: {
-          Button("Go to Settings") { model.selectedTab = .settings }
+          Button("Sign in with email") { showSignIn = true }
             .buttonStyle(.glassProminent)
             .tint(Theme.accent)
             .foregroundStyle(Theme.onAccent)
@@ -32,15 +32,17 @@ struct FamilyView: View {
               membersCard(household.name)
               inviteCard
               sharingCard
-              if !model.helperDevices.isEmpty { devicesCard }
-              Button("Leave this family group", role: .destructive) { confirmLeave = true }
+              if !model.helperDevices.isEmpty { theirDevicesCard }
+              devicesCard
+              Button("Leave this group", role: .destructive) { confirmLeave = true }
                 .font(.nunito(.subheadline, .semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
             } else {
               hero
-              createCard
+              inviteFirstCard
               joinCard
+              devicesCard
             }
           }
           .padding(.horizontal, Theme.pagePadding)
@@ -50,9 +52,10 @@ struct FamilyView: View {
       }
     }
     .screenBackground()
-    .navigationTitle("Family")
+    .navigationTitle("My Person")
     .refreshable { await model.refreshAll() }
-    .confirmationDialog("Leave the family group?", isPresented: $confirmLeave, titleVisibility: .visible) {
+    .sheet(isPresented: $showSignIn) { EmailSignInView() }
+    .confirmationDialog("Leave this group?", isPresented: $confirmLeave, titleVisibility: .visible) {
       Button("Leave", role: .destructive) { Task { await model.leaveHousehold() } }
     } message: {
       Text("You'll stop sharing blocked numbers and warnings with this group.")
@@ -71,7 +74,7 @@ struct FamilyView: View {
             Text((member.displayName ?? "Family member") + (member.isMe ? " (you)" : ""))
               .font(.nunito(.headline))
               .foregroundStyle(Theme.ink)
-            Text(member.role == "helper" ? "Helps look out for scams" : "Protected by Squeek")
+            Text(member.role == "helper" ? "Your trusted person" : "Protected by Squeek")
               .font(.nunito(.subheadline))
               .foregroundStyle(Theme.secondaryInk)
           }
@@ -95,10 +98,10 @@ struct FamilyView: View {
           .padding(.vertical, 14)
           .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
           .accessibilityLabel(invite.code.map(String.init).joined(separator: " "))
-        Text("They enter this in Squeek › Family. It works once, for 24 hours.")
+        Text("They enter this in Squeek › My Person. It works once, for 24 hours.")
           .font(.nunito(.subheadline))
           .foregroundStyle(Theme.secondaryInk)
-        ShareLink(item: "Join my Squeek family group: open Squeek, go to Family, and enter \(invite.code)") {
+        ShareLink(item: "Will you be my trusted person on Squeek? Open Squeek, go to My Person, and enter \(invite.code)") {
           Label("Send the code", systemImage: "square.and.arrow.up")
         }
         .secondaryAction()
@@ -141,7 +144,7 @@ struct FamilyView: View {
     }
   }
 
-  private var devicesCard: some View {
+  private var theirDevicesCard: some View {
     VStack(alignment: .leading, spacing: 14) {
       SectionHeader("Their devices")
       ForEach(model.helperDevices) { device in
@@ -169,8 +172,8 @@ struct FamilyView: View {
       Image(systemName: "figure.2.and.child.holdinghands")
         .font(.system(size: 44, weight: .medium))
         .foregroundStyle(Theme.accentInk)
-      Text("Look out for each other").font(.display(.title)).foregroundStyle(Theme.ink)
-      Text("Everyone in a family group shares blocked numbers and websites. You decide whether helpers see your warnings.")
+      Text("Who do you trust?").font(.display(.title)).foregroundStyle(Theme.ink)
+      Text("Scammers count on you deciding alone. Pick a family member or friend who can help you check, and who hears from Squeek when something looks wrong.")
         .font(.nunito(.title3))
         .foregroundStyle(Theme.secondaryInk)
         .fixedSize(horizontal: false, vertical: true)
@@ -178,30 +181,29 @@ struct FamilyView: View {
     .padding(.top, 8)
   }
 
-  private var createCard: some View {
+  /// Starts a group with this person as the one protected, then shows a helper invite code.
+  private var inviteFirstCard: some View {
     VStack(alignment: .leading, spacing: 14) {
-      SectionHeader("Start a group")
-      TextField("Group name", text: $groupName)
-        .font(.nunito(.title3))
-        .padding(14)
-        .background(Theme.ground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-      Picker("I am", selection: $role) {
-        Text("Being protected").tag("protected")
-        Text("Helping someone").tag("helper")
-      }
-      .pickerStyle(.segmented)
-      Button("Create family group") {
-        Task { await model.createHousehold(name: groupName, role: role) }
+      SectionHeader("Invite your person")
+      Text("You'll get a code to send them. You choose whether they see your warnings.")
+        .font(.nunito(.subheadline))
+        .foregroundStyle(Theme.secondaryInk)
+      Button("Get an invite code") {
+        Task {
+          await model.createHousehold(name: "My people", role: "protected")
+          if let code = await model.createInvite(role: "helper") {
+            withAnimation(.spring) { invite = (code, "helper") }
+          }
+        }
       }
       .primaryAction()
-      .disabled(groupName.trimmingCharacters(in: .whitespaces).isEmpty)
     }
     .card(padding: 20)
   }
 
   private var joinCard: some View {
     VStack(alignment: .leading, spacing: 14) {
-      SectionHeader("Have a code?")
+      SectionHeader("Someone asked you to be their person?")
       TextField("6-letter code", text: $joinCode)
         .textInputAutocapitalization(.characters)
         .autocorrectionDisabled()
@@ -213,6 +215,32 @@ struct FamilyView: View {
       }
       .secondaryAction()
       .disabled(joinCode.trimmingCharacters(in: .whitespaces).count < 6)
+    }
+    .card(padding: 20)
+  }
+}
+
+extension MyPersonView {
+  /// This person's own devices, and pairing the Squeek computer app.
+  fileprivate var devicesCard: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      SectionHeader("Your devices")
+      ForEach(model.myDevices) { device in
+        HStack(spacing: 14) {
+          IconBadge(symbol: Labels.platformSymbol(device.platform))
+          VStack(alignment: .leading, spacing: 2) {
+            Text(device.name ?? Labels.platform(device.platform)).font(.nunito(.headline))
+            if let status = device.monitoringStatus {
+              Text(status).font(.nunito(.subheadline)).foregroundStyle(Theme.secondaryInk)
+            }
+          }
+        }
+        .accessibilityElement(children: .combine)
+      }
+      NavigationLink { PairComputerView() } label: {
+        Label("Connect a computer", systemImage: "desktopcomputer")
+      }
+      .secondaryAction()
     }
     .card(padding: 20)
   }

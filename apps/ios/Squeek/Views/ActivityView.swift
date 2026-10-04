@@ -2,8 +2,11 @@ import Charts
 import SqueekCore
 import SwiftUI
 
-struct HistoryView: View {
+/// Everything Squeek caught on this iPhone, the computer, and for people you help. The block list
+/// sits behind the toolbar button, since it's what Squeek acts on rather than something to watch.
+struct ActivityView: View {
   @EnvironmentObject private var model: AppModel
+  @State private var showSignIn = false
 
   private var groups: [(title: String, items: [Incident])] {
     let calendar = Calendar.current
@@ -29,19 +32,19 @@ struct HistoryView: View {
     Group {
       if !model.showsAccountData {
         ContentUnavailableView {
-          Label("Your warnings live here", systemImage: "exclamationmark.triangle")
+          Label("What Squeek catches shows up here", systemImage: "list.bullet.rectangle")
         } description: {
-          Text("Sign in to see warnings from this iPhone, your computer and family you help.")
+          Text("Sign in to see warnings from this iPhone, your computer and the people you help.")
         } actions: {
-          Button("Go to Settings") { model.selectedTab = .settings }
+          Button("Sign in with email") { showSignIn = true }
             .buttonStyle(.glassProminent)
             .tint(Theme.accent)
             .foregroundStyle(Theme.onAccent)
         }
       } else if model.incidents.isEmpty {
         ContentUnavailableView(
-          "No warnings yet", systemImage: "checkmark.shield",
-          description: Text("When Squeek warns you on this iPhone or your computer, it shows up here."))
+          "Nothing caught yet", systemImage: "checkmark.shield",
+          description: Text("When Squeek blocks a call, filters a text or warns you on your computer, it shows up here."))
       } else {
         ScrollView {
           VStack(alignment: .leading, spacing: 22) {
@@ -71,8 +74,16 @@ struct HistoryView: View {
       }
     }
     .screenBackground()
-    .navigationTitle("Warnings")
+    .navigationTitle("Activity")
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        NavigationLink { BlockedView() } label: {
+          Label("Blocked", systemImage: "hand.raised.fill")
+        }
+      }
+    }
     .refreshable { await model.refreshAll() }
+    .sheet(isPresented: $showSignIn) { EmailSignInView() }
   }
 }
 
@@ -206,6 +217,15 @@ struct IncidentDetailView: View {
           .foregroundStyle(Theme.secondaryInk)
         }
         .card(padding: 20, tint: status.soft)
+
+        if let tactic = current.categories.lazy.compactMap(Labels.tactic).first {
+          VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("What's going on")
+            Text(tactic).font(.nunito(.title3)).foregroundStyle(Theme.ink)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          .card()
+        }
 
         if !current.categories.isEmpty {
           VStack(alignment: .leading, spacing: 10) {

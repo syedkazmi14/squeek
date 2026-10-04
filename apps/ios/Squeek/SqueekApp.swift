@@ -18,12 +18,14 @@ struct SqueekApp: App {
     .onChange(of: scenePhase) { _, phase in
       switch phase {
       case .active:
+        model.appBecameActive()
         Task {
           await model.refreshAll()
           await model.refreshProtectionStatus()
           LiveActivityController.startOrUpdate(protectionsOn: model.protectionsOn, protectionsTotal: model.protectionsTotal)
         }
       case .background:
+        model.appWentToBackground()
         BackgroundRefresh.schedule()
       default:
         break

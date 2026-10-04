@@ -21,7 +21,7 @@ struct WelcomeView: View {
             Text("Squeek")
               .font(.nunito(size: 46, weight: .black))
               .foregroundStyle(Theme.ink)
-            Text("A calm second opinion on messages, links and calls.")
+            Text("Looks out for scams in the background, and brings in someone you trust.")
               .font(.nunito(.title2, .medium))
               .foregroundStyle(Theme.secondaryInk)
               .fixedSize(horizontal: false, vertical: true)
@@ -29,9 +29,9 @@ struct WelcomeView: View {
           .padding(.top, 40)
 
           VStack(alignment: .leading, spacing: 16) {
-            feature("text.magnifyingglass", "Spots scams in messages and links, and reads its warnings aloud")
-            feature("phone.down.fill", "Blocks and labels scam callers")
-            feature("person.2.fill", "Keeps your computer and family in step")
+            feature("phone.down.fill", "Blocks and labels scam callers, and tells you what it caught")
+            feature("message.fill", "Moves scam texts to Junk and warns before dangerous websites open")
+            feature("person.2.fill", "Lets a family member or friend help you check")
           }
           .card(padding: 20)
 

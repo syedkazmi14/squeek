@@ -7,10 +7,7 @@
   enum DemoData {
     static let userId = "00000000-0000-0000-0000-00000000000a"
     static let helperId = "00000000-0000-0000-0000-00000000000b"
-    static let scamText =
-      "This is the IRS. A warrant for your arrest will be issued today. Pay with Google Play gift cards and do not tell anyone."
-
-    /// Value after a launch argument, e.g. `-SqueekTab warnings`.
+    /// Value after a launch argument, e.g. `-SqueekTab activity`.
     static func argument(_ name: String) -> String? {
       let args = ProcessInfo.processInfo.arguments
       guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }
@@ -59,10 +56,9 @@
          "history_sync":true,"share_incidents_with_helpers":true,"block_reported_numbers":false}
         """
       switch argument("-SqueekTab") {
-      case "warnings": model.selectedTab = .warnings
-      case "blocked": model.selectedTab = .blocked
-      case "family": model.selectedTab = .family
-      case "settings": model.selectedTab = .settings
+      case "activity": model.selectedTab = .activity
+      case "person": model.selectedTab = .person
+      case "settings": model.showingSettings = true
       default: break
       }
       model.applyDemo(
