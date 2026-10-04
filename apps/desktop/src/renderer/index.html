@@ -15,17 +15,23 @@
     <div class="app-shell">
       <header class="app-header">
         <h1><span class="brand-ring" aria-hidden="true"></span>Squeek</h1>
-        <button
-          id="mute"
-          class="quiet-button"
-          type="button"
-          aria-pressed="false"
-        >
-          Mute
-        </button>
+        <div class="header-actions">
+          <button
+            id="mute"
+            class="quiet-button"
+            type="button"
+            aria-pressed="false"
+          >
+            Mute
+          </button>
+          <button id="close" class="quiet-button close-button" type="button">
+            Close
+          </button>
+        </div>
       </header>
       <main>
         <section class="assessment" aria-labelledby="assessment-heading">
+          <p id="last-review" hidden>Last review</p>
           <div
             id="result"
             class="result"

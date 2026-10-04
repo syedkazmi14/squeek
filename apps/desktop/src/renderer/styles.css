@@ -319,3 +319,42 @@ summary {
     transform: none;
   }
 }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.app-header {
+  gap: 12px;
+}
+.app-header h1 {
+  font-size: 34px;
+  gap: 12px;
+}
+.app-header .brand-ring {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+}
+.close-button {
+  min-width: 70px;
+  padding-inline: 12px;
+  font-size: 18px;
+}
+#last-review {
+  color: var(--ochre);
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+@media (max-width: 480px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+  .header-actions {
+    margin-left: auto;
+  }
+  .app-header h1 {
+    font-size: 30px;
+  }
+}

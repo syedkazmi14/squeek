@@ -8,10 +8,45 @@ body {
 }
 div {
   position: absolute;
-  inset: 8px;
-  border: 3px solid #174e3d;
-  border-left-color: #a46c08;
+  inset: 4px;
+  background: #faf7f1f2;
+  border: 1px solid #d4d7cf;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px #182b2530;
+}
+div:before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 3px solid #59645e;
   border-top-color: transparent;
   border-radius: 50%;
-  box-shadow: 0 0 0 4px #faf7f155;
+  transform: rotate(-20deg);
+}
+div:after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #faf7f1;
+  border-radius: 50%;
+  background: #59645e;
+}
+body[data-state="monitoring"] div:before {
+  border-color: #174e3d;
+  border-top-color: transparent;
+  border-left-color: #a46c08;
+}
+body[data-state="monitoring"] div:after {
+  background: #174e3d;
+}
+body[data-state="unknown"] div:after,
+body[data-state="risk"] div:after {
+  background: #a46c08;
+}
+body[data-state="risk"] div:before {
+  border-color: #a46c08;
+  border-top-color: transparent;
 }

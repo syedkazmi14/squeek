@@ -18,3 +18,16 @@ test("IPC excludes foreign frames and unbounded or malformed commands", () => {
     { enabled: true, browser: "chrome" },
   );
 });
+
+test("sidebar visibility requests are payload-free and limited to its frame", () => {
+  assert.equal(validateInput("show", undefined), undefined);
+  assert.equal(validateInput("hide", undefined), undefined);
+  assert.throws(() => validateInput("hide", { enabled: false }));
+  assert.equal(allowedFrame("squeek://app/halo.html", true), false);
+});
+
+test("browser selection requires a string rather than a coercible value", () => {
+  assert.throws(() =>
+    validateInput("monitor", { enabled: true, browser: ["chrome"] }),
+  );
+});

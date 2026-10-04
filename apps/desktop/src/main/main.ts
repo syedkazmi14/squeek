@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
 import { createObserverClient } from "./observer-client.ts";
 import { Monitoring } from "./monitoring.ts";
+import { Companion } from "./companion.ts";
 import { allowedFrame, validateInput } from "./ipc-policy.ts";
 import { ProviderGate } from "./provider-gate.ts";
 import { createJevProvider } from "../../../../packages/providers/src/jev.ts";
@@ -50,12 +51,16 @@ const key = !app.isPackaged ? process.env.TYPESAFE_API_KEY : undefined;
 const providerGate = new ProviderGate(key ? createJevProvider(key) : undefined);
 let manualAbort: AbortController | undefined;
 let quitting = false;
+let companion: Companion | undefined;
+let reviewExpiry: ReturnType<typeof setTimeout> | undefined;
 let state: {
   providerConfigured: boolean;
   cloudEnabled: boolean;
   monitoring: boolean;
   health: string;
   revision: number;
+  browser: "chrome" | "msedge";
+  assessmentCurrent?: boolean;
   assessment?: Assessment;
 } = {
   providerConfigured: providerGate.configured,
@@ -63,11 +68,24 @@ let state: {
   monitoring: false,
   health: "paused",
   revision: 0,
+  browser: "chrome",
 };
 let scheduler: AssessmentScheduler | undefined;
 const publish = () => {
   if (panel && !panel.isDestroyed())
     panel.webContents.send("squeek:state", state);
+  if (halo && !halo.isDestroyed())
+    halo.webContents.send("squeek:state", {
+      status:
+        state.assessmentCurrent && state.assessment?.state === "high_risk"
+          ? "risk"
+          : !state.monitoring
+            ? "paused"
+            : state.health === "watching"
+              ? "monitoring"
+              : "unknown",
+    });
+  refreshTray();
 };
 const resource = app.isPackaged
   ? join(process.resourcesPath, "observer", "Squeek.Observer.exe")
@@ -80,7 +98,12 @@ const monitor = new Monitoring({
     if (health.state !== "available") {
       scheduler?.pause();
       scheduler = undefined;
-      delete state.assessment;
+      state.assessmentCurrent = false;
+      if (
+        !state.assessment ||
+        !["high_risk", "caution"].includes(state.assessment.state)
+      )
+        delete state.assessment;
       state.revision++;
     } else if (state.monitoring && !scheduler) scheduler = makeScheduler();
     publish();
@@ -95,15 +118,78 @@ function makeScheduler() {
           ? { provider: providerGate.provider()! }
           : {}),
       }),
-    onResult: (assessment) => {
-      state.assessment = assessment;
-      state.revision++;
-      publish();
-      if (assessment.state === "high_risk") panel?.showInactive();
-    },
+    onResult: acceptAssessment,
   });
 }
+function acceptAssessment(assessment: Assessment) {
+  if (reviewExpiry) clearTimeout(reviewExpiry);
+  state.assessment = assessment;
+  state.assessmentCurrent = true;
+  state.revision++;
+  publish();
+  companion?.assessment(assessment);
+  reviewExpiry = setTimeout(() => {
+    delete state.assessment;
+    state.assessmentCurrent = false;
+    state.revision++;
+    publish();
+  }, 60000);
+}
+async function startMonitoring(browser: "chrome" | "msedge") {
+  pause();
+  state.browser = browser;
+  state.monitoring = true;
+  state.health = "starting";
+  scheduler = makeScheduler();
+  publish();
+  await monitor.start(browser);
+}
+function hideSidebar() {
+  manualAbort?.abort();
+  manualAbort = undefined;
+  companion?.hideSidebar();
+  if (panel && !panel.isDestroyed())
+    panel.webContents.send("squeek:sidebar-hidden");
+}
+function refreshTray() {
+  if (!tray || tray.isDestroyed()) return;
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Settings", click: () => companion?.showSidebar(true) },
+      { type: "separator" },
+      {
+        label: "Start monitoring Chrome",
+        enabled: !state.monitoring || state.browser !== "chrome",
+        click: () => {
+          void startMonitoring("chrome");
+        },
+      },
+      {
+        label: "Start monitoring Edge",
+        enabled: !state.monitoring || state.browser !== "msedge",
+        click: () => {
+          void startMonitoring("msedge");
+        },
+      },
+      { label: "Pause monitoring", enabled: state.monitoring, click: pause },
+      {
+        label: "Show companion",
+        type: "checkbox",
+        checked: companion?.isVisible ?? true,
+        click: (item) => {
+          companion?.setVisible(item.checked);
+          refreshTray();
+        },
+      },
+      { type: "separator" },
+      { label: "Quit", click: () => app.quit() },
+    ]),
+  );
+}
 function pause() {
+  if (reviewExpiry) clearTimeout(reviewExpiry);
+  reviewExpiry = undefined;
+  companion?.resetAlert();
   reviews.invalidate();
   demoAction = undefined;
   demoAssessment = undefined;
@@ -124,15 +210,24 @@ function pause() {
     monitoring: false,
     health: "paused",
     revision: state.revision + 1,
+    browser: state.browser,
   };
-  if (halo && !halo.isDestroyed()) halo.hide();
   publish();
 }
-function secureWindow(options: { width: number; height: number }) {
+function secureWindow(options: {
+  width: number;
+  height: number;
+  sidebar?: boolean;
+}) {
+  const { sidebar = false, ...dimensions } = options;
   const window = new BrowserWindow({
-    ...options,
-    minWidth: 480,
-    minHeight: 600,
+    ...dimensions,
+    minWidth: sidebar ? 320 : 480,
+    minHeight: sidebar ? 360 : 600,
+    frame: !sidebar,
+    skipTaskbar: sidebar,
+    alwaysOnTop: sidebar,
+    resizable: !sidebar,
     show: false,
     backgroundColor: "#f5f1e8",
     title: "Squeek",
@@ -149,7 +244,7 @@ function secureWindow(options: { width: number; height: number }) {
   window.webContents.on("will-navigate", (event, url) => {
     if (!url.startsWith("squeek://app/")) event.preventDefault();
   });
-  window.once("ready-to-show", () => window.show());
+  if (!sidebar) window.once("ready-to-show", () => window.show());
   return window;
 }
 function observation(text: string, revision: number): Observation {
@@ -200,7 +295,10 @@ function parseDemo(value: unknown): {
     destination: string;
   };
 }
+const primaryInstance = app.requestSingleInstanceLock();
+if (!primaryInstance) app.quit();
 app.whenReady().then(async () => {
+  if (!primaryInstance) return;
   session.defaultSession.setPermissionRequestHandler(
     (_webContents, _permission, callback) => callback(false),
   );
@@ -219,18 +317,18 @@ app.whenReady().then(async () => {
         "demo.js",
         "halo.html",
         "halo.css",
+        "halo.js",
       ].includes(name)
     )
       return new Response("", { status: 404 });
     return net.fetch(pathToFileURL(join(root, name)).href);
   });
-  panel = secureWindow({ width: 560, height: 820 });
+  panel = secureWindow({ width: 520, height: 820, sidebar: true });
   panel.on("close", (event) => {
     if (!quitting) {
       event.preventDefault();
-      panel?.hide();
+      hideSidebar();
     }
-    pause();
   });
   ipcMain.handle(
     "squeek:request",
@@ -245,19 +343,22 @@ app.whenReady().then(async () => {
         ) {
           const input = validateInput(action, value);
           if (action === "state") return structuredClone(state);
+          if (action === "show") {
+            companion?.showSidebar(true);
+            return undefined;
+          }
+          if (action === "hide") {
+            hideSidebar();
+            return undefined;
+          }
           if (action === "monitor") {
-            pause();
             const settings = input as {
               enabled: boolean;
               browser: "chrome" | "msedge";
             };
             if (settings.enabled) {
-              state.monitoring = true;
-              state.health = "starting";
-              scheduler = makeScheduler();
-              publish();
-              await monitor.start(settings.browser);
-            }
+              await startMonitoring(settings.browser);
+            } else pause();
             return structuredClone(state);
           }
           if (action === "cloud") {
@@ -282,9 +383,7 @@ app.whenReady().then(async () => {
               },
             );
             if (generation === state.revision) {
-              state.assessment = assessment;
-              state.revision++;
-              publish();
+              acceptAssessment(assessment);
             }
             return structuredClone(state);
           }
@@ -379,6 +478,7 @@ app.whenReady().then(async () => {
     alwaysOnTop: true,
     hasShadow: false,
     webPreferences: {
+      preload: join(root, "preload.cjs"),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -388,44 +488,26 @@ app.whenReady().then(async () => {
   halo.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   halo.webContents.on("will-navigate", (event) => event.preventDefault());
   await halo.loadURL("squeek://app/halo.html");
-  const follow = setInterval(() => {
-    if (!halo || halo.isDestroyed()) return;
-    if (
-      !state.monitoring ||
-      !["watching", "changed", "unchanged"].includes(state.health)
-    ) {
-      halo.hide();
-      return;
-    }
-    const point = screen.getCursorScreenPoint(),
-      area = screen.getDisplayNearestPoint(point).workArea;
-    halo.setPosition(
-      Math.round(
-        Math.max(area.x, Math.min(point.x + 16, area.x + area.width - 48)),
-      ),
-      Math.round(
-        Math.max(area.y, Math.min(point.y + 16, area.y + area.height - 48)),
-      ),
-    );
-    halo.showInactive();
-  }, 60);
-  app.once("before-quit", () => clearInterval(follow));
+  companion = new Companion({
+    panel,
+    halo,
+    cursor: () => screen.getCursorScreenPoint(),
+    workArea: (point) => screen.getDisplayNearestPoint(point).workArea,
+  });
+  companion.start();
   const icon = nativeImage
-    .createFromPath(join(root, "icon.png"))
+    .createFromPath(join(root, "tray-icon.png"))
     .resize({ width: 20, height: 20 });
   tray = new Tray(icon);
   tray.setToolTip("Squeek");
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: "Show Squeek", click: () => panel?.show() },
-      { label: "Pause", click: pause },
-      { label: "Quit", click: () => app.quit() },
-    ]),
-  );
+  tray.on("click", () => tray?.popUpContextMenu());
+  tray.on("double-click", () => companion?.showSidebar(true));
+  publish();
 });
 app.on("before-quit", () => {
   quitting = true;
   pause();
+  companion?.stop();
   reviews.invalidate();
   tray?.destroy();
 });

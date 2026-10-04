@@ -16,13 +16,16 @@ interface AppState {
   revision: number;
   providerConfigured?: boolean;
   cloudEnabled?: boolean;
+  browser?: "chrome" | "msedge";
+  assessmentCurrent?: boolean;
 }
 interface SqueekApi {
   invoke(
-    action: "state" | "monitor" | "check" | "demo" | "cloud",
+    action: "state" | "monitor" | "check" | "demo" | "cloud" | "hide" | "show",
     value?: unknown,
   ): Promise<unknown>;
   onState(callback: (state: AppState) => void): () => void;
+  onHidden(callback: () => void): () => void;
 }
 declare global {
   interface Window {
@@ -118,9 +121,14 @@ function render(next: AppState): void {
   const nextKey = incidentKey(next.assessment);
   const changed = assessmentKey !== nextKey;
   const paused = current.monitoring && !next.monitoring;
-  if (changed || paused) cancelSpeech();
+  const sourceLost =
+    current.assessmentCurrent !== false && next.assessmentCurrent === false;
+  if (changed || paused || sourceLost) cancelSpeech();
   current = next;
   assessmentKey = nextKey;
+  if (current.browser) browser.value = current.browser;
+  element("last-review").hidden =
+    !current.assessment || current.assessmentCurrent !== false;
   element("monitoring-state").textContent = current.monitoring
     ? "Monitoring"
     : "Paused";
@@ -200,6 +208,10 @@ mute.addEventListener("click", () => {
 });
 replay.addEventListener("click", speak);
 voiceRate.addEventListener("change", cancelSpeech);
+element("close").addEventListener("click", () => {
+  cancelSpeech();
+  void window.squeek.invoke("hide").catch(() => {});
+});
 window.speechSynthesis?.addEventListener("voiceschanged", () => {
   refreshControls();
   if (pendingSpeechKey === assessmentKey && localVoice()) speak();
@@ -208,6 +220,7 @@ window.speechSynthesis?.addEventListener("voiceschanged", () => {
 render(current);
 if (window.squeek) {
   const unsubscribe = window.squeek.onState(render);
+  const stopHiddenListener = window.squeek.onHidden(cancelSpeech);
   void window.squeek
     .invoke("state")
     .then((value) => render(value as AppState))
@@ -218,6 +231,7 @@ if (window.squeek) {
     "beforeunload",
     () => {
       unsubscribe();
+      stopHiddenListener();
       cancelSpeech();
     },
     { once: true },

@@ -6,19 +6,21 @@ The main process launches a fixed bundled observer path. Sandboxed renderers hav
 
 The native helper collects read-only accessible text only after explicit monitoring opt-in, using PID/HWND/process-start identity and the selected foreground browser's physical rectangle. Metadata polling is bounded to one cycle per two seconds. Text is read initially and after a scoped accessibility change, then foreground identity and bounds are checked again. Pause closes the helper and cancels assessment work. No screenshots or OCR are captured in this build.
 
-The pointer ring follows the Windows cursor locally at a bounded interval. It is click-through, does not take focus, and does not replace or intercept input. The review panel remains the accessible interface. Closing the panel pauses monitoring and hides it; the tray can show it again. Quit closes native work and windows.
+Squeek starts in the Windows notification area with a visible click-through companion following the cursor locally at a bounded interval. It does not take focus or intercept input. The sidebar starts hidden, has no taskbar entry, and docks to the current display when a new suspicious assessment arrives. Closing it hides the review and cancels its speech without stopping enabled monitoring. Settings and browser start/pause controls are available from the tray. Pause stops observation explicitly while leaving the neutral companion visible; Quit ends the process. Windows controls whether the tray icon is visible directly or inside its overflow arrow.
+
+A source change cancels in-flight assessment work. A recent suspicious result can remain labeled **Last review** while its source is unavailable; captured assessment/evidence is removed after 60 seconds or immediately on Pause. Repeated copies of the same alert do not reopen a dismissed sidebar within the deduplication window. This behavior does not establish real browser extraction support.
 
 ## Development provider
 
 `.env.example` documents the optional local credential. Development loads `.env` in main only. Jev is off until the user selects the data-sharing checkbox. Text is redacted and bounded before classification. The session has a maximum of 100 classification starts and 100 actual HTTP attempts, including retries; concurrent classifications are limited to two. Failed/missing provider responses preserve local evidence and uncertainty. Packaged builds ignore developer credentials and cannot enable cloud classification.
 
-Redaction cannot guarantee removal of every personal detail. Never test a live provider with private correspondence without separate consent. Real-world classification accuracy and live latency/token cost remain unmeasured.
+Redaction cannot guarantee removal of every personal detail. Never test a live provider with private correspondence without separate consent. Real-world classification accuracy and representative latency/token cost remain unmeasured. Isolated synthetic live smoke results are recorded in `demo-results.md`.
 
 ## Packaging
 
 `npm.cmd run observer:build` builds the self-contained Windows helper, C# policy checks, and controlled WPF fixture. `npm.cmd run package:win` builds Electron and a per-user NSIS installer under `artifacts/installer`. It includes only desktop bundles and observer/runtime resources. Development SDKs, `.env`, test fixtures, raw messages, and development dependencies are excluded.
 
-The local installer is unsigned. Building it and launching the unpacked app do not prove installation on a clean Windows machine. Standard-user installation, Windows security prompts, multi-monitor/DPI behavior, actual bank/mail pages, screen-reader behavior, and older-user usability still need separate testing.
+The local installer is unsigned. This machine's Device Guard policy blocked the latest unpacked executable; the development Electron runtime still launches. Building the package does not prove installation or successful launch on a clean Windows machine. Standard-user installation, signing, Windows security prompts, multi-monitor/DPI behavior, actual bank/mail pages, screen-reader behavior, and older-user usability still need separate testing.
 
 ## Test commands
 

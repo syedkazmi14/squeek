@@ -25,7 +25,7 @@ npm.cmd run test:desktop
 npm.cmd run package:win
 ```
 
-Monitoring starts paused. Choose Chrome or Microsoft Edge and enable monitoring explicitly. Only the selected foreground browser is eligible for observation. Manual check accepts user-entered text; Open demo opens a local simulation whose exact action requires review. External pages receive advisory warnings only.
+Squeek starts in the Windows tray with its cursor companion visible and the review sidebar hidden. Use the tray to start Chrome or Edge monitoring or open Settings. Only the selected foreground browser is eligible for observation. Closing the sidebar leaves enabled monitoring running; Pause and Quit are explicit tray actions. New suspicious assessments open the sidebar automatically. Manual check accepts user-entered text; Open demo opens a local simulation whose exact action requires review. External pages receive advisory warnings only.
 
 The default and packaged app use local English rules and Windows local speech. Image-only content, unsupported accessibility trees, incomplete reads, and unknown identities remain coverage gaps. OCR and live Gmail/Edge compatibility are not verified or shipped.
 

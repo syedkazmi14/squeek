@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { spawn } from "node:child_process";
+import electronExecutable from "electron";
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 delete env.TYPESAFE_API_KEY;
@@ -23,6 +25,130 @@ try {
   const page = await application.firstWindow();
   page.on("pageerror", (error) => errors.push(error.message));
   await expect(page.locator("#health")).toHaveText("paused");
+  await expect
+    .poll(() =>
+      application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL() === "squeek://app/index.html")
+          ?.isVisible(),
+      ),
+    )
+    .toBe(false);
+  await expect
+    .poll(() =>
+      application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL() === "squeek://app/halo.html")
+          ?.isVisible(),
+      ),
+    )
+    .toBe(true);
+  const haloFlags = await application.evaluate(({ BrowserWindow }) => {
+    const halo = BrowserWindow.getAllWindows().find(
+      (w) => w.webContents.getURL() === "squeek://app/halo.html",
+    );
+    return { focusable: halo.isFocusable(), onTop: halo.isAlwaysOnTop() };
+  });
+  assert.deepEqual(haloFlags, { focusable: false, onTop: true });
+  await application.evaluate(({ screen }) => {
+    screen.__originalCursor = screen.getCursorScreenPoint;
+    const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+    let tick = 0;
+    screen.getCursorScreenPoint = () => ({ x: area.x + 80 + (tick++ % 20), y: area.y + 80 });
+  });
+  let movingBounds;
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    movingBounds = await application.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL() === "squeek://app/halo.html")
+        .getBounds(),
+    );
+  } finally {
+    await application.evaluate(({ screen }) => {
+      screen.getCursorScreenPoint = screen.__originalCursor;
+      delete screen.__originalCursor;
+    });
+  }
+  assert.ok(
+    movingBounds.width <= 49 && movingBounds.height <= 49,
+    "DPI rounding must not enlarge the companion as it moves",
+  );
+  const duplicate = spawn(
+    executablePath ?? electronExecutable,
+    executablePath ? [`--user-data-dir=${profile}`] : [".", `--user-data-dir=${profile}`],
+    { env, stdio: "ignore", windowsHide: true },
+  );
+  const duplicateExit = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      duplicate.kill();
+      reject(Error("Duplicate companion did not exit"));
+    }, 5000);
+    duplicate.once("error", (error) => { clearTimeout(timer); reject(error); });
+    duplicate.once("exit", (code) => { clearTimeout(timer); resolve(code); });
+  });
+  assert.equal(duplicateExit, 0, "second launch must use the existing tray instance");
+  const haloPage = application
+    .windows()
+    .find((window) => window.url() === "squeek://app/halo.html");
+  await haloPage.screenshot({
+    path: "artifacts/qa/companion.png",
+    omitBackground: true,
+  });
+  await page.evaluate(() => window.squeek.invoke("show"));
+  await expect
+    .poll(() =>
+      application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL() === "squeek://app/index.html")
+          ?.isVisible(),
+      ),
+    )
+    .toBe(true);
+  await page.locator("#close").click();
+  await expect
+    .poll(() =>
+      application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL() === "squeek://app/index.html")
+          ?.isVisible(),
+      ),
+    )
+    .toBe(false);
+  await page.evaluate(() =>
+    window.squeek.invoke(
+      "check",
+      "IRS: send money using gift cards immediately.",
+    ),
+  );
+  await expect
+    .poll(() =>
+      application.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL() === "squeek://app/index.html")
+          ?.isVisible(),
+      ),
+    )
+    .toBe(true);
+  const dock = await application.evaluate(({ BrowserWindow, screen }) => {
+    const bounds = BrowserWindow.getAllWindows()
+      .find((w) => w.webContents.getURL() === "squeek://app/index.html")
+      .getBounds();
+    return {
+      bounds,
+      area: screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+        .workArea,
+    };
+  });
+  assert.ok(dock.bounds.x + dock.bounds.width <= dock.area.x + dock.area.width);
+  assert.ok(
+    dock.bounds.y + dock.bounds.height <= dock.area.y + dock.area.height,
+  );
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  );
   if (executablePath)
     assert.equal(
       await page.evaluate(
@@ -141,9 +267,17 @@ try {
       .show(),
   );
   await expect(page.locator("#monitoring-state")).toHaveText("Paused");
+  assert.equal(
+    await application.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL() === "squeek://app/halo.html")
+        .isVisible(),
+    ),
+    true,
+  );
   assert.deepEqual(errors, []);
   console.log(
-    "Electron flows passed: isolated renderer, local voices, warning visible, mute/cancel, changed-action invalidation, simulated review, invalid IPC.",
+    "Electron flows passed: tray-only startup, visible nonfocusable companion, close-to-hide, warning-triggered docked sidebar, isolated renderer, local voices, mute/cancel, action review, invalid IPC.",
   );
 } finally {
   await application.close();

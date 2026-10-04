@@ -1,6 +1,6 @@
 import { deflateSync } from "node:zlib";
 // Code-native ring asset, using the same forest/ochre tokens as the companion.
-export function ringPng(size = 256) {
+export function ringPng(size = 256, backdrop = false) {
   const pixels = Buffer.alloc(size * (size * 4 + 1));
   for (let y = 0; y < size; y++)
     for (let x = 0; x < size; x++) {
@@ -21,11 +21,19 @@ export function ringPng(size = 256) {
             if (dx < 0 && dy > 0) ochre++;
           }
         }
-      if (!alpha) continue;
       const i = y * (size * 4 + 1) + 1 + x * 4;
+      const background =
+        backdrop &&
+        Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2) < size * 0.46;
+      if (!alpha && !background) continue;
       const color = ochre > alpha / 2 ? [164, 108, 8] : [23, 78, 61];
-      for (let c = 0; c < 3; c++) pixels[i + c] = color[c];
-      pixels[i + 3] = Math.round((alpha / 16) * 255);
+      for (let c = 0; c < 3; c++)
+        pixels[i + c] = background
+          ? Math.round(
+              (color[c] * alpha) / 16 + [250, 247, 241][c] * (1 - alpha / 16),
+            )
+          : color[c];
+      pixels[i + 3] = background ? 255 : Math.round((alpha / 16) * 255);
     }
   const crc = (buffer) => {
     let n = 0xffffffff;

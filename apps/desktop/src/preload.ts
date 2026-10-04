@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("squeek", {
+  onHidden: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on("squeek:sidebar-hidden", listener);
+    return () => ipcRenderer.removeListener("squeek:sidebar-hidden", listener);
+  },
   invoke: (action: string, value?: unknown) =>
     ipcRenderer.invoke("squeek:request", action, value),
   onState: (callback: (state: unknown) => void) => {

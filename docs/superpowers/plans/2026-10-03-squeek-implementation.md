@@ -151,3 +151,11 @@ Prioritize a working real-app warning over additional adapters, cloud voice, cal
 | 5 | Single per-user unsigned NSIS package with self-contained helper/runtime | Clean-machine installation, signing and release publication |
 
 The implementation uses `apps/desktop/src/main/main.ts`, `preload.ts`, renderer HTML/TypeScript/CSS, and root `electron-builder.yml`. The simulation is bundled `renderer/demo.html` rather than a separate installed app. See `docs/development/desktop.md` for exact commands and runtime boundaries. Unchecked original items retain their broader validation requirements; this checkpoint does not claim universal coverage or completion of OCR/live-provider work.
+
+## Tray and cursor lifecycle revision
+
+User correction: Squeek is a cursor companion first. Startup should show only the cursor-following icon and notification-area tray icon. Suspicious assessments open a docked review sidebar; explicitly opening Settings is also allowed. Closing the sidebar keeps the companion and enabled observation alive.
+
+1. Correct lifecycle in `apps/desktop/src/main/{companion,main}.ts`: always-present local companion, hidden initial sidebar, no taskbar entry, notification-area controls, and close-to-hide without pausing. Verify with fake-window lifecycle tests and real Electron visibility checks.
+2. Add sidebar controls and source-aware alerts in `apps/desktop/src/renderer/` and narrow IPC policy. Position the sidebar on the current display, deduplicate repeated alerts, and retain a clearly labeled last review when its source is unavailable. Pause remains an explicit action and cloud opt-in is preserved. Verify bounds, close/pause distinction, safe IPC, and warning presentation.
+3. Build, run affected core/Electron checks, inspect the rendered companion/sidebar, and restart the user's development instance. Rebuild the installer after verification. Real Chrome extraction and OCR remain separately unverified; this lifecycle change does not expand capture permissions or add Windows-login auto-start.

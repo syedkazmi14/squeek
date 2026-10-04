@@ -2,7 +2,10 @@ export function allowedFrame(url: string, mainFrame: boolean): boolean {
   return mainFrame && url === "squeek://app/index.html";
 }
 export function validateInput(action: unknown, value: unknown): unknown {
-  if (action === "state" || action === "demo") {
+  if (
+    typeof action === "string" &&
+    ["state", "demo", "show", "hide"].includes(action)
+  ) {
     if (value !== undefined) throw Error("Invalid request");
     return undefined;
   }
@@ -22,7 +25,8 @@ export function validateInput(action: unknown, value: unknown): unknown {
     if (
       Object.keys(v).length !== 2 ||
       typeof v.enabled !== "boolean" ||
-      !["chrome", "msedge"].includes(String(v.browser))
+      typeof v.browser !== "string" ||
+      !["chrome", "msedge"].includes(v.browser)
     )
       throw Error("Invalid request");
     return { enabled: v.enabled, browser: v.browser };

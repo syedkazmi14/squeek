@@ -32,7 +32,9 @@ for (const name of [
   "demo.js",
   "halo.html",
   "halo.css",
+  "halo.js",
 ])
   await copyFile(`apps/desktop/src/renderer/${name}`, `dist/desktop/${name}`);
 
 await writeFile("dist/desktop/icon.png", ringPng());
+await writeFile("dist/desktop/tray-icon.png", ringPng(64, true));

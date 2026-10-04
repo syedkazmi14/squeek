@@ -1,6 +1,6 @@
 # Detection evaluation
 
-This implementation has synthetic technical tests only. It has not been evaluated against real correspondence or a live TypeSafe account. No provider credential or private-content request was used.
+This implementation has synthetic technical tests and isolated live TypeSafe smoke checks using a privately configured user-supplied development key. It has not been evaluated against real correspondence. No private content was sent.
 
 ## Implemented checks
 
@@ -19,6 +19,6 @@ Transport checks use fake fetch responses only, covering authentication failure,
 
 ## Remaining evaluation
 
-Use user-approved representative scam, legitimate, ambiguous, and adversarial examples before relying on detection quality. Measure false positives/negatives per category and coverage level, test option-order effects against a configured live account using approved non-private fixtures, and separately record live token counts and latency. Local rules are English heuristics with narrow negated-request suppression and may miss paraphrases, complex negation, image-only messages, split context, hidden destinations, and unfamiliar payment methods. Real-world evaluation and live smoke testing remain pending.
+Use user-approved representative scam, legitimate, ambiguous, and adversarial examples before relying on detection quality. Measure false positives/negatives per category and coverage level, test option-order effects against a configured live account using approved non-private fixtures, and separately record live token counts and latency. Local rules are English heuristics with narrow negated-request suppression and may miss paraphrases, complex negation, image-only messages, split context, hidden destinations, and unfamiliar payment methods. Real-world evaluation remains pending. A live synthetic scam probe returned HTTP 200 with `unconventional_payment`, 602 input tokens and 431 ms; an explicitly enabled desktop safety-guidance check returned available provider health and no detected signal in 557 ms. These are isolated smoke results, not detection-quality or reliability evaluation.
 
 API contract source: [TypeSafe API reference](https://docs.typesafe.ai/api), checked during implementation. Provider availability is distinct from observation completeness.
