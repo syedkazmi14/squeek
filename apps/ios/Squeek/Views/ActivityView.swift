@@ -132,7 +132,7 @@ private struct ActivityHeader: View {
 
 /// How an incident reads in a sentence, shared by the two Activity row styles.
 @MainActor
-private struct IncidentWords {
+struct IncidentWords {
   let incident: Incident
   let model: AppModel
 
@@ -187,7 +187,7 @@ private struct IncidentWords {
 }
 
 /// One line of the feed: a dot for how serious it was, then a sentence. No boxes around each one.
-private struct ActivityRow: View {
+struct ActivityRow: View {
   @EnvironmentObject private var model: AppModel
   let incident: Incident
 

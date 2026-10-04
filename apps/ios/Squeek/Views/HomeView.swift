@@ -104,10 +104,10 @@ private struct SpeechBubble: View {
         EmptyView()
       }
     }
-    .card(padding: 20, tint: summary.mood == .concerned ? Theme.dangerSoft : nil)
+    .card(padding: 20)
     .overlay(alignment: .top) {
       BubbleTail()
-        .fill(summary.mood == .concerned ? Theme.dangerSoft : Theme.card)
+        .fill(Theme.card)
         .frame(width: 28, height: 14)
         .offset(y: -13)
         .accessibilityHidden(true)
@@ -200,15 +200,12 @@ struct RecentWarnings: View {
         VStack(spacing: 0) {
           ForEach(Array(recent.enumerated()), id: \.element.id) { index, incident in
             NavigationLink { IncidentDetailView(incident: incident) } label: {
-              IncidentRow(incident: incident)
-                .padding(.vertical, 12)
-                .contentShape(Rectangle())
+              ActivityRow(incident: incident)
             }
             .buttonStyle(.plain)
-            if index < recent.count - 1 { Divider().padding(.leading, 56) }
+            if index < recent.count - 1 { Rectangle().fill(Theme.hairline).frame(height: 1) }
           }
         }
-        .card(padding: 14)
       }
     }
   }
