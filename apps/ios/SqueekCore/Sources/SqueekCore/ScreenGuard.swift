@@ -26,14 +26,25 @@ public struct ScreenGuardAlert: Codable, Sendable, Identifiable, Equatable {
   }
 }
 
-/// Written by the extension each time it looks at the screen.
+/// Written by the extension each time it looks at the screen. Beyond "it's alive" it records what
+/// the last look found, as a count and a verdict only, never the words, so the app can show whether
+/// Screen Guard is really reading the screen.
 public struct ScreenGuardStatus: Codable, Sendable, Equatable {
   public var startedAt: Date
   public var lastFrameAt: Date
+  /// How many times it has looked since the broadcast started.
+  public var looks: Int?
+  /// How many characters the last look read.
+  public var lastCharacters: Int?
+  /// "clear", "caution", "danger", "own_screen", "little_text", "no_rules", "image_failed" or "no_text".
+  public var lastResult: String?
 
-  public init(startedAt: Date, lastFrameAt: Date) {
+  public init(startedAt: Date, lastFrameAt: Date, looks: Int? = nil, lastCharacters: Int? = nil, lastResult: String? = nil) {
     self.startedAt = startedAt
     self.lastFrameAt = lastFrameAt
+    self.looks = looks
+    self.lastCharacters = lastCharacters
+    self.lastResult = lastResult
   }
 
   /// The extension looks every 30 seconds, so a beat in the last 90 means it's still running.

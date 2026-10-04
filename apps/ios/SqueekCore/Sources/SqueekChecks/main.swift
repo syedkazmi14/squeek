@@ -122,6 +122,13 @@ let store = SharedStore(directory: tempDir)
 check("no status before a broadcast", store.screenGuardStatus() == nil, "")
 store.saveScreenGuardStatus(beat)
 check("status round-trips", store.screenGuardStatus()?.lastFrameAt == beat.lastFrameAt, "")
+let richer = ScreenGuardStatus(startedAt: t0, lastFrameAt: t0, looks: 3, lastCharacters: 214, lastResult: "clear")
+store.saveScreenGuardStatus(richer)
+check("what the last look found round-trips", store.screenGuardStatus() == richer, "")
+let oldJSON = #"{"startedAt":"2026-10-04T10:00:00Z","lastFrameAt":"2026-10-04T10:00:30Z"}"#
+let decoder = JSONDecoder()
+decoder.dateDecodingStrategy = .iso8601
+check("an older status without the new fields still reads", (try? decoder.decode(ScreenGuardStatus.self, from: Data(oldJSON.utf8)))?.looks == nil, "")
 store.clearScreenGuardStatus()
 check("status clears when the broadcast ends", store.screenGuardStatus() == nil, "")
 store.addScreenGuardAlert(ScreenGuardAlert(id: "b", date: t0.addingTimeInterval(5), headline: "Second", excerpt: nil, reasons: [], notified: false))

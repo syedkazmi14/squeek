@@ -1,3 +1,4 @@
+import SqueekCore
 import ReplayKit
 import SwiftUI
 
@@ -54,6 +55,12 @@ struct ScreenGuardActions: View {
         Label("Screen Guard is running. Stop it any time from the red bar or Control Center.", systemImage: "checkmark.circle.fill")
           .font(.nunito(.subheadline, .semibold))
           .foregroundStyle(Theme.safe)
+        if let status = model.screenGuardStatus {
+          Text(lastLook(status))
+            .font(.nunito(.footnote))
+            .foregroundStyle(Theme.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+        }
       } else {
         StartScreenGuardButton()
       }
@@ -65,5 +72,24 @@ struct ScreenGuardActions: View {
         try? await Task.sleep(for: .seconds(2))
       }
     }
+  }
+
+  /// "Last looked 12 seconds ago and read 318 characters: no scam signs." So it's clear whether it's reading.
+  private func lastLook(_ status: ScreenGuardStatus) -> String {
+    guard let result = status.lastResult else { return "Waiting for the first look. It looks about every 30 seconds." }
+    let ago = Int(Date().timeIntervalSince(status.lastFrameAt))
+    let when = ago < 5 ? "just now" : "\(ago) seconds ago"
+    let read = (status.lastCharacters ?? 0) > 0 ? " and read \(status.lastCharacters ?? 0) characters" : ""
+    let outcome: String
+    switch result {
+    case "clear": outcome = "no scam signs found."
+    case "caution": outcome = "a few things looked odd, not enough to warn."
+    case "danger": outcome = "that looked like a scam. Check your notifications and Activity."
+    case "own_screen": outcome = "skipped, that was a Squeek screen."
+    case "little_text": outcome = "too little text to judge."
+    case "no_rules": outcome = "setup problem: the scam rules are missing."
+    default: outcome = "couldn't read the screen."
+    }
+    return "Last looked \(when)\(read): \(outcome) (\(status.looks ?? 0) looks so far)"
   }
 }

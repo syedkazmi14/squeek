@@ -52,6 +52,8 @@ final class AppModel: ObservableObject {
 
   /// Whether the Screen Guard broadcast is running. The extension reports it in the App Group.
   @Published private(set) var screenGuardOn = false
+  /// What Screen Guard last reported, for the setup card.
+  @Published private(set) var screenGuardStatus: ScreenGuardStatus?
 
   /// This person's Squeek phone line, where unanswered calls are forwarded. Nil until claimed.
   @Published private(set) var screeningLine: String?
@@ -500,7 +502,8 @@ final class AppModel: ObservableObject {
     guard !isDemo else { return }
     callBlockingStatus = await CallDirectorySync.status()
     notificationsOn = await Notifications.isAuthorized()
-    screenGuardOn = store?.screenGuardStatus()?.isRunning() ?? false
+    screenGuardStatus = store?.screenGuardStatus()
+    screenGuardOn = screenGuardStatus?.isRunning() ?? false
   }
 
   /// Collects what Screen Guard found while the app was closed. If its notification didn't go out,

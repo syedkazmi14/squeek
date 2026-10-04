@@ -18,6 +18,8 @@ final class SampleHandler: RPBroadcastSampleHandler {
   private let busyLock = NSLock()
   private var busy = false
   private var startedAt = Date()
+  private let statusLock = NSLock()
+  private var status = ScreenGuardStatus(startedAt: Date(), lastFrameAt: Date())
 
   private let appGroup = (Bundle.main.object(forInfoDictionaryKey: "SqueekAppGroup") as? String) ?? ""
   private lazy var store = SharedStore(appGroup: appGroup)
@@ -29,7 +31,10 @@ final class SampleHandler: RPBroadcastSampleHandler {
 
   override func broadcastStarted(withSetupInfo setupInfo: [String: NSObject]?) {
     startedAt = Date()
-    store?.saveScreenGuardStatus(ScreenGuardStatus(startedAt: startedAt, lastFrameAt: startedAt))
+    statusLock.lock()
+    status = ScreenGuardStatus(startedAt: startedAt, lastFrameAt: startedAt, looks: 0)
+    statusLock.unlock()
+    store?.saveScreenGuardStatus(status)
   }
 
   override func broadcastFinished() {
@@ -40,10 +45,10 @@ final class SampleHandler: RPBroadcastSampleHandler {
     guard sampleBufferType == .video, policy.shouldSample() else { return }
     guard tryBeginWork() else { return }
     guard let pixels = CMSampleBufferGetImageBuffer(sampleBuffer), let image = shrunk(pixels) else {
+      record("image_failed", characters: 0)
       endWork()
       return
     }
-    store?.saveScreenGuardStatus(ScreenGuardStatus(startedAt: startedAt, lastFrameAt: Date()))
     queue.async { [self] in
       defer { endWork() }
       autoreleasepool { inspect(image) }
@@ -63,12 +68,18 @@ final class SampleHandler: RPBroadcastSampleHandler {
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = .fast
     request.usesLanguageCorrection = false
-    guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return }
+    guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else {
+      record("no_text", characters: 0)
+      return
+    }
     let text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
 
-    guard ScreenGuardPolicy.hasEnoughText(text), !ScreenGuardPolicy.isOwnScreen(text), let checker else { return }
+    guard ScreenGuardPolicy.hasEnoughText(text) else { return record("little_text", characters: text.count) }
+    guard !ScreenGuardPolicy.isOwnScreen(text) else { return record("own_screen", characters: text.count) }
+    guard let checker else { return record("no_rules", characters: text.count) }
     let blocked = store?.blockList().domains.map(\.domain) ?? []
     let result = checker.checkText(text, blockedDomains: blocked)
+    record(result.level.rawValue, characters: text.count)
     // Only a likely scam interrupts. A cautious reading of whatever happens to be on screen would
     // nag far too often.
     guard result.level == .danger, policy.shouldAlert(fingerprint: text.hashValue) else { return }
@@ -78,6 +89,18 @@ final class SampleHandler: RPBroadcastSampleHandler {
       headline: result.headline, excerpt: excerpt, reasons: result.reasons.map(\.label), notified: false)
     alert.notified = notify(headline: result.headline)
     store?.addScreenGuardAlert(alert)
+  }
+
+  /// Leaves a note of what the last look found (counts and a verdict, never the words) for the app.
+  private func record(_ result: String, characters: Int) {
+    statusLock.lock()
+    status.lastFrameAt = Date()
+    status.looks = (status.looks ?? 0) + 1
+    status.lastCharacters = characters
+    status.lastResult = result
+    let snapshot = status
+    statusLock.unlock()
+    store?.saveScreenGuardStatus(snapshot)
   }
 
   /// Posts a notification and waits briefly for iOS to accept it. If a broadcast extension isn't
