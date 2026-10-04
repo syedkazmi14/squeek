@@ -17,7 +17,7 @@ function resize() {
 
 const R = 17; // body radius
 const S = R / 46; // scale for features sized against the original radius
-const HOVER = 18; // distance the ghost keeps from the cursor
+const HOVER = 30; // distance the ghost keeps from the cursor
 const N = 56; // outline points
 const PAD = R * 3; // covers tail, wobble and squash when clearing
 
