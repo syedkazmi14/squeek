@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io";
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // Rachel
+const DEFAULT_VOICE_ID = "s3TPKV1kjDlVtZbl4Ksh"; // the only voice this server uses
 const MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_flash_v2_5";
 const MAX_TEXT_LENGTH = 2000;
 const CONNECT_TIMEOUT_MS = 10000;
@@ -31,37 +31,6 @@ app.get("/api/config", (req, res) => {
   });
 });
 
-app.get("/api/voices", async (req, res) => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return res.status(500).json({ error: "ELEVENLABS_API_KEY is not set on the server" });
-  }
-
-  try {
-    const elevenRes = await fetch(`${ELEVENLABS_BASE}/v1/voices`, {
-      headers: { "xi-api-key": apiKey },
-    });
-
-    if (!elevenRes.ok) {
-      const detail = await elevenRes.text().catch(() => "");
-      console.error("[/api/voices] ElevenLabs error:", elevenRes.status, detail);
-      return res.status(502).json({ error: "Could not load voices", detail });
-    }
-
-    const data = await elevenRes.json();
-    res.json({
-      voices: (data.voices || []).map((v) => ({
-        voiceId: v.voice_id,
-        name: v.name,
-        category: v.category,
-      })),
-    });
-  } catch (err) {
-    console.error("[/api/voices] Fetch failed:", err.message);
-    res.status(502).json({ error: "Failed to reach ElevenLabs" });
-  }
-});
-
 /**
  * Streams MP3 straight through from ElevenLabs.
  *
@@ -80,16 +49,13 @@ async function handleTts(req, res) {
 
   const source = req.method === "GET" ? req.query : req.body || {};
   const text = typeof source.text === "string" ? source.text.trim() : "";
-  const resolvedVoiceId = source.voiceId || DEFAULT_VOICE_ID;
+  const resolvedVoiceId = DEFAULT_VOICE_ID; // client-supplied voiceId is ignored
 
   if (!text) {
     return res.status(400).json({ error: "`text` is required" });
   }
   if (text.length > MAX_TEXT_LENGTH) {
     return res.status(413).json({ error: `\`text\` must be ${MAX_TEXT_LENGTH} characters or fewer` });
-  }
-  if (!/^[A-Za-z0-9]{16,40}$/.test(resolvedVoiceId)) {
-    return res.status(400).json({ error: "`voiceId` is not a valid ElevenLabs voice id" });
   }
 
   // Hang up on ElevenLabs if the browser walks away mid-sentence (new request,

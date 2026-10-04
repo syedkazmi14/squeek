@@ -159,9 +159,6 @@
     <textarea id="text" autofocus maxlength="2000" placeholder="Say something&hellip;"></textarea>
 
     <div class="row">
-      <select id="voice" aria-label="Voice">
-        <option value="">Default voice</option>
-      </select>
       <span class="hint"><kbd>Enter</kbd> to speak &middot; <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line</span>
     </div>
 
@@ -178,7 +175,6 @@
 
 <script>
 const textEl     = document.getElementById("text");
-const voiceEl    = document.getElementById("voice");
 const progressEl = document.getElementById("progress");
 const statusEl   = document.getElementById("status");
 const latencyEl  = document.getElementById("latency");
@@ -209,7 +205,6 @@ function speak(text) {
   player.load();
 
   const params = new URLSearchParams({ text });
-  if (voiceEl.value) params.set("voiceId", voiceEl.value);
 
   // Pointing the element at a GET URL lets the browser stream the MP3 itself:
   // it starts playing on the first decodable frames instead of waiting for the
@@ -286,18 +281,8 @@ async function init() {
         return;
       }
     }
-
-    const voicesRes = await fetch("/api/voices");
-    if (!voicesRes.ok) return; // keep the default-voice option
-    const { voices } = await voicesRes.json();
-    for (const voice of voices) {
-      const option = document.createElement("option");
-      option.value = voice.voiceId;
-      option.textContent = voice.name;
-      voiceEl.append(option);
-    }
   } catch {
-    // A missing voice list is not fatal — the server still has a default voice.
+    // Config is only used for the API-key warning; ignore failures.
   }
 }
 
