@@ -2,10 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   Companion,
-  companionBounds,
   sidebarBounds,
+  type Pointer,
 } from "../apps/desktop/src/main/companion.ts";
 const area = { x: -1200, y: 0, width: 1200, height: 900 };
+const second = { x: 0, y: 0, width: 1600, height: 1000 };
 class Window {
   visible = false;
   positions: { x: number; y: number }[] = [];
@@ -36,11 +37,13 @@ function setup() {
   let point = { x: -600, y: 200 };
   let tick: (() => void) | undefined;
   let cleared = false;
+  const pointers: Pointer[] = [];
   const shell = new Companion({
     panel,
     halo,
     cursor: () => point,
-    workArea: () => area,
+    workArea: (p) => (p.x < 0 ? area : second),
+    pointer: (value) => pointers.push(value),
     setInterval: (fn) => {
       tick = fn;
       return 1;
@@ -53,6 +56,7 @@ function setup() {
     shell,
     panel,
     halo,
+    pointers,
     move: (p: { x: number; y: number }) => {
       point = p;
       tick?.();
@@ -60,18 +64,29 @@ function setup() {
     cleared: () => cleared,
   };
 }
-test("startup shows cursor companion only and follows locally without assessment", () => {
-  const { shell, panel, halo, move } = setup();
+test("startup shows a display overlay that streams the cursor without assessment", () => {
+  const { shell, panel, halo, pointers, move } = setup();
   shell.start();
   assert.equal(panel.visible, false);
   assert.equal(halo.visible, true);
-  assert.deepEqual(halo.positions.at(-1), { x: -584, y: 216 });
+  assert.deepEqual(halo.bounds, area);
+  assert.deepEqual(pointers.at(-1), { x: 600, y: 200, reset: true });
   move({ x: -500, y: 250 });
-  assert.deepEqual(halo.positions.at(-1), { x: -484, y: 266 });
-  assert.deepEqual(halo.bounds, { x: -484, y: 266, width: 48, height: 48 });
-  const n = halo.positions.length;
+  assert.deepEqual(pointers.at(-1), { x: 700, y: 250, reset: false });
+  assert.equal(halo.positions.length, 1, "overlay stays put on its display");
+  const n = pointers.length;
   move({ x: -500, y: 250 });
-  assert.equal(halo.positions.length, n);
+  assert.equal(pointers.length, n, "an idle cursor sends nothing");
+  shell.stop();
+});
+test("crossing displays moves the overlay and snaps the ghost", () => {
+  const { shell, halo, pointers, move } = setup();
+  shell.start();
+  move({ x: 40, y: 60 });
+  assert.deepEqual(halo.bounds, second);
+  assert.deepEqual(pointers.at(-1), { x: 40, y: 60, reset: true });
+  move({ x: 50, y: 60 });
+  assert.deepEqual(pointers.at(-1), { x: 50, y: 60, reset: false });
   shell.stop();
 });
 test("suspicious results open sidebar once per incident and close preserves companion", () => {
@@ -112,18 +127,15 @@ test("caution opens review while unknown and clean readings do not", () => {
   assert.equal(panel.visible, false);
   shell.stop();
 });
-test("companion visibility is separately controllable and monitor coordinates are bounded", () => {
-  const { shell, halo, move } = setup();
+test("companion visibility is separately controllable and the sidebar is bounded", () => {
+  const { shell, halo, pointers, move } = setup();
   shell.start();
   shell.setVisible(false);
   move({ x: -50, y: 800 });
   assert.equal(halo.visible, false);
   shell.setVisible(true);
   assert.equal(halo.visible, true);
-  assert.deepEqual(companionBounds({ x: -1, y: 900 }, area), {
-    x: -48,
-    y: 852,
-  });
+  assert.deepEqual(pointers.at(-1), { x: 1150, y: 800, reset: true });
   const bounds = sidebarBounds(area);
   assert.ok(bounds.x >= area.x && bounds.y >= area.y);
   assert.ok(bounds.x + bounds.width <= area.x + area.width);

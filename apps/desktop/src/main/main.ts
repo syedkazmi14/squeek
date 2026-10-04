@@ -467,8 +467,7 @@ app.whenReady().then(async () => {
   );
   await panel.loadURL("squeek://app/index.html");
   halo = new BrowserWindow({
-    width: 48,
-    height: 48,
+    ...screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea,
     frame: false,
     transparent: true,
     show: false,
@@ -482,6 +481,8 @@ app.whenReady().then(async () => {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      // The ghost animates continuously while the overlay sits behind other work.
+      backgroundThrottling: false,
     },
   });
   halo.setIgnoreMouseEvents(true);
@@ -493,6 +494,10 @@ app.whenReady().then(async () => {
     halo,
     cursor: () => screen.getCursorScreenPoint(),
     workArea: (point) => screen.getDisplayNearestPoint(point).workArea,
+    pointer: (value) => {
+      if (halo && !halo.isDestroyed())
+        halo.webContents.send("squeek:pointer", value);
+    },
   });
   companion.start();
   const icon = nativeImage

@@ -56,23 +56,25 @@ try {
     let tick = 0;
     screen.getCursorScreenPoint = () => ({ x: area.x + 80 + (tick++ % 20), y: area.y + 80 });
   });
-  let movingBounds;
+  let overlay;
   try {
     await new Promise((resolve) => setTimeout(resolve, 600));
-    movingBounds = await application.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()
+    overlay = await application.evaluate(({ BrowserWindow, screen }) => ({
+      bounds: BrowserWindow.getAllWindows()
         .find((w) => w.webContents.getURL() === "squeek://app/halo.html")
         .getBounds(),
-    );
+      area: screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea,
+    }));
   } finally {
     await application.evaluate(({ screen }) => {
       screen.getCursorScreenPoint = screen.__originalCursor;
       delete screen.__originalCursor;
     });
   }
-  assert.ok(
-    movingBounds.width <= 49 && movingBounds.height <= 49,
-    "DPI rounding must not enlarge the companion as it moves",
+  assert.deepEqual(
+    overlay.bounds,
+    overlay.area,
+    "the ghost overlay spans the cursor display and stays put while the cursor moves",
   );
   const duplicate = spawn(
     executablePath ?? electronExecutable,
@@ -91,6 +93,20 @@ try {
   const haloPage = application
     .windows()
     .find((window) => window.url() === "squeek://app/halo.html");
+  const ghostPixels = await haloPage.evaluate(() => {
+    const canvas = document.querySelector("canvas");
+    const data = canvas
+      .getContext("2d")
+      .getImageData(0, 0, canvas.width, canvas.height).data;
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted++;
+    return { painted, total: data.length / 4 };
+  });
+  assert.ok(ghostPixels.painted > 200, "the ghost is drawn on the overlay");
+  assert.ok(
+    ghostPixels.painted < ghostPixels.total * 0.01,
+    "the overlay stays transparent apart from the ghost",
+  );
   await haloPage.screenshot({
     path: "artifacts/qa/companion.png",
     omitBackground: true,

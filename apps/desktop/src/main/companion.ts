@@ -16,24 +16,29 @@ interface WindowPort {
   isDestroyed(): boolean;
   setBounds(bounds: Area): void;
 }
+export interface Pointer extends Point {
+  /** True when the overlay moved or reappeared, so the ghost should snap instead of fly. */
+  reset: boolean;
+}
 interface Options {
   panel: WindowPort;
   halo: WindowPort;
   cursor: () => Point;
   workArea: (point: Point) => Area;
+  /** Receives the cursor relative to the overlay; the renderer animates toward it. */
+  pointer: (value: Pointer) => void;
   setInterval?: (callback: () => void, ms: number) => unknown;
   clearInterval?: (handle: unknown) => void;
   now?: () => number;
 }
-export function companionBounds(point: Point, area: Area): Point {
-  return {
-    x: Math.round(
-      Math.max(area.x, Math.min(point.x + 16, area.x + area.width - 48)),
-    ),
-    y: Math.round(
-      Math.max(area.y, Math.min(point.y + 16, area.y + area.height - 48)),
-    ),
-  };
+function sameArea(a: Area | undefined, b: Area) {
+  return (
+    !!a &&
+    a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height
+  );
 }
 export function sidebarBounds(area: Area): Area {
   const width = Math.max(1, Math.min(520, area.width - 24)),
@@ -50,6 +55,7 @@ export class Companion {
   private readonly options: Options;
   private timer: unknown;
   private visible = true;
+  private area: Area | undefined;
   private position: Point | undefined;
   private alertKey: string | undefined;
   private alertedAt = 0;
@@ -61,7 +67,7 @@ export class Companion {
     this.tick();
     this.timer = (this.options.setInterval ?? setInterval)(
       () => this.tick(),
-      33,
+      16,
     );
   }
   stop() {
@@ -118,14 +124,22 @@ export class Companion {
       return;
     }
     const point = this.options.cursor(),
-      position = companionBounds(point, this.options.workArea(point));
+      area = this.options.workArea(point);
+    let reset = !halo.isVisible();
+    if (!sameArea(this.area, area)) {
+      // The overlay spans the cursor's display and only moves when the cursor changes display.
+      halo.setBounds({ ...area });
+      this.area = area;
+      reset = true;
+    }
+    const position = { x: point.x - area.x, y: point.y - area.y };
     if (
+      reset ||
       !this.position ||
       position.x !== this.position.x ||
       position.y !== this.position.y
     ) {
-      // Preserve the intended size across Windows display scaling and rounding.
-      halo.setBounds({ ...position, width: 48, height: 48 });
+      this.options.pointer({ ...position, reset });
       this.position = position;
     }
     if (!halo.isVisible()) halo.showInactive();
