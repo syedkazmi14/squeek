@@ -76,7 +76,7 @@ export class ObserverClient {
     try {
       await this.ready;
       if (this.failure) throw this.failure;
-      if (approved.kind === "observe")
+      if (approved.kind === "observe" || approved.kind === "link")
         this.context.source = { ...approved.source };
       else delete this.context.source;
       return await new Promise<ObserverEvent>((resolve, reject) => {
@@ -158,6 +158,7 @@ export class ObserverClient {
       !(
         (pending.kind === "observe" &&
           ["observation", "health"].includes(event.kind)) ||
+        (pending.kind === "link" && ["link", "health"].includes(event.kind)) ||
         (["hello", "pause", "watch", "changes"].includes(pending.kind) &&
           event.kind === "health") ||
         (pending.kind === "foreground" &&

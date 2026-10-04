@@ -1,6 +1,7 @@
 import type { ObserverClient } from "./observer-client.ts";
 import type {
   Foreground,
+  Link,
   Observation,
   ObserverCommand,
   ObserverEvent,
@@ -19,7 +20,10 @@ export interface MonitoringOptions {
   };
   onObservation: (observation: Observation) => void;
   onHealth: (health: MonitoringHealth) => void;
+  /** Receives the link under the cursor (or none) while a page is watched. */
+  onLink?: (link: Link | undefined) => void;
   pollIntervalMs?: number;
+  hoverIntervalMs?: number;
 }
 type Session = ReturnType<MonitoringOptions["createSession"]>;
 // Browsers build their accessibility tree lazily and live pages drop nodes mid-read;
@@ -41,6 +45,10 @@ export class Monitoring {
   private scope: Foreground | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private retryRead = false;
+  private hoverTimer: ReturnType<typeof setInterval> | undefined;
+  private hovering = false;
+  // The observer answers one request at a time; page reads and hover checks take turns.
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(options: MonitoringOptions) {
     this.options = options;
@@ -56,6 +64,11 @@ export class Monitoring {
     this.stop();
     this.selected = processName;
     const epoch = ++this.epoch;
+    if (this.options.onLink)
+      this.hoverTimer = setInterval(
+        () => void this.hover(epoch),
+        this.options.hoverIntervalMs ?? 300,
+      );
     await this.poll(epoch);
   }
 
@@ -65,6 +78,8 @@ export class Monitoring {
     this.selected = undefined;
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
+    if (this.hoverTimer) clearInterval(this.hoverTimer);
+    this.hoverTimer = undefined;
     this.disconnect();
     if (active) this.options.onHealth({ state: "paused", code: "paused" });
   }
@@ -74,7 +89,40 @@ export class Monitoring {
     this.session = undefined;
     this.scope = undefined;
     this.retryRead = false;
+    // A closed session's requests must not hold up the next session's.
+    this.queue = Promise.resolve();
     session?.observer.close();
+    this.options.onLink?.(undefined);
+  }
+
+  private send(session: Session, command: ObserverCommand) {
+    const result = this.queue.then(() => session.observer.request(command));
+    this.queue = result.catch(() => {});
+    return result;
+  }
+
+  /** Hover checks never tear the session down; the page poll owns health. */
+  private async hover(epoch: number): Promise<void> {
+    const session = this.session,
+      scope = this.scope;
+    if (this.hovering || !session || !scope || !this.current(epoch, session))
+      return;
+    this.hovering = true;
+    try {
+      const reply = await this.send(session, {
+        kind: "link",
+        version: 1,
+        sessionId: session.sessionId,
+        source: scope.source,
+        region: scope.region,
+      });
+      if (!this.current(epoch, session) || this.scope !== scope) return;
+      this.options.onLink?.(reply.kind === "link" ? reply : undefined);
+    } catch {
+      if (this.current(epoch, session)) this.options.onLink?.(undefined);
+    } finally {
+      this.hovering = false;
+    }
   }
 
   private current(epoch: number, session: Session): boolean {
@@ -96,7 +144,8 @@ export class Monitoring {
       const session = this.session ?? this.options.createSession();
       this.session = session;
       const request = (kind: ObserverCommand["kind"], scope?: Foreground) =>
-        session.observer.request(
+        this.send(
+          session,
           scope
             ? {
                 kind: kind as "watch" | "observe",

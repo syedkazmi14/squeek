@@ -9,6 +9,7 @@ import {
   Menu,
   screen,
   nativeImage,
+  shell,
 } from "electron";
 import { randomUUID } from "node:crypto";
 import { join, dirname, basename } from "node:path";
@@ -20,6 +21,8 @@ import { Companion } from "./companion.ts";
 import { warning } from "../renderer/incident.ts";
 import { allowedFrame, validateInput } from "./ipc-policy.ts";
 import { ProviderGate } from "./provider-gate.ts";
+import { createTts } from "./tts.ts";
+import { LinkGuard, type LinkChoice, type LinkView } from "./link-guard.ts";
 import { createJevProvider } from "../../../../packages/providers/src/jev.ts";
 import {
   assess,
@@ -36,7 +39,13 @@ const root = dirname(fileURLToPath(import.meta.url));
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "squeek",
-    privileges: { standard: true, secure: true, supportFetchAPI: true },
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      // Lets <audio> play ElevenLabs speech while it is still downloading.
+      stream: true,
+    },
   },
 ]);
 let panel: BrowserWindow | undefined,
@@ -50,6 +59,13 @@ if (!app.isPackaged && existsSync(join(root, "../../.env"))) {
 }
 const key = !app.isPackaged ? process.env.TYPESAFE_API_KEY : undefined;
 const providerGate = new ProviderGate(key ? createJevProvider(key) : undefined);
+// Whatever text the panel asks to hear is sent to ElevenLabs to be spoken.
+const tts = createTts(
+  !app.isPackaged
+    ? process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY
+    : undefined,
+  (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
+);
 let manualAbort: AbortController | undefined;
 let quitting = false;
 let companion: Companion | undefined;
@@ -57,6 +73,7 @@ let reviewExpiry: ReturnType<typeof setTimeout> | undefined;
 let state: {
   providerConfigured: boolean;
   cloudEnabled: boolean;
+  cloudVoice: boolean;
   monitoring: boolean;
   health: string;
   revision: number;
@@ -66,6 +83,7 @@ let state: {
 } = {
   providerConfigured: providerGate.configured,
   cloudEnabled: false,
+  cloudVoice: tts.configured,
   monitoring: false,
   health: "paused",
   revision: 0,
@@ -91,9 +109,57 @@ const publish = () => {
 const resource = app.isPackaged
   ? join(process.resourcesPath, "observer", "Squeek.Observer.exe")
   : join(root, "../../artifacts/observer/Squeek.Observer.exe");
+function haloReady(): BrowserWindow | undefined {
+  return halo && !halo.isDestroyed() ? halo : undefined;
+}
+/** The overlay is click-through except over a link warning, where it holds the click. */
+let capturing = false;
+let captureTimer: ReturnType<typeof setInterval> | undefined;
+function captureClicks(on: boolean) {
+  if (on === capturing) return;
+  capturing = on;
+  haloReady()?.setIgnoreMouseEvents(!on, { forward: true });
+}
+/** While a link is guarded, follow the cursor and hold clicks only on the ring or card. */
+function watchGuard(active: boolean) {
+  if (active && !captureTimer)
+    captureTimer = setInterval(
+      () => captureClicks(linkGuard.holdsClick(screen.getCursorScreenPoint())),
+      16,
+    );
+  else if (!active && captureTimer) {
+    clearInterval(captureTimer);
+    captureTimer = undefined;
+    captureClicks(false);
+  }
+}
+const linkGuard = new LinkGuard({
+  toDip: (rect) => screen.screenToDipRect(null, rect),
+  cursor: () => screen.getCursorScreenPoint(),
+  show: (view?: LinkView) => {
+    const overlay = haloReady();
+    watchGuard(!!view?.guarded);
+    if (!overlay) return;
+    // The overlay spans one display's work area; draw relative to it.
+    const origin = overlay.getBounds();
+    overlay.webContents.send(
+      "squeek:link",
+      view && {
+        ...view,
+        rect: { ...view.rect, x: view.rect.x - origin.x, y: view.rect.y - origin.y },
+      },
+    );
+  },
+  say: (text, ms) => haloReady()?.webContents.send("squeek:say", { text, ms }),
+  speak: (text) => {
+    if (panel && !panel.isDestroyed()) panel.webContents.send("squeek:speak", { text });
+  },
+  open: (url) => void shell.openExternal(url).catch(() => {}),
+});
 const monitor = new Monitoring({
   createSession: () => createObserverClient(resource),
   onObservation: (observation) => scheduler?.observe(observation),
+  onLink: (link) => linkGuard.hover(link),
   onHealth: (health) => {
     state.health = health.code;
     if (health.state !== "available") {
@@ -141,6 +207,7 @@ async function startMonitoring(browser: "chrome" | "msedge") {
   state.browser = browser;
   state.monitoring = true;
   state.health = "starting";
+  tts.keepWarm(true);
   scheduler = makeScheduler();
   publish();
   await monitor.start(browser);
@@ -202,12 +269,15 @@ function pause() {
     });
   manualAbort?.abort();
   manualAbort = undefined;
+  tts.keepWarm(false);
+  linkGuard.reset();
   monitor.stop();
   scheduler?.pause();
   scheduler = undefined;
   state = {
     providerConfigured: providerGate.configured,
     cloudEnabled: state.cloudEnabled,
+    cloudVoice: tts.configured,
     monitoring: false,
     health: "paused",
     revision: state.revision + 1,
@@ -306,6 +376,8 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionCheckHandler(() => false);
   protocol.handle("squeek", (request) => {
     const url = new URL(request.url);
+    if (url.hostname === "app" && url.pathname === "/tts")
+      return tts.handle(request);
     const name = basename(url.pathname);
     if (
       url.hostname !== "app" ||
@@ -329,6 +401,7 @@ app.whenReady().then(async () => {
       return new Response("", { status: 404 });
     return net.fetch(pathToFileURL(join(root, name)).href);
   });
+  tts.warm();
   panel = secureWindow({ width: 520, height: 820, sidebar: true });
   panel.on("close", (event) => {
     if (!quitting) {
@@ -376,6 +449,7 @@ app.whenReady().then(async () => {
           }
           if (action === "check") {
             pause();
+            tts.warm();
             state.health = "manual";
             const generation = state.revision;
             manualAbort = new AbortController();
@@ -491,7 +565,46 @@ app.whenReady().then(async () => {
       backgroundThrottling: false,
     },
   });
-  halo.setIgnoreMouseEvents(true);
+  // Forwarded mouse moves let the overlay notice the cursor reaching a link warning.
+  halo.setIgnoreMouseEvents(true, { forward: true });
+  const fromHalo = (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) =>
+    !!halo &&
+    !halo.isDestroyed() &&
+    event.sender === halo.webContents &&
+    event.senderFrame === halo.webContents.mainFrame &&
+    event.senderFrame?.url === "squeek://app/halo.html";
+  ipcMain.on("squeek:link-card", (event, rect: unknown) => {
+    if (!fromHalo(event) || !halo) return;
+    const r = rect as Record<string, unknown> | null;
+    const valid =
+      !!r &&
+      ["x", "y", "width", "height"].every(
+        (key) =>
+          typeof r[key] === "number" &&
+          Number.isFinite(r[key]) &&
+          Math.abs(r[key]) < 100000,
+      ) &&
+      (r.width as number) > 0 &&
+      (r.height as number) > 0 &&
+      (r.width as number) <= 600 &&
+      (r.height as number) <= 600;
+    const origin = halo.getBounds();
+    linkGuard.setCard(
+      valid
+        ? {
+            x: origin.x + (r.x as number),
+            y: origin.y + (r.y as number),
+            width: r.width as number,
+            height: r.height as number,
+          }
+        : undefined,
+    );
+  });
+  ipcMain.handle("squeek:link-choice", (event, choice: unknown) => {
+    if (!fromHalo(event) || !["ask", "back", "open"].includes(choice as string))
+      return false;
+    return linkGuard.choose(choice as LinkChoice);
+  });
   halo.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   halo.webContents.on("will-navigate", (event) => event.preventDefault());
   await halo.loadURL("squeek://app/halo.html");

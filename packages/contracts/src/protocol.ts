@@ -3,6 +3,8 @@ import type { EventContext, ObserverCommand, ObserverEvent, Rect, SourceIdentity
 export const MAX_FRAME_BYTES = 65_536;
 export const MAX_TEXT_CHARACTERS = 8_000;
 export const MAX_SPANS = 200;
+export const MAX_URL_CHARACTERS = 2_048;
+export const MAX_LINK_TEXT_CHARACTERS = 300;
 
 // Errors deliberately omit rejected content; it may contain private correspondence.
 export class ProtocolError extends Error {
@@ -53,7 +55,7 @@ function envelope(line: string, sessionId: string): Record<string, unknown> {
 }
 export function parseCommand(line: string, sessionId: string): ObserverCommand {
   const value = envelope(line, sessionId);
-  if (value.kind === 'observe' || value.kind === 'watch') {
+  if (value.kind === 'observe' || value.kind === 'watch' || value.kind === 'link') {
     keys(value, ['kind', 'version', 'sessionId', 'source', 'region']);
     source(value.source);
     rectangle(value.region);
@@ -74,6 +76,12 @@ export function parseEvent(line: string, context: EventContext): ObserverEvent {
     keys(value, ['kind', 'version', 'sessionId', 'source', 'region', 'processName']);
     source(value.source); rectangle(value.region);
     if (!['chrome', 'msedge', 'Squeek.Fixture'].includes(value.processName as string)) invalid();
+  } else if (value.kind === 'link') {
+    keys(value, ['kind', 'version', 'sessionId', 'source', 'url', 'text', 'rect']);
+    if (!context.source || !sameSource(source(value.source), context.source)) invalid();
+    rectangle(value.rect);
+    if (typeof value.url !== 'string' || !value.url.trim() || value.url.length > MAX_URL_CHARACTERS ||
+        typeof value.text !== 'string' || value.text.length > MAX_LINK_TEXT_CHARACTERS) invalid();
   } else if (value.kind === 'observation') {
     keys(value, ['kind', 'version', 'sessionId', 'source', 'revision', 'observedAt', 'provenance', 'coverage', 'spans']);
     if (!context.source || !sameSource(source(value.source), context.source)) invalid();

@@ -16,6 +16,7 @@ interface AppState {
   revision: number;
   providerConfigured?: boolean;
   cloudEnabled?: boolean;
+  cloudVoice?: boolean;
   browser?: "chrome" | "msedge";
   assessmentCurrent?: boolean;
 }
@@ -26,6 +27,7 @@ interface SqueekApi {
   ): Promise<unknown>;
   onState(callback: (state: AppState) => void): () => void;
   onHidden(callback: () => void): () => void;
+  onSpeak(callback: (message: unknown) => void): () => void;
 }
 declare global {
   interface Window {
@@ -61,7 +63,36 @@ let muted = false;
 let pendingActions = 0;
 let pendingChecks = 0;
 let assessmentKey = "";
-let pendingSpeechKey: string | undefined;
+// Text waiting for Windows to load its voices.
+let pendingSpeech: string | undefined;
+// ElevenLabs speech streamed by the main process; plays while it downloads.
+const player = new Audio();
+// What the player is saying, so a failed stream can be retried locally.
+let playing: string | undefined;
+// Bluetooth and HDMI outputs power down when idle and drop the first second or
+// two of the next sound while they wake, which cut the start off the warning.
+// While Squeek is watching, it plays an inaudible hiss (about -80 dB) so the
+// output stays awake. Pure silence would not work: Chromium closes the device
+// when it only receives zeros.
+let keepAwake: AudioContext | undefined;
+function setOutputAwake(awake: boolean): void {
+  if (awake && !keepAwake) {
+    keepAwake = new AudioContext({ latencyHint: "playback" });
+    const rate = keepAwake.sampleRate;
+    const hiss = keepAwake.createBuffer(1, rate, rate);
+    const samples = hiss.getChannelData(0);
+    for (let i = 0; i < samples.length; i++)
+      samples[i] = (Math.random() * 2 - 1) * 1e-4;
+    const source = keepAwake.createBufferSource();
+    source.buffer = hiss;
+    source.loop = true;
+    source.connect(keepAwake.destination);
+    source.start();
+  } else if (!awake && keepAwake) {
+    void keepAwake.close().catch(() => {});
+    keepAwake = undefined;
+  }
+}
 
 function localVoice(): SpeechSynthesisVoice | undefined {
   return window.speechSynthesis
@@ -69,24 +100,48 @@ function localVoice(): SpeechSynthesisVoice | undefined {
     .find((voice) => voice.localService && voice.lang.startsWith("en"));
 }
 function cancelSpeech(): void {
-  pendingSpeechKey = undefined;
+  pendingSpeech = undefined;
   window.speechSynthesis?.cancel();
+  playing = undefined;
+  if (player.getAttribute("src")) {
+    // Dropping the source cancels the stream, which stops the upstream request.
+    player.pause();
+    player.removeAttribute("src");
+    player.load();
+  }
 }
 function speak(): void {
   cancelSpeech();
-  if (
-    muted ||
-    current.assessment?.state !== "high_risk" ||
-    !window.speechSynthesis
-  )
+  if (muted || current.assessment?.state !== "high_risk") return;
+  say(warning);
+}
+function say(text: string): void {
+  if (current.cloudVoice) {
+    playing = text;
+    player.src = `squeek://app/tts?${new URLSearchParams({ text })}`;
+    // Loading resets playbackRate to the default, so set both.
+    player.defaultPlaybackRate = player.playbackRate = Number(voiceRate.value);
+    player.play().catch(() => {});
     return;
-  const utterance = new SpeechSynthesisUtterance(warning);
+  }
+  speakLocally(text);
+}
+player.addEventListener("error", () => {
+  // ElevenLabs unavailable: say the same words with the local voice instead.
+  const failed = playing;
+  if (failed === undefined) return;
+  cancelSpeech();
+  if (!muted) speakLocally(failed);
+});
+function speakLocally(text: string): void {
+  if (!window.speechSynthesis) return;
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
   utterance.rate = Number(voiceRate.value);
   const voice = localVoice();
-  // Do not send warning audio to a remote speech service.
+  // The fallback stays on-device; Chromium's network voices are skipped.
   if (!voice) {
-    pendingSpeechKey = assessmentKey;
+    pendingSpeech = text;
     return;
   }
   utterance.voice = voice;
@@ -103,11 +158,20 @@ function refreshControls(): void {
   cloud.disabled = busy || current.providerConfigured !== true;
   cloud.checked = current.cloudEnabled === true;
   replay.disabled =
-    muted || current.assessment?.state !== "high_risk" || !localVoice();
+    muted ||
+    current.assessment?.state !== "high_risk" ||
+    !(current.cloudVoice || localVoice());
   cancel.hidden =
     !current.monitoring &&
     pendingActions === 0 &&
     current.assessment?.state !== "high_risk";
+  setOutputAwake(
+    current.cloudVoice === true &&
+      !muted &&
+      (current.monitoring ||
+        pendingActions > 0 ||
+        current.assessment?.state === "high_risk"),
+  );
 }
 function render(next: AppState): void {
   if (
@@ -213,13 +277,23 @@ element("close").addEventListener("click", () => {
 });
 window.speechSynthesis?.addEventListener("voiceschanged", () => {
   refreshControls();
-  if (pendingSpeechKey === assessmentKey && localVoice()) speak();
+  if (pendingSpeech !== undefined && localVoice()) speakLocally(pendingSpeech);
 });
 
 render(current);
 if (window.squeek) {
   const unsubscribe = window.squeek.onState(render);
   const stopHiddenListener = window.squeek.onHidden(cancelSpeech);
+  // Link warnings from the hover check, spoken even while the panel is hidden.
+  const stopSpeakListener = window.squeek.onSpeak((message) => {
+    const text =
+      message && typeof message === "object" && "text" in message
+        ? message.text
+        : undefined;
+    if (typeof text !== "string" || !text.trim() || text.length > 300) return;
+    cancelSpeech();
+    if (!muted) say(text);
+  });
   void window.squeek
     .invoke("state")
     .then((value) => render(value as AppState))
@@ -231,7 +305,9 @@ if (window.squeek) {
     () => {
       unsubscribe();
       stopHiddenListener();
+      stopSpeakListener();
       cancelSpeech();
+      setOutputAwake(false);
     },
     { once: true },
   );

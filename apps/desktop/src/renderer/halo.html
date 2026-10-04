@@ -12,5 +12,14 @@
   </head>
   <body data-state="paused">
     <canvas aria-label="Squeek"></canvas>
+    <div id="link-ring" hidden></div>
+    <div id="link-card" role="alertdialog" aria-labelledby="link-title" hidden>
+      <h2 id="link-title"></h2>
+      <p id="link-text"></p>
+      <div class="link-actions">
+        <button id="link-back" type="button">Go back</button>
+        <button id="link-open" type="button">Open anyway</button>
+      </div>
+    </div>
   </body>
 </html>

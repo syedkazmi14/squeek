@@ -94,9 +94,95 @@ window.squeek.onState((state) => {
 });
 window.squeek.onSay((message) => {
   const text = typeof message?.text === "string" ? message.text.trim() : "";
-  if (!text || text.length > 200) return;
+  if (!text || text.length > 300) return;
+  const ms =
+    Number.isFinite(message?.ms) && message.ms >= 1000 && message.ms <= 15000
+      ? message.ms
+      : BUBBLE_MS;
   const now = performance.now();
-  bubble = { lines: wrap(text), born: now, until: now + BUBBLE_MS };
+  bubble = { lines: wrap(text), born: now, until: now + ms };
+});
+
+// Link warnings: a ring around a risky link and, once it is clicked, a card asking
+// whether to open it. Main holds the click (stops the overlay passing it through)
+// only while the cursor is on the ring or the card, judged from the cursor position.
+const ring = document.getElementById("link-ring");
+const card = document.getElementById("link-card");
+const cardTitle = document.getElementById("link-title");
+const cardText = document.getElementById("link-text");
+const backButton = document.getElementById("link-back");
+const openButton = document.getElementById("link-open");
+let link;
+function validLink(view) {
+  const r = view?.rect;
+  return (
+    view &&
+    ["caution", "high_risk"].includes(view.state) &&
+    typeof view.message === "string" &&
+    view.message.length <= 300 &&
+    [r?.x, r?.y, r?.width, r?.height].every(Number.isFinite) &&
+    r.width > 0 &&
+    r.height > 0
+  );
+}
+function closeCard() {
+  if (card.hidden) return;
+  card.hidden = true;
+  window.squeek.linkCard(null);
+}
+function placeCard() {
+  const r = link.rect,
+    margin = 12,
+    width = card.offsetWidth,
+    height = card.offsetHeight;
+  const below = r.y + r.height + margin + height <= H - margin;
+  card.style.left = `${Math.max(margin, Math.min(r.x, W - width - margin))}px`;
+  card.style.top = `${below ? r.y + r.height + margin : Math.max(margin, r.y - height - margin)}px`;
+  const placed = card.getBoundingClientRect();
+  window.squeek.linkCard({
+    x: placed.x,
+    y: placed.y,
+    width: placed.width,
+    height: placed.height,
+  });
+}
+window.squeek.onLink((view) => {
+  link = validLink(view) ? view : undefined;
+  if (!link) {
+    ring.hidden = true;
+    closeCard();
+    return;
+  }
+  const pad = 4;
+  ring.style.left = `${link.rect.x - pad}px`;
+  ring.style.top = `${link.rect.y - pad}px`;
+  ring.style.width = `${link.rect.width + pad * 2}px`;
+  ring.style.height = `${link.rect.height + pad * 2}px`;
+  ring.dataset.state = link.state;
+  ring.classList.toggle("guarded", link.guarded === true);
+  ring.hidden = false;
+  if (!link.guarded) closeCard();
+  else if (!card.hidden) placeCard();
+});
+ring.addEventListener("click", () => {
+  if (!link?.guarded) return;
+  cardTitle.textContent =
+    link.state === "high_risk"
+      ? "This link looks like a scam"
+      : "Be careful with this link";
+  cardText.textContent = link.message;
+  openButton.hidden = link.canOpen !== true;
+  card.hidden = false;
+  // Main only accepts the card's position once it knows the user asked.
+  void window.squeek.linkChoice("ask").then(placeCard);
+});
+backButton.addEventListener("click", () => {
+  closeCard();
+  void window.squeek.linkChoice("back");
+});
+openButton.addEventListener("click", () => {
+  closeCard();
+  void window.squeek.linkChoice("open");
 });
 window.squeek.onPointer((pointer) => {
   if (!Number.isFinite(pointer?.x) || !Number.isFinite(pointer?.y)) return;

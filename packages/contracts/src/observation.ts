@@ -12,10 +12,12 @@ export interface Observation extends Envelope {
 }
 export type ObserverCommand = Envelope & (
   { kind: 'hello' | 'pause' | 'shutdown' | 'foreground' | 'changes' } |
-  { kind: 'observe' | 'watch'; source: SourceIdentity; region: Rect }
+  { kind: 'observe' | 'watch' | 'link'; source: SourceIdentity; region: Rect }
 );
 export interface Foreground extends Envelope { kind: 'foreground'; source: SourceIdentity; region: Rect; processName: 'chrome' | 'msedge' | 'Squeek.Fixture' }
-export type ObserverEvent = Observation | Foreground | (Envelope & (
+/** The hyperlink under the cursor, in physical screen pixels. */
+export interface Link extends Envelope { kind: 'link'; source: SourceIdentity; url: string; text: string; rect: Rect }
+export type ObserverEvent = Observation | Foreground | Link | (Envelope & (
   { kind: 'ready' | 'stopped' } |
   { kind: 'health'; state: 'available' | 'unsupported' | 'paused' | 'unavailable'; code: string }
 ));

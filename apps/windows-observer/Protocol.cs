@@ -40,7 +40,7 @@ public static class Protocol
             RequireKeys(root, "kind", "version", "sessionId");
             return new Command(kind);
         }
-        if (kind is not ("observe" or "watch")) throw new InvalidDataException();
+        if (kind is not ("observe" or "watch" or "link")) throw new InvalidDataException();
         RequireKeys(root, "kind", "version", "sessionId", "source", "region");
         var source = root.GetProperty("source");
         RequireKeys(source, "processId", "windowHandle", "processStartedAt");

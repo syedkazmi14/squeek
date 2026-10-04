@@ -17,6 +17,20 @@ contextBridge.exposeInMainWorld("squeek", {
     ipcRenderer.on("squeek:say", listener);
     return () => ipcRenderer.removeListener("squeek:say", listener);
   },
+  onSpeak: (callback: (message: unknown) => void) => {
+    const listener = (_event: unknown, message: unknown) => callback(message);
+    ipcRenderer.on("squeek:speak", listener);
+    return () => ipcRenderer.removeListener("squeek:speak", listener);
+  },
+  onLink: (callback: (link: unknown) => void) => {
+    const listener = (_event: unknown, link: unknown) => callback(link);
+    ipcRenderer.on("squeek:link", listener);
+    return () => ipcRenderer.removeListener("squeek:link", listener);
+  },
+  /** Overlay only: where the link confirmation card is, or null once closed. */
+  linkCard: (rect: unknown) => ipcRenderer.send("squeek:link-card", rect),
+  /** Overlay only: the user's answer to a risky link. */
+  linkChoice: (choice: string) => ipcRenderer.invoke("squeek:link-choice", choice),
   onPointer: (callback: (pointer: unknown) => void) => {
     const listener = (_event: unknown, pointer: unknown) => callback(pointer);
     ipcRenderer.on("squeek:pointer", listener);

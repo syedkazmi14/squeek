@@ -68,3 +68,15 @@ test('validates metadata-only foreground and change subscription commands', () =
   assert.throws(() => parseEvent(event({ ...foreground, region: { ...rect, width: 0 } }), context));
   assert.throws(() => parseCommand(event({ kind: 'watch', version: 1, sessionId, source, region: rect, extra: true }), sessionId));
 });
+
+test('a link event must come from the requested source and stay bounded', () => {
+  const link = { kind: 'link', version: 1, sessionId, source, url: 'https://example.com/', text: 'Example', rect };
+  assert.deepEqual(parseEvent(event(link), context), link);
+  assert.deepEqual(parseCommand(event({ kind: 'link', version: 1, sessionId, source, region: rect }), sessionId).kind, 'link');
+  assert.throws(() => parseEvent(event(link), { sessionId, lastRevision: 0 }));
+  assert.throws(() => parseEvent(event({ ...link, source: { ...source, windowHandle: '999' } }), context));
+  assert.throws(() => parseEvent(event({ ...link, url: '' }), context));
+  assert.throws(() => parseEvent(event({ ...link, url: 'x'.repeat(2049) }), context));
+  assert.throws(() => parseEvent(event({ ...link, text: 'x'.repeat(301) }), context));
+  assert.throws(() => parseEvent(event({ ...link, extra: true }), context));
+});

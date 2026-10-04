@@ -47,6 +47,14 @@ while (true)
         {
             var code = watch.Start(source, command.Region!); Health(code == "watching" ? "available" : "unsupported", code); continue;
         }
+        if (command.Kind == "link")
+        {
+            var link = LinkReader.Read(source, command.Region!);
+            if (link.Code == "no_link") Health("available", "no_link");
+            else if (link.Code is not null) Health("unsupported", link.Code);
+            else Emit(new { kind = "link", version = 1, sessionId, source, url = link.Url, text = link.Text, rect = link.Rect });
+            continue;
+        }
         var result = ForegroundReader.Read(source, command.Region!);
         if (result.Code is not null) { Health("unsupported", result.Code); continue; }
         if (revision >= 9007199254740991) { Health("unavailable", "revision_exhausted"); continue; }
