@@ -169,7 +169,11 @@ app.post("/api/tts", handleTts);
 // Kept so the older client path keeps working.
 app.post("/api/stream", handleTts);
 
-app.listen(PORT, () => {
+app.listen(PORT, (err) => {
+  if (err) {
+    console.error(`Could not listen on port ${PORT}:`, err.message);
+    process.exit(1);
+  }
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Streaming audio/mpeg via ${MODEL_ID}`);
   if (!getApiKey()) {
