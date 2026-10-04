@@ -19,3 +19,7 @@ verify_jwt = false
 # Safari downloads the DNS configuration profile without a sign-in token.
 [functions.dns-profile]
 verify_jwt = false
+
+# ElevenLabs signs this webhook with HMAC instead of sending a sign-in token.
+[functions.call-webhook]
+verify_jwt = false

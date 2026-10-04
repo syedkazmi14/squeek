@@ -60,6 +60,25 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
 
    Free projects can't edit email templates without your own SMTP provider, so the default emails contain a sign-in **link**. Tapping it on the iPhone opens Squeek and signs in. To get 6-digit codes instead, add custom SMTP (Authentication › Emails), then add `{{ .Token }}` to the Magic Link and Confirm signup templates. The apps accept either.
 6. **Authentication › Providers › Apple** (optional): enable it, and add your iOS bundle id under Client IDs.
+7. **Call screening** (optional). Calls the person doesn't answer are forwarded by their carrier to a Squeek line on Twilio, where an ElevenLabs agent asks who's calling and why; `call-webhook` then decides the verdict and calls the person to tell them.
+   1. Buy a Twilio number with Voice, and import it into ElevenLabs (Agents › Phone Numbers › Import › Twilio). Put `ELEVENLABS_API_KEY` (with Agents write access), `ELEVENLABS_PHONE_NUMBER_ID`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_PHONE_NUMBER` in `supabase/functions/.env`.
+   2. Create the agent and its post-call webhook. This saves the agent id, webhook id and signing secret to the same file, and is safe to rerun after editing the prompt:
+
+      ```bash
+      deno run --allow-read --allow-write --allow-net scripts/setup-call-screener.ts
+      ```
+
+   3. Push the secrets, then add the line in the SQL editor so `claim_screening_line()` can hand it out:
+
+      ```bash
+      supabase secrets set --env-file supabase/functions/.env
+      ```
+
+      ```sql
+      insert into public.screening_lines (e164) values ('+1XXXXXXXXXX');
+      ```
+
+   Alerts are spoken phone calls by default, because the iPhone app can't receive push notifications on a free developer account. Set `SQUEEK_ALERT_CHANNEL=sms` once the Twilio number is registered for US texting (A2P 10DLC).
 
 ## Test locally
 
@@ -69,6 +88,10 @@ deno test --allow-read packages/detection/test
 
 ```bash
 deno run --allow-read --allow-env --allow-net --allow-write supabase/tests/rls_test.ts
+```
+
+```bash
+deno test --allow-read supabase/tests/calls_test.ts
 ```
 
 ```bash
@@ -91,5 +114,7 @@ All functions take POST JSON with the signed-in user's token (supabase-js and su
 - `check-link`: `{ url, surface?, platform?, deviceId? }`.
 - `report`: `{ kind: "phone" | "domain", value, label?, householdId?, deviceId? }`.
 - `pair-device`: `{ action: "create" }` from the PC returns `{ code, qr, pollSecret }`. The iPhone sends `{ action: "claim", code }`. The PC then polls `{ action: "poll", pollSecret }` until it gets `{ status: "ready", tokenHash }`, and calls `supabase.auth.verifyOtp({ token_hash, type: "email" })`.
+
+- `call-webhook`: called by ElevenLabs, not by the apps. It checks the `elevenlabs-signature` HMAC, ignores Squeek's own alert calls and repeats of the same conversation, then writes a `screened_calls` row and, unless it was a hang-up, an `incidents` row with `surface: "call"`. Risk `clear` means Squeek took a message from a genuine caller. Callers who say they're family are asked for the household's safe word (`set_safe_word`), and only its hash is stored.
 
 The Windows app should use the same RPCs as the iPhone: `my_block_list`, `my_household_members` and `household_devices`. It should also subscribe to Realtime on `incidents`, `blocked_numbers` and `blocked_domains`.

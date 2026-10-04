@@ -22,9 +22,10 @@ await db.exec(`
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 `);
-for await (const entry of Deno.readDir(migrationDir)) {
-  if (entry.name.endsWith(".sql")) await db.exec(await Deno.readTextFile(new URL(entry.name, migrationDir)));
-}
+// In filename order, as Supabase applies them.
+const migrations = [];
+for await (const entry of Deno.readDir(migrationDir)) if (entry.name.endsWith(".sql")) migrations.push(entry.name);
+for (const name of migrations.sort()) await db.exec(await Deno.readTextFile(new URL(name, migrationDir)));
 await db.exec(await Deno.readTextFile(new URL("../seed.sql", import.meta.url)));
 
 const A = "00000000-0000-0000-0000-00000000000a"; // protected person
@@ -78,6 +79,36 @@ await expectError("cannot edit incident evidence", () => as(A, `update incidents
 await as(A, `update incidents set user_action = 'reviewed'`);
 expect("can set user_action", (await as<{ user_action: string }>(A, `select user_action from incidents`))[0].user_action === "reviewed");
 expect("helper cannot change incident", (await as(B, `update incidents set user_action = 'dismissed' returning id`)).length === 0);
+
+// Call screening: lines, screened calls and the family safe word.
+await db.query(`insert into screening_lines (e164) values ('+15555550190')`);
+const [{ claim_screening_line: line }] = await as<{ claim_screening_line: string }>(A, `select claim_screening_line()`);
+expect("claims the free line", line === "+15555550190", line);
+expect("same line again", (await as<{ claim_screening_line: string }>(A, `select claim_screening_line()`))[0].claim_screening_line === line);
+await expectError("no second free line", () => as(C, `select claim_screening_line()`));
+expect("own line visible", (await as(A, `select * from screening_lines`)).length === 1);
+expect("others' lines hidden", (await as(B, `select * from screening_lines`)).length === 0);
+await db.query(`insert into screened_calls (user_id, conversation_id, risk) values ($1, 'conv_1', 'high_risk')`, [A]);
+expect("owner sees screened call", (await as(A, `select id from screened_calls`)).length === 1);
+expect("sharing helper sees screened call", (await as(B, `select id from screened_calls`)).length === 1);
+expect("stranger never sees screened call", (await as(C, `select id from screened_calls`)).length === 0);
+await expectError("clients cannot write screened calls", () =>
+  as(A, `insert into screened_calls (user_id, conversation_id, risk) values ($1, 'conv_2', 'clear')`, [A]));
+await as(A, `insert into incidents (user_id, platform, surface, risk) values ($1, 'ios', 'call', 'clear')`, [A]);
+expect("clear calls are incidents", (await as(A, `select id from incidents where risk = 'clear'`)).length === 1);
+await as(A, `delete from incidents where risk = 'clear'`);
+
+expect("no safe word yet", (await as<{ ok: boolean }>(B, `select household_has_safe_word($1) as ok`, [hid]))[0].ok === false);
+await as(B, `select set_safe_word($1, '  Blue  Moon! ')`, [hid]);
+expect("helper set safe word", (await as<{ ok: boolean }>(A, `select household_has_safe_word($1) as ok`, [hid]))[0].ok === true);
+const [{ safe_word_hash: hash }] = (await db.query<{ safe_word_hash: string }>(`select safe_word_hash from households where id = $1`, [hid])).rows;
+const [{ expected }] = (await db.query<{ expected: string }>(
+  `select encode(extensions.digest($1::text || ':blue moon', 'sha256'), 'hex') as expected`, [hid])).rows;
+expect("safe word normalized before hashing", hash === expected);
+await expectError("members cannot read the hash", () => as(A, `select safe_word_hash from households`));
+expect("members still see the household", (await as(A, `select name from households`)).length === 1);
+await expectError("stranger cannot set safe word", () => as(C, `select set_safe_word($1, 'x')`, [hid]));
+expect("stranger can't tell", (await as<{ ok: boolean }>(C, `select household_has_safe_word($1) as ok`, [hid]))[0].ok === false);
 
 // Block lists.
 await as(A, `insert into blocked_numbers (owner_user_id, e164, source, created_by) values ($1, '+15555550123', 'user', $1)`, [A]);
