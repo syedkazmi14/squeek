@@ -7,9 +7,10 @@ import { redact } from "./redact.ts";
 import { normalize } from "./normalize.ts";
 import { qualify } from "./qualify.ts";
 import { decide } from "./policy.ts";
+import { segment } from "./segment.ts";
 import { extractors } from "./signals/registry.ts";
-import type { SignalExtractor } from "./types.ts";
-export const detectionPolicyVersion = "local-4";
+import type { RiskState, Signal, SignalExtractor } from "./types.ts";
+export const detectionPolicyVersion = "local-5";
 export interface Assessment {
   state: "no_detected_signal" | "caution" | "high_risk" | "unknown";
   source: SourceIdentity;
@@ -22,10 +23,12 @@ export interface Assessment {
 export function sourceId(source: SourceIdentity): string {
   return `${source.processId}:${source.windowHandle}:${source.processStartedAt}`;
 }
-// Categories whose negated matches were suppressed entirely by the legacy
-// implementation; the pipeline reproduces that by filtering them from
-// evidence, while the policy (see qualify.ts/policy.ts) discounts them too.
-const NEGATION_SUPPRESSED_EVIDENCE = ["credential", "remote_access", "money"];
+const SEVERITY: Record<RiskState, number> = {
+  no_supported_signal: 0,
+  unknown_incomplete: 1,
+  caution: 2,
+  suspicious: 3,
+};
 export async function assess(
   observation: Observation,
   options: {
@@ -41,16 +44,35 @@ export async function assess(
   const input = normalize(observation);
   const stages = options.extractors ?? extractors;
   const signals = qualify(stages.flatMap((e) => e.extract(input)), input);
-  const { state: decided } = (options.policy ?? decide)(
-    signals,
-    observation.coverage,
-  );
+  const policy = options.policy ?? decide;
+  // Each unit of text (one email body, one inbox row) is judged on its own, so
+  // a word in one message never corroborates a demand in another.
+  const units = segment(observation.spans.map((span) => span.rect));
+  const byUnit = new Map<number, Signal[]>();
+  for (const s of signals) {
+    const unit = units[s.spanIndex] ?? -1;
+    byUnit.set(unit, [...(byUnit.get(unit) ?? []), s]);
+  }
+  let decided = policy([], observation.coverage).state;
+  let findings = new Set<Signal>();
+  for (const unitSignals of byUnit.values()) {
+    const result = policy(unitSignals, observation.coverage);
+    if (SEVERITY[result.state] > SEVERITY[decided]) {
+      decided = result.state;
+      findings = new Set(result.rationale.findings);
+    } else if (result.state === decided)
+      for (const f of result.rationale.findings) findings.add(f);
+  }
+  // Only the words behind the warning are evidence, in extractor order, each
+  // quoted once.
+  const quoted = new Set<string>();
   const evidence: Assessment["evidence"] = signals
-    .filter(
-      (s) =>
-        !s.qualifiers.includes("negated") ||
-        !NEGATION_SUPPRESSED_EVIDENCE.includes(s.category),
-    )
+    .filter((s) => {
+      const key = s.excerpt.toLowerCase();
+      if (!findings.has(s) || quoted.has(key)) return false;
+      quoted.add(key);
+      return true;
+    })
     .map((s) => ({
       ruleId: s.category,
       spanIndex: s.spanIndex,

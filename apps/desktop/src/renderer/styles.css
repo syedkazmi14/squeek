@@ -596,6 +596,104 @@ textarea {
 .evidence-list li:last-child {
   padding-bottom: 0;
 }
+.sender-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.sender-card h3 {
+  font-size: 12px;
+  font-weight: 800;
+}
+.sender-from {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sender-checks {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sender-checks li {
+  position: relative;
+  padding: 6px 0 6px 22px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.sender-checks li::before {
+  position: absolute;
+  left: 0;
+  font-weight: 800;
+}
+.sender-checks li[data-tone="ok"]::before {
+  content: "✓";
+  color: var(--active);
+}
+.sender-checks li[data-tone="warn"] {
+  color: var(--danger-ink);
+}
+.sender-checks li[data-tone="warn"]::before {
+  content: "!";
+}
+.sender-checks li[data-tone="info"]::before {
+  content: "·";
+  color: var(--secondary);
+}
+.sender-review {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--neutral-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sender-review:empty {
+  display: none;
+}
+.sender-review[data-tone="warn"] {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
+.sender-review[data-tone="caution"] {
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+}
+.sender-lookup {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--secondary);
+}
+.sender-lookup:empty {
+  display: none;
+}
+.about-me {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.about-me summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+}
+.about-me label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 13px;
+}
+.about-me textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
 .next-step-card {
   margin: 12px 0;
   padding: 12px 14px;

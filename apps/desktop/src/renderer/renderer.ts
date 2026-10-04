@@ -20,8 +20,23 @@ interface SyncView {
   error?: string;
   phoneWarning?: { surface: string; evidence: string | null; minutesAgo: number };
 }
+interface SenderView {
+  name: string;
+  address: string;
+  checks: { id: string; tone: "ok" | "warn" | "info"; text: string }[];
+  review?:
+    | { status: "checking" }
+    | { status: "unavailable" }
+    | { status: "done"; verdict: string; kind: string; reason: string; advice: string; say: string };
+  lookup?:
+    | { status: "checking" }
+    | { status: "unavailable" }
+    | { status: "done"; summary: string; fits: string; question: string };
+}
 interface AppState {
   sync?: SyncView;
+  sender?: SenderView;
+  profile?: string;
   monitoring: boolean;
   health: string;
   assessment?: Assessment;
@@ -46,7 +61,8 @@ interface SqueekApi {
       | "listening"
       | "talk"
       | "sync-signin"
-      | "sync-signout",
+      | "sync-signout"
+      | "profile",
     value?: unknown,
   ): Promise<unknown>;
   onListen(callback: (mode: unknown) => void): () => void;
@@ -213,7 +229,8 @@ function speakLocally(text: string): void {
   if (!window.speechSynthesis) return;
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
-  utterance.rate = 1;
+  // Matches the slower cloud voice; many listeners are older adults.
+  utterance.rate = 0.8;
   const voice = localVoice();
   // The fallback stays on-device; Chromium's network voices are skipped.
   if (!voice) {
@@ -480,6 +497,105 @@ function renderPhone(view: SyncView | undefined): void {
   error.hidden = !view.error;
   error.textContent = view.error ?? "";
 }
+const verdictLabels: Record<string, string> = {
+  safe: "Looks OK",
+  unsure: "Not sure",
+  suspicious: "Be careful",
+  scam: "This looks like a scam",
+};
+const kindLabels: Record<string, string> = {
+  friend_or_family: "pretending to be a friend or family member",
+  old_acquaintance_loan: "an old acquaintance suddenly asking for money",
+  romance: "a romance scam",
+  grandparent_emergency: "a family emergency scam",
+  government: "pretending to be the government",
+  medicare_or_social_security: "pretending to be Medicare or Social Security",
+  bank_fraud_department: "pretending to be your bank's fraud team",
+  safe_account_transfer: "asking you to move money to a 'safe' account",
+  tech_support: "a fake tech support scam",
+  callback_billing: "a fake bill that wants you to call them",
+  subscription_renewal: "a fake subscription renewal",
+  delivery_or_customs_fee: "a fake delivery or customs fee",
+  toll_or_utility_bill: "a fake toll or utility bill",
+  job_or_money_mule: "a fake job",
+  overpayment_refund: "a fake overpayment or refund",
+  prize_or_lottery: "a fake prize or lottery",
+  inheritance_or_advance_fee: "a fake inheritance that needs a fee",
+  investment_or_crypto: "an investment or crypto scam",
+  crypto_recovery: "a fake offer to recover lost money",
+  account_login: "trying to get your login",
+  invoice_or_order: "a fake bill or order",
+  extortion_or_sextortion: "a threat to scare you into paying",
+  charity_or_disaster: "a fake charity",
+  jury_duty_or_warrant: "a fake jury duty or warrant threat",
+  rental_or_marketplace: "a rental or marketplace scam",
+  fake_grant: "a fake government grant",
+};
+// Squeek's own words type in at about the pace of its voice; status lines appear at once.
+const typing = new WeakMap<HTMLElement, number>();
+const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+function typeInto(target: HTMLElement, text: string, animate: boolean): void {
+  if (target.dataset.full === text) return;
+  target.dataset.full = text;
+  window.clearInterval(typing.get(target));
+  if (!animate || !text || calm.matches) {
+    target.textContent = text;
+    target.removeAttribute("aria-busy");
+    return;
+  }
+  // Screen readers hear the finished sentence, not every letter.
+  target.setAttribute("aria-busy", "true");
+  let shown = 0;
+  target.textContent = "";
+  const timer = window.setInterval(() => {
+    shown += 2;
+    target.textContent = text.slice(0, shown);
+    if (shown >= text.length) {
+      window.clearInterval(timer);
+      target.removeAttribute("aria-busy");
+    }
+  }, 1000 / 7);
+  typing.set(target, timer);
+}
+/** Who the opened email is from and what Squeek found out about them. */
+function renderSender(sender: SenderView | undefined): void {
+  for (const card of document.querySelectorAll<HTMLElement>("[data-sender]")) {
+    card.hidden = !sender;
+    if (!sender) continue;
+    card.querySelector(".sender-from")!.textContent = sender.name
+      ? `${sender.name} · ${sender.address}`
+      : sender.address;
+    const list = card.querySelector(".sender-checks")!;
+    list.replaceChildren();
+    for (const check of sender.checks) {
+      const item = document.createElement("li");
+      item.dataset.tone = check.tone;
+      item.textContent = check.text;
+      list.append(item);
+    }
+    const review = card.querySelector<HTMLElement>(".sender-review")!;
+    const r = sender.review;
+    delete review.dataset.tone;
+    if (!r) typeInto(review, "", false);
+    else if (r.status === "checking")
+      typeInto(review, "Squeek is reading this email…", false);
+    else if (r.status === "unavailable")
+      typeInto(review, "Squeek couldn't read this email closely right now.", false);
+    else {
+      const kind = r.verdict === "scam" || r.verdict === "suspicious" ? kindLabels[r.kind] : undefined;
+      typeInto(review, `${verdictLabels[r.verdict] ?? "Not sure"}${kind ? ` (${kind})` : ""}. ${r.reason} ${r.advice}`, true);
+      if (r.verdict === "scam") review.dataset.tone = "warn";
+      else if (r.verdict === "suspicious") review.dataset.tone = "caution";
+    }
+    const lookup = card.querySelector<HTMLElement>(".sender-lookup")!;
+    const l = sender.lookup;
+    if (!l) typeInto(lookup, "", false);
+    else if (l.status === "checking") typeInto(lookup, "Looking them up online…", false);
+    else if (l.status === "unavailable")
+      typeInto(lookup, "Squeek couldn't look them up online right now.", false);
+    else typeInto(lookup, `What I found online: ${l.summary} ${l.question}`, true);
+  }
+}
 function render(next: AppState): void {
   if (
     !next ||
@@ -497,6 +613,9 @@ function render(next: AppState): void {
   current = next;
   assessmentKey = nextKey;
   renderPhone(next.sync);
+  renderSender(next.sender);
+  const about = element<HTMLTextAreaElement>("about-text");
+  if (document.activeElement !== about) about.value = next.profile ?? "";
   if (current.browser) browser.value = current.browser;
   element("assessment-heading").textContent = result().title;
   element("finding-description").textContent =
@@ -684,12 +803,22 @@ if (window.squeek) {
   });
   const stopListenListener = window.squeek.onListen(onListen);
   // Link warnings from the hover check, spoken even while the panel is hidden.
+  element("about-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = element<HTMLTextAreaElement>("about-text").value.trim().slice(0, 300);
+    void window.squeek
+      .invoke("profile", text)
+      .then((value) => render(value as AppState))
+      .catch(() => {});
+    element("about-save").textContent = "Saved";
+    setTimeout(() => (element("about-save").textContent = "Save"), 2000);
+  });
   const stopSpeakListener = window.squeek.onSpeak((message) => {
     const text =
       message && typeof message === "object" && "text" in message
         ? message.text
         : undefined;
-    if (typeof text !== "string" || !text.trim() || text.length > 300) return;
+    if (typeof text !== "string" || !text.trim() || text.length > 600) return;
     cancelSpeech();
     if (!muted) say(text);
   });

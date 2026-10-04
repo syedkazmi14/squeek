@@ -13,7 +13,7 @@ const STRONG = 3;
 const WEAK = 1;
 
 // Real sites for brands scammers copy. A brand's name in any other address is a disguise.
-const BRANDS: Record<string, { name: string; domains: string[] }> = {
+export const BRANDS: Record<string, { name: string; domains: string[] }> = {
   paypal: { name: "PayPal", domains: ["paypal.com", "paypal.me"] },
   apple: { name: "Apple", domains: ["apple.com", "icloud.com"] },
   icloud: { name: "iCloud", domains: ["icloud.com", "apple.com"] },
@@ -52,7 +52,7 @@ const SHORTENERS = new Set([
   "bit.ly", "tinyurl.com", "t.co", "goo.gl", "is.gd", "cutt.ly", "rb.gy", "ow.ly", "buff.ly",
   "rebrand.ly", "shorturl.at", "tiny.cc", "s.id", "t.ly", "v.gd", "qrco.de",
 ]);
-const RISKY_ENDINGS = new Set([
+export const RISKY_ENDINGS = new Set([
   "zip", "mov", "top", "xyz", "click", "country", "gq", "tk", "ml", "cf", "ga", "work",
   "support", "rest", "cam", "icu", "buzz", "monster", "sbs", "cfd", "loan", "win", "bid",
 ]);
@@ -72,7 +72,7 @@ export function registrableDomain(host: string): string {
   return labels.slice(-take).join(".");
 }
 
-function belongsTo(host: string, domains: string[]): boolean {
+export function belongsTo(host: string, domains: string[]): boolean {
   return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 

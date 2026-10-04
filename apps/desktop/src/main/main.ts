@@ -36,6 +36,21 @@ import {
   type Assessment,
 } from "../../../../packages/detection/src/index.ts";
 import { AssessmentScheduler } from "../../../../packages/detection/src/scheduler.ts";
+import { focusObservation } from "../../../../packages/detection/src/focus.ts";
+import {
+  extractSender,
+  looksLikePerson,
+  rememberSender,
+  senderChecks,
+  type KnownSenders,
+  type SenderCheck,
+} from "../../../../packages/detection/src/sender.ts";
+import {
+  createEmailReview,
+  type EmailReview,
+  type SenderLookup,
+} from "./email-review.ts";
+import { createDomainFacts } from "./domain-facts.ts";
 import {
   ActionReview,
   type ReviewedAction,
@@ -79,6 +94,37 @@ const conversation = createConversation(
     : undefined,
   (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
 );
+// Reads an opened email for scams the local rules miss. The redacted email goes to OpenAI.
+const emailReview = createEmailReview(
+  !app.isPackaged
+    ? process.env.OPENAI_API_KEY || process.env.OPEN_API
+    : undefined,
+  (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
+);
+const domainFacts = createDomainFacts((input, init) =>
+  net.fetch(input instanceof URL ? input.href : input, init),
+);
+// Senders seen in opened emails, so a familiar name from a new address stands out. Local only.
+const knownSendersFile = join(app.getPath("userData"), "known-senders.json");
+let knownSenders: KnownSenders = {};
+// What the user chose to tell Squeek about themselves, so a lookup can spot a real
+// connection ("you both went to Lincoln High"). Local only; sent with a lookup.
+const profileFile = join(app.getPath("userData"), "about-me.txt");
+let profile = "";
+void readFile(profileFile, "utf8")
+  .then((text) => {
+    profile = text.slice(0, 300);
+    state.profile = profile;
+    publish();
+  })
+  .catch(() => {});
+void readFile(knownSendersFile, "utf8")
+  .then((text) => {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+      knownSenders = parsed as KnownSenders;
+  })
+  .catch(() => {});
 // Links this PC to the iPhone's account: the same email on both is the same account, so a scam
 // found on one shows up on the other. Development builds only until the packaged-cloud gate is lifted.
 const syncFile = join(app.getPath("userData"), "iphone-link.bin");
@@ -130,6 +176,8 @@ let state: {
   browser: "chrome" | "msedge";
   assessmentCurrent?: boolean;
   assessment?: Assessment;
+  sender?: SenderView;
+  profile?: string;
 } = {
   providerConfigured: providerGate.configured,
   cloudEnabled: false,
@@ -140,7 +188,29 @@ let state: {
   revision: 0,
   browser: "chrome",
 };
+interface SenderView {
+  name: string;
+  address: string;
+  checks: SenderCheck[];
+  review?:
+    | { status: "checking" }
+    | { status: "unavailable" }
+    | ({ status: "done" } & EmailReview);
+  lookup?:
+    | { status: "checking" }
+    | { status: "unavailable" }
+    | ({ status: "done" } & SenderLookup);
+}
 let scheduler: AssessmentScheduler | undefined;
+// Which opened email the sender card describes; async results for any other are dropped.
+let senderTarget: string | undefined;
+let senderAbort: AbortController | undefined;
+let senderTimer: ReturnType<typeof setTimeout> | undefined;
+// The last page read, kept so moving the cursor to another inbox row can be
+// judged without waiting for the page to change.
+let pageObservation: Observation | undefined;
+let focusKey: string | undefined;
+let focusTimer: ReturnType<typeof setInterval> | undefined;
 /** What the panel sees: the app's state plus the link to the iPhone. */
 const snapshot = () => ({ ...structuredClone(state), sync: sync.view() });
 const publish = () => {
@@ -211,11 +281,18 @@ const linkGuard = new LinkGuard({
 });
 const monitor = new Monitoring({
   createSession: () => createObserverClient(resource),
-  onObservation: (observation) => scheduler?.observe(observation),
+  onObservation: (observation) => {
+    pageObservation = observation;
+    assessFocused();
+  },
   onLink: (link) => linkGuard.hover(link),
   onHealth: (health) => {
+    // Opening Squeek's own panel takes the foreground from the browser. That is the
+    // user reading the result, not leaving the page: keep it until they go elsewhere.
+    if (health.state !== "available" && squeekInUse()) return;
     state.health = health.code;
     if (health.state !== "available") {
+      pageObservation = undefined;
       scheduler?.pause();
       scheduler = undefined;
       state.assessmentCurrent = false;
@@ -239,9 +316,240 @@ function makeScheduler() {
           : {}),
       }),
     onResult: acceptAssessment,
+    // Hovering from row to row re-checks locally; the provider keeps its own budget.
+    maxRequests: 5000,
   });
 }
-function acceptAssessment(assessment: Assessment) {
+/** Judges the latest page, narrowed to the inbox row under the cursor if it is a list. */
+function assessFocused() {
+  if (!pageObservation) return;
+  const cursor = screen.dipToScreenPoint(screen.getCursorScreenPoint());
+  const focused = focusObservation(pageObservation, cursor);
+  focusKey = focused.key;
+  describeSender(focused.observation, focused.key === "page");
+  scheduler?.observe(focused.observation);
+}
+function clearSender() {
+  senderTarget = undefined;
+  senderAbort?.abort();
+  senderAbort = undefined;
+  if (senderTimer) clearTimeout(senderTimer);
+  senderTimer = undefined;
+}
+/**
+ * Fills the sender card for an opened email (or a contact card): local checks
+ * at once, then the domain's public record and, for an opened email, an AI read.
+ */
+function describeSender(observation: Observation, opened: boolean) {
+  const sender = extractSender(observation);
+  if (!sender) {
+    if (state.sender) {
+      clearSender();
+      delete state.sender;
+      state.revision++;
+      publish();
+    }
+    return;
+  }
+  const text = observation.spans.map((span) => span.text).join("\n");
+  const target = `${sender.address}\n${opened}\n${text}`;
+  if (target === senderTarget) return;
+  const sameSender =
+    !!state.sender &&
+    (state.sender.address === sender.address ||
+      (!!sender.name && state.sender.name === sender.name));
+  clearSender();
+  senderTarget = target;
+  const checks = senderChecks(sender, knownSenders);
+  state.sender = {
+    name: sender.name,
+    address: sender.address,
+    // Keep facts already found for this sender while the page settles.
+    checks: sameSender ? mergeChecks(checks, state.sender!.checks) : checks,
+    ...(sameSender && state.sender!.lookup ? { lookup: state.sender!.lookup } : {}),
+    ...(sameSender && state.sender!.review
+      ? { review: state.sender!.review }
+      : opened && emailReview.configured
+        ? { review: { status: "checking" as const } }
+        : {}),
+  };
+  state.revision++;
+  publish();
+  void domainFacts.lookup(sender.domain).then((facts) => {
+    if (senderTarget !== target || !state.sender) return;
+    state.sender.checks = mergeChecks(state.sender.checks, facts);
+    state.revision++;
+    publish();
+  });
+  const remember = () => {
+    knownSenders = rememberSender(knownSenders, sender);
+    void writeFile(knownSendersFile, JSON.stringify(knownSenders)).catch(() => {});
+  };
+  if (!opened || !emailReview.configured) {
+    if (!checks.some((c) => c.tone === "warn")) remember();
+    return;
+  }
+  const abort = new AbortController();
+  senderAbort = abort;
+  // Answer at once, so they know Squeek is on it.
+  if (!sameSender) acknowledge(sender.name || sender.address);
+  // A person may be someone the reader knows: look them up alongside the read, not after it.
+  const person = looksLikePerson(sender.name);
+  // An email paints in pieces as it opens; read it once it has briefly settled.
+  senderTimer = setTimeout(() => {
+    senderTimer = undefined;
+    if (person && state.sender?.lookup?.status !== "done")
+      lookUp(target, sender, "", abort.signal);
+    const review = emailReview.review(sender, state.sender?.checks ?? checks, text, abort.signal);
+    void review
+      .then((result) => {
+        if (senderTarget !== target || !state.sender) return;
+        state.sender.review = { status: "done", ...result };
+        if (result.verdict === "safe" || result.verdict === "unsure") {
+          if (!checks.some((c) => c.tone === "warn")) remember();
+        }
+        if (state.assessment && state.assessmentCurrent)
+          acceptAssessment(state.assessment);
+        else {
+          state.revision++;
+          publish();
+        }
+        talkAbout(sender.name || sender.address, result);
+        if (!person && result.verdict !== "safe" && sender.name)
+          lookUp(target, sender, result.reason, abort.signal);
+      })
+      .catch(() => {
+        if (senderTarget !== target || !state.sender || abort.signal.aborted)
+          return;
+        state.sender.review = { status: "unavailable" };
+        state.revision++;
+        publish();
+      });
+  }, 250);
+}
+/** An instant word in the bubble when an email opens; the spoken read follows shortly. */
+function acknowledge(who: string) {
+  ghostSays(`Let me read this email from ${who} for you…`, 4000);
+}
+// Rows Squeek has already offered to read, so it says so once per email.
+const offeredRows = new Map<string, number>();
+let hoveredRow: { key: string; since: number; texts: string[] } | undefined;
+/**
+ * After the cursor rests on an inbox row, Squeek explains it can only see a
+ * preview and offers to read the whole email once it's opened.
+ */
+function offerToRead(key: string, texts: string[] | undefined) {
+  const now = Date.now();
+  if (!texts) {
+    hoveredRow = undefined;
+    return;
+  }
+  if (hoveredRow?.key !== key) {
+    hoveredRow = { key, since: now, texts };
+    return;
+  }
+  if (now - hoveredRow.since < 1500) return;
+  const id = texts.slice(0, 2).join("|");
+  if (now - (offeredRows.get(id) ?? 0) < 10 * 60_000) return;
+  // A row that already raised a warning has been spoken about.
+  if (state.assessment && ["high_risk", "caution"].includes(state.assessment.state)) return;
+  offeredRows.set(id, now);
+  const who = texts[0]?.trim();
+  const text = `${who ? `This one is from ${who}. ` : ""}I can only see a little of it from here. Click on it to open it, and I'll read the whole email and check who sent it.`;
+  ghostSays(text);
+  if (panel && !panel.isDestroyed()) panel.webContents.send("squeek:speak", { text });
+}
+// Who Squeek last talked about, so pointing at a name (which repaints the email) doesn't repeat it.
+const spokenAbout = new Map<string, { verdict: string; at: number }>();
+const verdictRank: Record<string, number> = { safe: 0, unsure: 1, suspicious: 2, scam: 3 };
+/** Says the review out loud, warmly, and invites the user to talk it over. */
+function talkAbout(who: string, review: EmailReview) {
+  if (review.verdict === "safe") return;
+  const key = who.toLowerCase();
+  const before = spokenAbout.get(key);
+  if (before && Date.now() - before.at < 10 * 60_000 && verdictRank[before.verdict]! >= verdictRank[review.verdict]!)
+    return;
+  spokenAbout.set(key, { verdict: review.verdict, at: Date.now() });
+  const invite = conversation.configured
+    ? " If you'd like to talk it over, hold down the Control key and speak to me. Let go when you're done."
+    : "";
+  const text = `${review.say}${invite}`;
+  ghostSays(`${review.say}${invite ? " Hold Ctrl to talk to me." : ""}`);
+  if (panel && !panel.isDestroyed()) panel.webContents.send("squeek:speak", { text });
+}
+/** A short public web search on the sender, shown on the card and known to the conversation. */
+function lookUp(target: string, sender: { name: string; address: string; domain: string }, claim: string, signal: AbortSignal) {
+  if (!state.sender) return;
+  state.sender.lookup = { status: "checking" };
+  state.revision++;
+  publish();
+  void emailReview
+    .lookup(sender, claim, profile, signal)
+    .then((found) => {
+      if (senderTarget !== target || !state.sender) return;
+      state.sender.lookup = { status: "done", ...found };
+      state.revision++;
+      publish();
+    })
+    .catch(() => {
+      if (senderTarget !== target || !state.sender || signal.aborted) return;
+      state.sender.lookup = { status: "unavailable" };
+      state.revision++;
+      publish();
+    });
+}
+function mergeChecks(a: SenderCheck[], b: SenderCheck[]): SenderCheck[] {
+  return [...a, ...b.filter((c) => !a.some((d) => d.id === c.id))];
+}
+/** A scam the AI read found raises the page's verdict; it never lowers one. */
+function withReview(assessment: Assessment): Assessment {
+  const review = state.sender?.review;
+  if (review?.status !== "done") return assessment;
+  const raised =
+    review.verdict === "scam"
+      ? "high_risk"
+      : review.verdict === "suspicious"
+        ? "caution"
+        : undefined;
+  if (!raised) return assessment;
+  const rank = { unknown: 0, no_detected_signal: 0, caution: 1, high_risk: 2 };
+  const evidence = assessment.evidence.some((e) => e.ruleId === "ai_review")
+    ? assessment.evidence
+    : [...assessment.evidence, { ruleId: "ai_review", spanIndex: -1, excerpt: review.reason }];
+  return {
+    ...assessment,
+    state: rank[raised] > rank[assessment.state] ? raised : assessment.state,
+    evidence,
+  };
+}
+function watchFocus(on: boolean) {
+  if (focusTimer) clearInterval(focusTimer);
+  focusTimer = undefined;
+  pageObservation = undefined;
+  focusKey = undefined;
+  clearSender();
+  if (!on) return;
+  focusTimer = setInterval(() => {
+    // Moving to Squeek's panel to read the result must not change what it describes.
+    if (!pageObservation || squeekInUse()) return;
+    const cursor = screen.dipToScreenPoint(screen.getCursorScreenPoint());
+    const focused = focusObservation(pageObservation, cursor);
+    if (focused.key !== focusKey) assessFocused();
+    offerToRead(focused.key, focused.row);
+  }, 250);
+}
+/** True while the user is in, or pointing at, one of Squeek's own windows. */
+function squeekInUse(): boolean {
+  if (BrowserWindow.getFocusedWindow()) return true;
+  const cursor = screen.getCursorScreenPoint();
+  return [panel, demo].some((window) => {
+    if (!window || window.isDestroyed() || !window.isVisible()) return false;
+    const b = window.getBounds();
+    return cursor.x >= b.x && cursor.x < b.x + b.width && cursor.y >= b.y && cursor.y < b.y + b.height;
+  });
+}
+function acceptAssessment(incoming: Assessment) {
+  const assessment = withReview(incoming);
   if (reviewExpiry) clearTimeout(reviewExpiry);
   state.assessment = assessment;
   state.assessmentCurrent = true;
@@ -255,6 +563,8 @@ function acceptAssessment(assessment: Assessment) {
   );
   if (forPhone) void sync.reportIncident(forPhone);
   reviewExpiry = setTimeout(() => {
+    // While the same page is still being watched, its result still stands.
+    if (state.monitoring && state.health === "watching") return;
     delete state.assessment;
     state.assessmentCurrent = false;
     state.revision++;
@@ -268,15 +578,17 @@ async function startMonitoring(browser: "chrome" | "msedge") {
   state.health = "starting";
   tts.keepWarm(true);
   scheduler = makeScheduler();
+  watchFocus(true);
   publish();
   await monitor.start(browser);
 }
 /** Shows a line in the ghost's speech bubble, long enough to read. */
-function ghostSays(text: string, ms = 4000 + text.length * 60) {
-  const shown = text.length > 280 ? `${text.slice(0, 279)}…` : text;
+// Paced for slower readers: the words type in at the voice's pace, then stay a while.
+function ghostSays(text: string, ms = 7000 + (text.length / 14) * 1000) {
+  const shown = text.length > 480 ? `${text.slice(0, 479)}…` : text;
   haloReady()?.webContents.send("squeek:say", {
     text: shown,
-    ms: Math.min(15000, ms),
+    ms: Math.min(45000, ms),
   });
 }
 /** What the ghost can see, for the conversation. Excerpts and verdicts only. */
@@ -295,6 +607,24 @@ function conversationContext(): string {
     );
   else if (assessment)
     lines.push("Nothing suspicious detected on the current page.");
+  const sender = state.sender;
+  if (sender) {
+    lines.push(
+      `The user has an email open from ${sender.name || "someone"}${sender.address ? ` <${sender.address}>` : " (address hidden; pointing at the name shows it)"}.`,
+    );
+    for (const check of sender.checks) lines.push(`Sender check: ${check.text}`);
+    if (sender.review?.status === "done")
+      lines.push(
+        `Your read of the email: ${sender.review.verdict} (${sender.review.kind.replace(/_/g, " ")}). ${sender.review.reason} Advice: ${sender.review.advice}`,
+      );
+    if (sender.lookup?.status === "done")
+      lines.push(
+        `A quick public web search on the sender found: ${sender.lookup.summary} (A real person existing does not prove they sent it.)`,
+      );
+    else if (sender.lookup?.status === "checking")
+      lines.push("You are still looking the sender up online.");
+  }
+  if (profile) lines.push(`What the user has told you about themselves: ${profile}`);
   const link = linkGuard.recent();
   if (link)
     lines.push(
@@ -443,6 +773,7 @@ function pause() {
   manualAbort = undefined;
   tts.keepWarm(false);
   linkGuard.reset();
+  watchFocus(false);
   monitor.stop();
   scheduler?.pause();
   scheduler = undefined;
@@ -683,6 +1014,13 @@ app.whenReady().then(async () => {
               .signIn(input as string, monitoringStatus())
               .catch(() => {});
             void pollPhone();
+            publish();
+            return snapshot();
+          }
+          if (action === "profile") {
+            profile = input as string;
+            state.profile = profile;
+            await writeFile(profileFile, profile).catch(() => {});
             publish();
             return snapshot();
           }
