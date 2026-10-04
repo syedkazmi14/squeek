@@ -75,6 +75,20 @@ let combined = checker.checkText(
   "Hi, see the photos here https://login.irs-refund-claim.example/start", blockedDomains: ["irs-refund-claim.example"])
 check("local blocked link", combined.level == .danger, "\(combined.level)")
 
+// Check-ins are open for a day, until answered.
+let asked = Date().addingTimeInterval(-3600)
+check("fresh check-in is open", CheckIn(id: "1", protectedUserId: "a", helperId: "b", status: "asked", createdAt: asked).isOpen(), "")
+check(
+  "old check-in lapses",
+  !CheckIn(id: "2", protectedUserId: "a", helperId: "b", status: "asked", createdAt: Date().addingTimeInterval(-25 * 3600)).isOpen(), "")
+check(
+  "answered check-in is closed",
+  !CheckIn(id: "3", protectedUserId: "a", helperId: "b", status: "ok", createdAt: asked, answeredAt: Date()).isOpen(), "")
+let decodedCheckIn = try? JSONDecoder().decode(
+  CheckIn.self,
+  from: Data(#"{"id":"4","protected_user_id":"a","helper_id":"b","status":"call_me","created_at":"2026-10-05T10:00:00.123456+00:00","answered_at":null}"#.utf8))
+check("check-in decodes from the server", decodedCheckIn?.status == "call_me" && decodedCheckIn?.date != nil, "\(String(describing: decodedCheckIn))")
+
 print("SqueekChecks: \(passed) passed, \(failures.count) failed")
 for f in failures { print("  FAIL \(f)") }
 exit(failures.isEmpty ? 0 : 1)

@@ -110,6 +110,34 @@ expect("members still see the household", (await as(A, `select name from househo
 await expectError("stranger cannot set safe word", () => as(C, `select set_safe_word($1, 'x')`, [hid]));
 expect("stranger can't tell", (await as<{ ok: boolean }>(C, `select household_has_safe_word($1) as ok`, [hid]))[0].ok === false);
 
+// Trusted person: helper alerts and check-ins.
+const [{ id: incidentForAlert }] = await as<{ id: string }>(A, `insert into incidents (user_id, platform, surface, risk) values ($1, 'ios', 'call', 'high_risk') returning id`, [A]);
+await db.query(`insert into helper_alerts (incident_id) values ($1)`, [incidentForAlert]);
+await expectError("helper alerts are service only", () => as(A, `select * from helper_alerts`));
+await expectError("clients cannot write helper alerts", () => as(A, `insert into helper_alerts (incident_id) values ($1)`, [incidentForAlert]));
+
+const [{ id: checkIn, is_new: firstAsk }] = await as<{ id: string; is_new: boolean }>(B, `select * from ask_check_in($1)`, [A]);
+expect("helper starts a check-in", firstAsk === true);
+const [{ id: again, is_new: secondAsk }] = await as<{ id: string; is_new: boolean }>(B, `select * from ask_check_in($1)`, [A]);
+expect("asking again reuses the open check-in", again === checkIn && secondAsk === false);
+await expectError("only a helper can ask", () => as(A, `select * from ask_check_in($1)`, [B]));
+await expectError("a stranger cannot ask", () => as(C, `select * from ask_check_in($1)`, [A]));
+expect("person sees the check-in", (await as(A, `select id from check_ins`)).length === 1);
+expect("helper sees the check-in", (await as(B, `select id from check_ins`)).length === 1);
+expect("stranger never sees check-ins", (await as(C, `select id from check_ins`)).length === 0);
+await expectError("clients cannot write check-ins", () =>
+  as(B, `insert into check_ins (household_id, protected_user_id, helper_id) values ($1, $2, $3)`, [hid, A, B]));
+await expectError("helper cannot answer for the person", () => as(B, `select answer_check_in($1, 'ok')`, [checkIn]));
+await expectError("answers are limited", () => as(A, `select answer_check_in($1, 'maybe')`, [checkIn]));
+await as(A, `select answer_check_in($1, 'call_me')`, [checkIn]);
+const answered = await as<{ status: string }>(B, `select status from check_ins where id = $1`, [checkIn]);
+expect("helper sees the answer", answered[0].status === "call_me");
+await expectError("answered once", () => as(A, `select answer_check_in($1, 'ok')`, [checkIn]));
+await db.query(`update check_ins set status = 'asked', answered_at = null, created_at = now() - interval '2 days' where id = $1`, [checkIn]);
+await expectError("expired check-ins cannot be answered", () => as(A, `select answer_check_in($1, 'ok')`, [checkIn]));
+const [{ is_new: afterExpiry }] = await as<{ is_new: boolean }>(B, `select * from ask_check_in($1)`, [A]);
+expect("an expired check-in is replaced", afterExpiry === true);
+
 // Block lists.
 await as(A, `insert into blocked_numbers (owner_user_id, e164, source, created_by) values ($1, '+15555550123', 'user', $1)`, [A]);
 await as(B, `insert into blocked_numbers (household_id, e164, source, created_by) values ($1, '+15555550124', 'household', $2)`, [hid, B]);

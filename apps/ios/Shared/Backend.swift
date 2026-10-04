@@ -113,6 +113,20 @@ final class Backend: @unchecked Sendable {
     }
   }
 
+  /// Phones the person's helpers once after "Continue anyway" on a likely scam (supabase/functions/notify-helpers).
+  func notifyHelpers(incidentId: String) async throws {
+    struct Request: Encodable { let incidentId: String }
+    struct Response: Decodable { let sent: Int }
+    let _: Response = try await invoke("notify-helpers", Request(incidentId: incidentId))
+  }
+
+  /// A helper asks someone they look out for if they're OK (supabase/functions/check-in).
+  func startCheckIn(personId: String) async throws {
+    struct Request: Encodable { let personId: String }
+    struct Response: Decodable { let id: String }
+    let _: Response = try await invoke("check-in", Request(personId: personId))
+  }
+
   func claimPairing(code: String) async throws {
     let _: PairClaimResponse = try await invoke("pair-device", PairClaimRequest(code: code))
   }

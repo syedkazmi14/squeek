@@ -52,6 +52,7 @@ struct HomeView: View {
 
 /// What Squeek says, in a bubble pointing up at him, with a button to hear it.
 private struct SpeechBubble: View {
+  @EnvironmentObject private var model: AppModel
   let summary: HomeSummary
   var onFinishSetup: () -> Void
 
@@ -85,6 +86,20 @@ private struct SpeechBubble: View {
         Button("Finish setting me up", action: onFinishSetup)
           .secondaryAction()
           .padding(.top, 4)
+      case .answerCheckIn(let checkIn):
+        VStack(spacing: 10) {
+          Button("I'm OK") { Task { await model.answerCheckIn(checkIn.id, "ok") } }
+            .primaryAction()
+          Button("Please call me") { Task { await model.answerCheckIn(checkIn.id, "call_me") } }
+            .secondaryAction()
+        }
+        .padding(.top, 4)
+      case .call(let name, let phone):
+        if let phone, let url = URL(string: "tel:\(phone)") {
+          Link(destination: url) { Label("Call \(name)", systemImage: "phone.fill") }
+            .primaryAction()
+            .padding(.top, 4)
+        }
       case nil:
         EmptyView()
       }

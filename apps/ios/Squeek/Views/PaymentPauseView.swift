@@ -106,7 +106,13 @@ struct PaymentPauseView: View {
 
   private func finish(_ action: String) {
     Speech.shared.stop()
-    if !pause.isPractice { Task { await model.setAction(action, forIncident: pause.incident.id) } }
+    if !pause.isPractice {
+      Task {
+        await model.setAction(action, forIncident: pause.incident.id)
+        // Going ahead after a likely scam is the moment a helper's call can matter most.
+        if action == "opened_anyway" { await model.notifyHelpers(about: pause.incident) }
+      }
+    }
     dismiss()
   }
 }

@@ -50,8 +50,10 @@ final class AppModel: ObservableObject {
   }
   /// The likely scam behind a payment pause, while the pause screen is showing.
   @Published var pause: PaymentPause?
-  /// Trusted people's phone numbers (their alert_phone), for "Call Aisha" on the pause screen.
-  @Published private(set) var helperPhones: [String: String] = [:]
+  /// Phone numbers and sharing choices of the other people in the family group, for "Call Aisha".
+  @Published private(set) var contacts: [String: MemberContact] = [:]
+  /// Check-ins from the last day, asked of me or by me.
+  @Published private(set) var checkIns: [CheckIn] = []
 
   /// This person's Squeek phone line, where unanswered calls are forwarded. Nil until claimed.
   @Published private(set) var screeningLine: String?
@@ -143,6 +145,28 @@ final class AppModel: ObservableObject {
 
   var myRole: String? { members.first { $0.isMe }?.role }
 
+  /// The people this helper looks out for.
+  var peopleIHelp: [HouseholdMember] {
+    myRole == "helper" ? members.filter { $0.role == "protected" && !$0.isMe } : []
+  }
+
+  /// Trusted people's phone numbers, for "Call Aisha" on the pause screen.
+  var helperPhones: [String: String] {
+    contacts.compactMapValues { $0.alertPhone }
+  }
+
+  func phone(of userId: String) -> String? { contacts[userId]?.alertPhone }
+
+  /// The latest check-in a helper made of this person: still open, or answered within the day.
+  func latestCheckIn(of personId: String) -> CheckIn? {
+    checkIns.filter { $0.protectedUserId == personId && $0.helperId == userId }.max { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) }
+  }
+
+  /// Check-ins other people are waiting on me to answer.
+  var openCheckInsForMe: [CheckIn] {
+    checkIns.filter { $0.protectedUserId == userId && $0.isOpen() }
+  }
+
   func memberName(_ userId: String) -> String? {
     members.first { $0.userId == userId }?.displayName
   }
@@ -176,7 +200,8 @@ final class AppModel: ObservableObject {
   func homeSummary() -> HomeSummary {
     HomeSummary(
       name: profile?.displayName, incidents: incidents, myUserId: userId, since: summarySince,
-      guardsOff: protectionsTotal - protectionsOn, guardsTotal: protectionsTotal, memberName: memberName)
+      guardsOff: protectionsTotal - protectionsOn, guardsTotal: protectionsTotal,
+      checkIns: checkIns, phoneOf: { [self] in phone(of: $0) }, memberName: memberName)
   }
 
   func start() {
@@ -228,6 +253,8 @@ final class AppModel: ObservableObject {
     members = []
     helperDevices = []
     myDevices = []
+    checkIns = []
+    contacts = [:]
     screeningLine = nil
     hasSafeWord = false
     subscribedUserId = nil
@@ -259,7 +286,8 @@ final class AppModel: ObservableObject {
       let lines: [ScreeningLineRow] = try await client.from("screening_lines").select("e164").execute().value
       screeningLine = lines.first?.e164
       hasSafeWord = await fetchHasSafeWord()
-      await reloadHelperPhones()
+      await reloadContacts()
+      await reloadCheckIns()
     } catch {
       report(error)
     }
@@ -320,6 +348,7 @@ final class AppModel: ObservableObject {
     let domains = channel.postgresChange(AnyAction.self, schema: "public", table: "blocked_domains")
     let profiles = channel.postgresChange(UpdateAction.self, schema: "public", table: "profiles")
     let householdMembers = channel.postgresChange(AnyAction.self, schema: "public", table: "household_members")
+    let checkInChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "check_ins")
     do {
       try await channel.subscribeWithError()
     } catch {
@@ -345,6 +374,9 @@ final class AppModel: ObservableObject {
       },
       Task { [weak self] in
         for await _ in householdMembers { await self?.reloadHousehold() }
+      },
+      Task { [weak self] in
+        for await _ in checkInChanges { await self?.receivedCheckIn() }
       },
     ]
   }
@@ -396,20 +428,42 @@ final class AppModel: ObservableObject {
       members = try await client.rpc("my_household_members").execute().value
       helperDevices = try await client.rpc("household_devices").execute().value
       hasSafeWord = await fetchHasSafeWord()
-      await reloadHelperPhones()
+      await reloadContacts()
     } catch { report(error) }
   }
 
-  private func reloadHelperPhones() async {
+  /// The other family members' phone numbers and whether they share warnings. Household members can
+  /// read each other's profiles, so this is a plain query.
+  private func reloadContacts() async {
     guard let client else { return }
-    let helperIds = members.filter { $0.role == "helper" && !$0.isMe }.map(\.userId)
-    guard !helperIds.isEmpty else {
-      helperPhones = [:]
+    let otherIds = members.filter { !$0.isMe }.map(\.userId)
+    guard !otherIds.isEmpty else {
+      contacts = [:]
       return
     }
-    let rows: [HelperPhoneRow]? = try? await client.from("profiles").select("id, alert_phone").in("id", values: helperIds)
-      .execute().value
-    helperPhones = Dictionary((rows ?? []).compactMap { r in r.alertPhone.map { (r.id, $0) } }, uniquingKeysWith: { a, _ in a })
+    let rows: [MemberContact]? = try? await client.from("profiles")
+      .select("id, alert_phone, share_incidents_with_helpers").in("id", values: otherIds).execute().value
+    contacts = Dictionary((rows ?? []).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+  }
+
+  private func reloadCheckIns() async {
+    guard let client, isSignedIn else { return }
+    let since = Timestamps.format(Date().addingTimeInterval(-CheckIn.lifetime))
+    if let rows: [CheckIn] = try? await client.from("check_ins").select().gte("created_at", value: since)
+      .order("created_at", ascending: false).execute().value
+    {
+      checkIns = rows
+    }
+  }
+
+  /// A check-in was asked or answered. When someone has just asked me, say so with a notification.
+  private func receivedCheckIn() async {
+    let before = Set(openCheckInsForMe.map(\.id))
+    await reloadCheckIns()
+    for checkIn in openCheckInsForMe where !before.contains(checkIn.id) {
+      let who = memberName(checkIn.helperId) ?? "Someone who looks out for you"
+      Notifications.post(title: "\(who) is checking in", body: "Open Squeek to let them know you're OK.")
+    }
   }
   private func fetchHasSafeWord() async -> Bool {
     guard let client, let household else { return false }
@@ -453,7 +507,7 @@ final class AppModel: ObservableObject {
       incidents: [Incident], entries: [BlockEntry], members: [HouseholdMember], devices: [HelperDevice], profile: Profile
     ) {
       isDemo = true
-      email = "syed@example.com"
+      email = DemoData.isHelper ? "aisha@example.com" : "syed@example.com"
       self.incidents = incidents
       serverEntries = entries
       self.members = members
@@ -463,7 +517,8 @@ final class AppModel: ObservableObject {
       notificationsOn = true
       screeningLine = "+16822041962"
       hasSafeWord = true
-      helperPhones = [DemoData.helperId: "+15555550112"]
+      contacts = DemoData.contacts
+      checkIns = DemoData.checkIns
     }
   #endif
 
@@ -738,6 +793,45 @@ final class AppModel: ObservableObject {
     }
   }
 
+  // MARK: - Trusted person
+
+  /// A helper asks someone they look out for if they're OK. The person sees it on Home and gets a
+  /// phone call if they have an alert phone.
+  func askCheckIn(of personId: String) async {
+    if isDemo {
+      checkIns.append(CheckIn(id: UUID().uuidString, protectedUserId: personId, helperId: userId ?? "", status: "asked", createdAt: Date()))
+      return
+    }
+    do {
+      try await Backend.shared.startCheckIn(personId: personId)
+      await reloadCheckIns()
+    } catch { report(error) }
+  }
+
+  /// The person answers a check-in: "ok" or "call_me".
+  func answerCheckIn(_ id: String, _ answer: String) async {
+    if let index = checkIns.firstIndex(where: { $0.id == id }) {
+      checkIns[index].status = answer
+      checkIns[index].answeredAt = Timestamps.format(Date())
+    }
+    guard let client, isSignedIn, !isDemo else { return }
+    do {
+      try await client.rpc("answer_check_in", params: ["p_id": id, "p_status": answer]).execute()
+    } catch {
+      report(error)
+      await reloadCheckIns()
+    }
+  }
+
+  /// "Continue anyway" on a likely scam: tell the person's helpers, if they share warnings, so one of
+  /// them can call before the money moves. The server sends it at most once per warning.
+  func notifyHelpers(about incident: Incident) async {
+    guard !isDemo, isSignedIn, incident.level == .danger, incident.userId == userId,
+      profile?.shareIncidentsWithHelpers == true
+    else { return }
+    try? await Backend.shared.notifyHelpers(incidentId: incident.id)
+  }
+
   // MARK: - Payment pause
 
   /// Scammers push people to pay while they're still rattled, so a likely scam stays "recent" this long.
@@ -804,12 +898,15 @@ private struct ScreeningLineRow: Decodable {
   let e164: String
 }
 
-private struct HelperPhoneRow: Decodable {
+/// What a family member has chosen to tell me: how to phone them, and whether they share warnings.
+struct MemberContact: Decodable, Equatable {
   let id: String
   let alertPhone: String?
+  let shareIncidentsWithHelpers: Bool
 
   enum CodingKeys: String, CodingKey {
     case id
     case alertPhone = "alert_phone"
+    case shareIncidentsWithHelpers = "share_incidents_with_helpers"
   }
 }

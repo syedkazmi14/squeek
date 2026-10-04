@@ -9,6 +9,10 @@ struct HomeSummary {
     case review(Incident)
     /// Some guards are still off.
     case finishSetup
+    /// A trusted person is asking if I'm OK.
+    case answerCheckIn(CheckIn)
+    /// A person I help asked me to call them.
+    case call(name: String, phone: String?)
   }
 
   let greeting: String
@@ -21,6 +25,7 @@ struct HomeSummary {
 
   init(
     name: String?, incidents: [Incident], myUserId: String?, since: Date, guardsOff: Int, guardsTotal: Int,
+    checkIns: [CheckIn] = [], phoneOf: (String) -> String? = { _ in nil },
     memberName: (String) -> String?, now: Date = Date()
   ) {
     let hour = Calendar.current.component(.hour, from: now)
@@ -31,6 +36,27 @@ struct HomeSummary {
     let recent = incidents.filter { ($0.date ?? .distantPast) > since }
     let counts = Self.countSentence(recent.filter(isMine))
     let family = Self.familySentence(recent.filter { !isMine($0) }, memberName: memberName)
+
+    // Someone who looks out for me is asking if I'm OK: answering comes before anything else.
+    if let ask = checkIns.filter({ $0.protectedUserId == myUserId && $0.isOpen(now: now) })
+      .max(by: { ($0.date ?? .distantPast) < ($1.date ?? .distantPast) })
+    {
+      let helper = memberName(ask.helperId) ?? "Someone who looks out for you"
+      mood = .calm
+      action = .answerCheckIn(ask)
+      message = "\(helper) is checking in on you. Are you OK?"
+      return
+    }
+
+    // A person I help asked me to call: that's the one thing to do.
+    let answers = checkIns.filter { $0.helperId == myUserId && $0.status != "asked" && ($0.answerDate ?? .distantPast) > now.addingTimeInterval(-CheckIn.lifetime) }
+    if let callMe = answers.filter({ $0.status == "call_me" }).max(by: { ($0.answerDate ?? .distantPast) < ($1.answerDate ?? .distantPast) }) {
+      let who = memberName(callMe.protectedUserId) ?? "Someone you help"
+      mood = .concerned
+      action = .call(name: who, phone: phoneOf(callMe.protectedUserId))
+      message = "\(who) asked you to call them. They answered when you checked in."
+      return
+    }
 
     // An unreviewed likely scam from the last few days comes first, even if it's from before the last visit.
     let lately = now.addingTimeInterval(-3 * 24 * 3600)
@@ -54,6 +80,8 @@ struct HomeSummary {
         guardsOff == guardsTotal ? "Nothing to report yet." : "Nothing suspicious since you were last here. I'm still keeping watch.")
     }
     if let family { parts.append(family) }
+    let fine = answers.filter { $0.status == "ok" }.compactMap { memberName($0.protectedUserId) }
+    if !fine.isEmpty { parts.append("\(Self.list(Array(Set(fine)).sorted())) said they're OK.") }
     if guardsOff > 0 {
       let which = ["One of my guards is", "Two of my guards are", "Three of my guards are", "Four of my guards are"]
       parts.append(

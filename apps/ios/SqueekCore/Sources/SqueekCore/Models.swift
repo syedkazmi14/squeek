@@ -485,6 +485,44 @@ public struct HouseholdMember: Codable, Sendable, Identifiable, Hashable {
   }
 }
 
+/// A helper asking someone they look out for "are you OK?". Open for a day, then it lapses.
+public struct CheckIn: Codable, Sendable, Identifiable, Equatable {
+  public let id: String
+  public let protectedUserId: String
+  public let helperId: String
+  public var status: String  // "asked" | "ok" | "call_me"
+  public let createdAt: String
+  public var answeredAt: String?
+
+  public static let lifetime: TimeInterval = 24 * 3600
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case protectedUserId = "protected_user_id"
+    case helperId = "helper_id"
+    case status
+    case createdAt = "created_at"
+    case answeredAt = "answered_at"
+  }
+
+  public init(id: String, protectedUserId: String, helperId: String, status: String, createdAt: Date, answeredAt: Date? = nil) {
+    self.id = id
+    self.protectedUserId = protectedUserId
+    self.helperId = helperId
+    self.status = status
+    self.createdAt = Timestamps.format(createdAt)
+    self.answeredAt = answeredAt.map(Timestamps.format)
+  }
+
+  public var date: Date? { Timestamps.parse(createdAt) }
+  public var answerDate: Date? { answeredAt.flatMap(Timestamps.parse) }
+
+  /// Waiting for an answer, and not yet a day old.
+  public func isOpen(now: Date = Date()) -> Bool {
+    status == "asked" && (date ?? .distantPast) > now.addingTimeInterval(-Self.lifetime)
+  }
+}
+
 public struct HelperDevice: Codable, Sendable, Identifiable, Hashable {
   public let userId: String
   public let displayName: String?
