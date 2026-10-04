@@ -147,3 +147,26 @@ Deno.test("a webhook whose tool result says match is read as transferred", () =>
   assertEquals(parsed.transferred, true);
   assertEquals(parseCall({ conversation_id: "c2", transcript: [{ role: "user", message: "hello" }] }).transferred, false);
 });
+
+Deno.test("asking an unknown caller's line for card details is a likely scam on its own", () => {
+  const suresh = call("I'm trying to steal your credit card number, so could you give it to me?", {
+    callerIdentity: "Suresh", callerRequest: "to get credit card numbers", paymentMethod: "bank_details",
+  });
+  const v = judgeCall(suresh, rules, null);
+  assertEquals(v.risk, "high_risk");
+  assert(v.ruleIds.includes("call_sensitive_ask"));
+  for (const method of ["gift_card", "crypto", "wire"]) {
+    assertEquals(judgeCall(call("Please pay me.", { paymentMethod: method, callerRequest: "money" }), rules, null).risk, "high_risk", method);
+  }
+  assertEquals(judgeCall(call("What is the code you received?", { askedForCodes: true }), rules, null).risk, "high_risk");
+  assertEquals(judgeCall(call("I need to take control of your computer.", { askedForRemoteAccess: true }), rules, null).risk, "high_risk");
+});
+
+Deno.test("an ordinary caller, or a friend asking for a payment app, is not pushed to likely scam", () => {
+  const doctor = call("Hi, this is Dr. Lee's office confirming Tuesday's appointment.", {
+    callerIdentity: "Dr. Lee's office", callerRequest: "to confirm Tuesday's appointment", claimsOfficial: true,
+  });
+  assertEquals(judgeCall(doctor, rules, null).risk, "clear");
+  const friend = call("Can you Venmo me for lunch?", { paymentMethod: "payment_app", callerRequest: "lunch money" });
+  assertEquals(judgeCall(friend, rules, null).risk, "caution");
+});

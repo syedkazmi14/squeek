@@ -284,6 +284,16 @@ export function judgeCall(
   }
 
   let risk = decideRisk(rules, score, categories);
+  // Someone who dialed Squeek's number without knowing the secret word and then asks for gift cards,
+  // crypto, a wire, card or bank details, a code or access to a device is almost certainly a scammer,
+  // even with nothing else suspicious to combine it with.
+  const sensitiveAsk =
+    ["gift_card", "crypto", "wire", "bank_details"].includes(f.paymentMethod ?? "") || f.askedForCodes || f.askedForRemoteAccess;
+  if (sensitiveAsk && risk !== "high_risk") {
+    risk = "high_risk";
+    reasons.push({ id: "call_sensitive_ask", label: "Asked for money, a code or access without knowing your secret word", source: "rule" });
+    ruleIds.push("call_sensitive_ask");
+  }
   // Knowing the family's safe word is strong evidence it really is family. Still not "clear" if
   // they asked for money in a risky way, but no longer "likely scam".
   if (familySafeWord === "matched") {
