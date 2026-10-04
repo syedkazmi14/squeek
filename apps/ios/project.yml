@@ -51,6 +51,7 @@ targets:
     sources:
       - Squeek
       - Shared
+      - LiveActivity
       - path: Fonts
         buildPhase: resources
       - path: ../../packages/detection/rules/rules.json
@@ -60,6 +61,7 @@ targets:
         product: Supabase
       - package: SqueekCore
       - package: Pow
+      - target: SqueekWidgets
       - target: CallDirectoryExtension
       - target: MessageFilterExtension
       - target: ShareExtension
@@ -76,6 +78,7 @@ targets:
       properties:
         <<: *sharedInfo
         UILaunchScreen: {}
+        NSSupportsLiveActivities: true
         CFBundleURLTypes:
           - CFBundleURLName: Squeek sign-in
             CFBundleURLSchemes: [squeek]
@@ -85,6 +88,26 @@ targets:
         NSCameraUsageDescription: Squeek uses the camera to scan the code shown by Squeek on your computer.
         NSPhotoLibraryUsageDescription: Squeek reads the words in a screenshot you choose, on your iPhone, to check it for scams.
         ITSAppUsesNonExemptEncryption: false
+
+  SqueekWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - SqueekWidgets
+      - LiveActivity
+      - Shared/Assets.xcassets
+      - path: Fonts
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID).Widgets
+    info:
+      path: SqueekWidgets/Info.plist
+      properties:
+        <<: *sharedInfo
+        CFBundleDisplayName: Squeek
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   CallDirectoryExtension:
     type: app-extension

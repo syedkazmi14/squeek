@@ -373,7 +373,8 @@ final class AppModel: ObservableObject {
 
   /// Finishes sign-in when the person taps the link in the email.
   func handleOpenURL(_ url: URL) {
-    guard let client, url.scheme == Self.signInRedirect.scheme else { return }
+    // squeek://live is the Dynamic Island tap: just open the app.
+    guard let client, url.scheme == Self.signInRedirect.scheme, url.host != "live" else { return }
     Task {
       do {
         _ = try await client.auth.session(from: url)
