@@ -34,9 +34,9 @@ final class CheckService: @unchecked Sendable {
       var result = try await Backend.shared.assess(text: redacted, surface: surface, deviceId: deviceId)
       // A local block-list hit always wins, even if the server disagrees.
       if local.level == .danger && result.level != .danger { result = local }
-      return result
+      return await recordIfMissing(result, surface: surface)
     } catch {
-      return degrade(local, reason: error.localizedDescription)
+      return await recordIfMissing(degrade(local, reason: error.localizedDescription), surface: surface)
     }
   }
 
@@ -46,10 +46,18 @@ final class CheckService: @unchecked Sendable {
     do {
       var result = try await Backend.shared.checkLink(url, surface: surface, deviceId: deviceId)
       if local.level == .danger && result.level != .danger { result = local }
-      return result
+      return await recordIfMissing(result, surface: surface)
     } catch {
-      return degrade(local, reason: error.localizedDescription)
+      return await recordIfMissing(degrade(local, reason: error.localizedDescription), surface: surface)
     }
+  }
+
+  /// A likely scam the phone found by itself has no incident on the server. Record one so it shows
+  /// in Activity and counts toward the payment pause, if the person keeps a history.
+  private func recordIfMissing(_ result: CheckResult, surface: Surface) async -> CheckResult {
+    guard result.level == .danger, result.incidentId == nil, store?.settings().historySync == true else { return result }
+    await Backend.shared.recordLocalIncident(surface: surface, domain: result.kind == "link" ? result.domain : nil, deviceId: deviceId)
+    return result
   }
 
   /// Local-only results that found nothing become "unknown": local rules are only part of the check.

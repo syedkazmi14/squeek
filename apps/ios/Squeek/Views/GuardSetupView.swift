@@ -54,9 +54,15 @@ struct GuardSetupView: View {
         card(.texts, manual: $model.textsGuardOn, lines: [
           "Open Settings › Apps › Messages › Unknown & Spam.",
           "Under SMS Filtering, choose Squeek.",
-          "Likely scams from unknown numbers go to Junk. Squeek never sees iMessages or texts from your contacts.",
+          "Likely scams from unknown numbers go to Junk. This filter can't see iMessages or texts from your contacts.",
+          "Optional, to also check every text you get: open Shortcuts, tap Automation, the + button, then Message. Leave the sender empty, pick Run Immediately, and tap Next.",
+          "Choose New Blank Automation, add the action Screen a Message from Squeek, tap Message and choose Shortcut Input.",
+          "Squeek checks each text on your iPhone first, and sends only texts with a link or a warning sign for a closer look. It tells you about a scam, and stays quiet otherwise.",
         ]) {
           Button("Open Settings") { SystemSettings.open() }.secondaryAction()
+          if let url = URL(string: "shortcuts://") {
+            Button("Open Shortcuts") { openURL(url) }.secondaryAction()
+          }
         }
 
         card(.web, manual: $model.webGuardOn, lines: [

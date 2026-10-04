@@ -847,9 +847,11 @@ final class AppModel: ObservableObject {
   }
 
   /// For Check Before Paying when iOS starts the app in the background just to run it: fetches the
-  /// last half hour of warnings without waiting for the full sign-in refresh.
-  func loadRecentIncidentsIfNeeded() async {
-    guard !isDemo, incidents.isEmpty, let client, client.auth.currentSession != nil else { return }
+  /// last half hour of warnings without waiting for the full sign-in refresh. Always asks, even when
+  /// the list isn't empty, because the app may have been asleep while Safari or a text shortcut
+  /// recorded something new.
+  func loadRecentIncidents() async {
+    guard !isDemo, let client, client.auth.currentSession != nil else { return }
     let since = Timestamps.format(Date().addingTimeInterval(-Self.riskWindow))
     let recent: [Incident]? = try? await client.from("incidents").select().gte("created_at", value: since)
       .order("created_at", ascending: false).limit(20).execute().value

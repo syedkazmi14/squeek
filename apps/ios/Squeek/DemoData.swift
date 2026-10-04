@@ -78,6 +78,9 @@
            "categories":["delivery","link"],"rule_ids":["delivery_problem"],
            "evidence_redacted":"USPS: Your package could not be delivered. A redelivery fee is required…",
            "indicator_kind":"domain","indicator_value":"usps-redelivery-fee.example","user_action":null,"created_at":"\(stamp(60 * 30))"},
+          {"id":"d6","user_id":"\(personId)","device_id":"phone","platform":"ios","surface":"browser","risk":"high_risk",
+           "categories":["link"],"rule_ids":["link_dangerous"],"evidence_redacted":"secure-bank-login.example",
+           "indicator_kind":"domain","indicator_value":"secure-bank-login.example","user_action":null,"created_at":"\(stamp(60 * 4))"},
           {"id":"d4","user_id":"\(personId)","device_id":"phone","platform":"ios","surface":"link","risk":"caution",
            "categories":["link"],"rule_ids":["brand_mismatch"],"evidence_redacted":"paypal-account-verify.example",
            "indicator_kind":"domain","indicator_value":"paypal-account-verify.example","user_action":"dismissed","created_at":"\(stamp(60 * 50))"}

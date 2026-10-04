@@ -138,6 +138,12 @@ await expectError("expired check-ins cannot be answered", () => as(A, `select an
 const [{ is_new: afterExpiry }] = await as<{ is_new: boolean }>(B, `select * from ask_check_in($1)`, [A]);
 expect("an expired check-in is replaced", afterExpiry === true);
 
+// A phone can record a warning it found itself (Safari blocked a site while offline).
+await as(A, `insert into incidents (user_id, platform, surface, risk, categories, evidence_redacted, indicator_kind, indicator_value)
+  values ($1, 'ios', 'browser', 'high_risk', '{link}', 'bad.example', 'domain', 'bad.example')`, [A]);
+expect("browser warnings reach Activity", (await as(A, `select id from incidents where surface = 'browser'`)).length === 1);
+expect("helper sees browser warnings too", (await as(B, `select id from incidents where surface = 'browser'`)).length === 1);
+
 // Block lists.
 await as(A, `insert into blocked_numbers (owner_user_id, e164, source, created_by) values ($1, '+15555550123', 'user', $1)`, [A]);
 await as(B, `insert into blocked_numbers (household_id, e164, source, created_by) values ($1, '+15555550124', 'household', $2)`, [hid, B]);

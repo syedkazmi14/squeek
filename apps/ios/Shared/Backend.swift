@@ -113,6 +113,48 @@ final class Backend: @unchecked Sendable {
     }
   }
 
+  /// Records a warning the phone found on its own when the server didn't record one (the server was
+  /// unreachable, or the phone's rules were stricter). Without it a dangerous site Safari blocked
+  /// offline would never reach Activity or the payment pause. Skips repeats within ten minutes.
+  func recordLocalIncident(surface: Surface, domain: String?, deviceId: String?) async {
+    guard let client = try? requireClient(), let userId else { return }
+    struct Row: Encodable {
+      let userId: String
+      let deviceId: String?
+      let platform = "ios"
+      let surface: String
+      let risk = "high_risk"
+      let categories: [String]
+      let evidenceRedacted: String?
+      let indicatorKind: String?
+      let indicatorValue: String?
+
+      enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case deviceId = "device_id"
+        case platform, surface, risk, categories
+        case evidenceRedacted = "evidence_redacted"
+        case indicatorKind = "indicator_kind"
+        case indicatorValue = "indicator_value"
+      }
+    }
+    do {
+      if let domain {
+        let since = Timestamps.format(Date().addingTimeInterval(-10 * 60))
+        let same: [IncidentID] = try await client.from("incidents").select("id")
+          .eq("surface", value: surface.rawValue).eq("indicator_value", value: domain)
+          .gte("created_at", value: since).limit(1).execute().value
+        if !same.isEmpty { return }
+      }
+      let row = Row(
+        userId: userId, deviceId: deviceId, surface: surface.rawValue, categories: domain == nil ? [] : ["link"],
+        evidenceRedacted: domain, indicatorKind: domain == nil ? nil : "domain", indicatorValue: domain)
+      try await client.from("incidents").insert(row).execute()
+    } catch {
+      // Best effort: the warning itself was already shown.
+    }
+  }
+
   /// Phones the person's helpers once after "Continue anyway" on a likely scam (supabase/functions/notify-helpers).
   func notifyHelpers(incidentId: String) async throws {
     struct Request: Encodable { let incidentId: String }
@@ -131,3 +173,5 @@ final class Backend: @unchecked Sendable {
     let _: PairClaimResponse = try await invoke("pair-device", PairClaimRequest(code: code))
   }
 }
+
+private struct IncidentID: Decodable { let id: String }

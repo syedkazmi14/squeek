@@ -12,7 +12,7 @@ struct CheckBeforePayingIntent: AppIntent {
   @MainActor
   func perform() async throws -> some IntentResult {
     let model = AppModel.shared
-    await model.loadRecentIncidentsIfNeeded()
+    await model.loadRecentIncidents()
     guard let risk = model.recentRisk() else { return .result() }
     model.pause = PaymentPause(incident: risk)
     try await continueInForeground(nil, alwaysConfirm: false)
@@ -27,5 +27,10 @@ struct SqueekShortcuts: AppShortcutsProvider {
       phrases: ["Check before paying with \(.applicationName)"],
       shortTitle: "Check before paying",
       systemImageName: "hand.raised.fill")
+    AppShortcut(
+      intent: ScreenMessageIntent(),
+      phrases: ["Screen a message with \(.applicationName)"],
+      shortTitle: "Screen a message",
+      systemImageName: "message.badge.fill")
   }
 }

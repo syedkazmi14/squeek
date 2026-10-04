@@ -106,9 +106,20 @@ export interface IncidentInput {
   userAction?: string | null;
 }
 
+// A page or link checked again within this window is the same warning, not a new one: Safari checks
+// the page on every load, and Activity shouldn't fill up with copies of it.
+const SAME_WARNING_MINUTES = 10;
+
 /** Inserts an incident as the caller (RLS-checked). Returns its id, or null if history sync is off. */
 export async function recordIncident(caller: Caller, flags: ProfileFlags, input: IncidentInput): Promise<string | null> {
   if (!flags.history_sync) return null;
+  if (input.indicatorValue) {
+    const since = new Date(Date.now() - SAME_WARNING_MINUTES * 60_000).toISOString();
+    const { data: same } = await caller.db.from("incidents").select("id")
+      .eq("user_id", caller.user.id).eq("surface", input.surface).eq("indicator_value", input.indicatorValue)
+      .gte("created_at", since).order("created_at", { ascending: false }).limit(1);
+    if (same?.length) return same[0].id as string;
+  }
   const { data, error } = await caller.db
     .from("incidents")
     .insert({
