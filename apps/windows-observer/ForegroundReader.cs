@@ -13,7 +13,12 @@ public static class ForegroundReader
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
     [DllImport("user32.dll")] private static extern bool IsIconic(nint hwnd);
 
-    private static bool Matches(SourceIdentity source)
+    public static bool Matches(SourceIdentity source)
+    {
+        try { return MatchesCore(source); } catch { return false; }
+    }
+
+    private static bool MatchesCore(SourceIdentity source)
     {
         var hwnd = GetForegroundWindow();
         if (hwnd == 0 || hwnd.ToInt64().ToString() != source.WindowHandle || IsIconic(hwnd)) return false;
@@ -21,6 +26,23 @@ public static class ForegroundReader
         if (pid != source.ProcessId || pid == Environment.ProcessId) return false;
         using var process = Process.GetProcessById(source.ProcessId);
         return new DateTimeOffset(process.StartTime.ToUniversalTime()).ToUnixTimeMilliseconds() == source.ProcessStartedAt;
+    }
+
+    public static (SourceIdentity Source, Region Region, string ProcessName)? Foreground()
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd == 0 || IsIconic(hwnd)) return null;
+        GetWindowThreadProcessId(hwnd, out var pid);
+        if (pid == Environment.ProcessId) return null;
+        using var process = Process.GetProcessById((int)pid);
+        var name = process.ProcessName;
+        if (name is not ("chrome" or "msedge" or "Squeek.Fixture")) return null;
+        var source = new SourceIdentity((int)pid, hwnd.ToInt64().ToString(), new DateTimeOffset(process.StartTime.ToUniversalTime()).ToUnixTimeMilliseconds());
+        var root = AutomationElement.FromHandle(hwnd);
+        var b = root.Current.BoundingRectangle;
+        var region = new Region(b.X, b.Y, b.Width, b.Height);
+        if (new[] { region.X, region.Y, region.Width, region.Height }.Any(n => !double.IsFinite(n) || Math.Abs(n) > 100000) || !ObservationPolicy.Contains(region, region) || !Matches(source)) return null;
+        return (source, region, name);
     }
 
     public static ReadResult Read(SourceIdentity source, Region region)
@@ -63,7 +85,7 @@ public static class ForegroundReader
             }
             // Bound sibling traversal as well as the outer queue; hostile providers cannot grow it indefinitely.
             var child = walker.GetFirstChild(element);
-            for (var siblings = 0; child is not null && siblings < 1500 && queue.Count < 1500; siblings++)
+            for (var siblings = 0; child is not null && siblings < 1500 && queue.Count < 1500 && timer.ElapsedMilliseconds < 750; siblings++)
             { queue.Enqueue(child); child = walker.GetNextSibling(child); }
         }
         if (!Matches(source)) return new("foreground_changed", []);

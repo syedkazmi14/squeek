@@ -56,3 +56,15 @@ test('keeps unsupported and unavailable separate from scan results', () => {
   assert.throws(() => parseEvent(event({ ...observation, coverage: 'safe' }), context));
   assert.throws(() => parseEvent(event(observation), { sessionId, lastRevision: 0 }));
 });
+
+test('validates metadata-only foreground and change subscription commands', () => {
+  for (const kind of ['foreground', 'changes']) assert.equal(parseCommand(event({ kind, version: 1, sessionId }), sessionId).kind, kind);
+  assert.equal(parseCommand(event({ kind: 'watch', version: 1, sessionId, source, region: rect }), sessionId).kind, 'watch');
+  const foreground = { kind: 'foreground', version: 1, sessionId, source, region: rect, processName: 'Squeek.Fixture' };
+  assert.deepEqual(parseEvent(event(foreground), { sessionId, lastRevision: 0 }), foreground);
+  assert.throws(() => parseEvent(event({ ...foreground, title: 'private' }), context));
+  assert.throws(() => parseEvent(event({ ...foreground, processName: 'other' }), context));
+  assert.throws(() => parseEvent(event({ ...foreground, source: { ...source, processId: 2_147_483_648 } }), context));
+  assert.throws(() => parseEvent(event({ ...foreground, region: { ...rect, width: 0 } }), context));
+  assert.throws(() => parseCommand(event({ kind: 'watch', version: 1, sessionId, source, region: rect, extra: true }), sessionId));
+});

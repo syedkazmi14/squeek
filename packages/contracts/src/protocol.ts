@@ -33,7 +33,7 @@ function rectangle(value: unknown): Rect {
 function source(value: unknown): SourceIdentity {
   const s = record(value);
   keys(s, ['processId', 'windowHandle', 'processStartedAt']);
-  integer(s.processId);
+  if (integer(s.processId) > 2_147_483_647) invalid();
   integer(s.processStartedAt);
   if (typeof s.windowHandle !== 'string' || !/^[1-9][0-9]{0,18}$/.test(s.windowHandle) ||
       BigInt(s.windowHandle) > 9_223_372_036_854_775_807n) invalid();
@@ -53,11 +53,11 @@ function envelope(line: string, sessionId: string): Record<string, unknown> {
 }
 export function parseCommand(line: string, sessionId: string): ObserverCommand {
   const value = envelope(line, sessionId);
-  if (value.kind === 'observe') {
+  if (value.kind === 'observe' || value.kind === 'watch') {
     keys(value, ['kind', 'version', 'sessionId', 'source', 'region']);
     source(value.source);
     rectangle(value.region);
-  } else if (['hello', 'pause', 'shutdown'].includes(value.kind as string)) {
+  } else if (['hello', 'pause', 'shutdown', 'foreground', 'changes'].includes(value.kind as string)) {
     keys(value, ['kind', 'version', 'sessionId']);
   } else invalid();
   return value as unknown as ObserverCommand;
@@ -70,6 +70,10 @@ export function parseEvent(line: string, context: EventContext): ObserverEvent {
     keys(value, ['kind', 'version', 'sessionId', 'state', 'code']);
     if (!['available', 'unsupported', 'paused', 'unavailable'].includes(value.state as string) ||
         typeof value.code !== 'string' || !/^[a-z_]{1,64}$/.test(value.code)) invalid();
+  } else if (value.kind === 'foreground') {
+    keys(value, ['kind', 'version', 'sessionId', 'source', 'region', 'processName']);
+    source(value.source); rectangle(value.region);
+    if (!['chrome', 'msedge', 'Squeek.Fixture'].includes(value.processName as string)) invalid();
   } else if (value.kind === 'observation') {
     keys(value, ['kind', 'version', 'sessionId', 'source', 'revision', 'observedAt', 'provenance', 'coverage', 'spans']);
     if (!context.source || !sameSource(source(value.source), context.source)) invalid();

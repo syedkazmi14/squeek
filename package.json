@@ -7,11 +7,24 @@
     "test": "node --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "observer:build": "pwsh -NoProfile -File scripts/build-observer.ps1",
-    "observer:probe": "node scripts/observer-probe.ts"
+    "observer:probe": "node scripts/observer-probe.ts",
+    "build": "node scripts/build-desktop.mjs",
+    "start": "electron .",
+    "package:win": "npm run observer:build && npm run build && electron-builder --win nsis",
+    "test:desktop": "npm run build && node tests/electron-smoke.mjs",
+    "test:chrome": "node tests/chrome-extraction.mjs",
+    "desktop:setup": "node node_modules/electron/install.js"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "26.6.4",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
     "typescript": "7.0.2"
   },
-  "engines": { "node": ">=24.0.0" }
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "main": "dist/desktop/main.mjs"
 }

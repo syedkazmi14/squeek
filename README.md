@@ -2,20 +2,31 @@
 
 - [Implementation plan](docs/superpowers/plans/2026-10-03-squeek-implementation.md)
 - [Design](docs/superpowers/specs/2026-10-03-squeek-scam-protection-design.md)
-- [Windows development check](docs/development/windows-observation-check.md)
+- [Desktop development and packaging](docs/development/desktop.md)
+- [Windows observation checks](docs/development/windows-observation-check.md)
+- [Detection evaluation](docs/development/evaluation.md)
 
 ## Development
 
-The current code is an observation-contract and Windows helper foundation. The Electron interface, automatic monitoring, scam detection, OCR, voice, and installer are planned. Real-browser extraction is not verified.
-
-On Windows x64 with Node.js 24+ and a .NET 10 SDK:
-
 ```powershell
 npm.cmd ci
+npm.cmd run desktop:setup
 npm.cmd run observer:build
-npm.cmd test
-npm.cmd run typecheck
-npm.cmd run observer:probe
+npm.cmd run build
+npm.cmd start
 ```
 
-The default probe performs a paused health check and does not read screen text. Native tests require the observer and policy harness built by `observer:build`. Build products, the local SDK, and dependencies are ignored by Git. Development and verification details are in the Windows development check above.
+Build tools require Node 24 or newer and a .NET 10 SDK. The build script also accepts a local SDK at `.tools/dotnet/dotnet.exe`. Installed users do not need these tools: the Windows package includes Electron and the self-contained observer.
+
+```powershell
+npm.cmd test
+npm.cmd run typecheck
+npm.cmd run test:desktop
+npm.cmd run package:win
+```
+
+Monitoring starts paused. Choose Chrome or Microsoft Edge and enable monitoring explicitly. Only the selected foreground browser is eligible for observation. Manual check accepts user-entered text; Open demo opens a local simulation whose exact action requires review. External pages receive advisory warnings only.
+
+The default and packaged app use local English rules and Windows local speech. Image-only content, unsupported accessibility trees, incomplete reads, and unknown identities remain coverage gaps. OCR and live Gmail/Edge compatibility are not verified or shipped.
+
+Jev is optional in development. Configure `TYPESAFE_API_KEY` in a private `.env`, then explicitly enable **Send redacted text to Jev**. No key is included in the installer; packaged cloud support needs a separately authorized authenticated backend. No microphone, continuous cloud video, payments, or contact messages are included.

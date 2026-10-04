@@ -139,3 +139,15 @@
 Start task 1 immediately: contracts, helper lifecycle, self-contained build, and controlled feasibility tests. Its real-browser check determines the automatic monitoring approach. Then implement tasks 2 and 3 as the first end-to-end warning path; task 4 adds the required speech/demo, and task 5 verifies delivery.
 
 Prioritize a working real-app warning over additional adapters, cloud voice, call listening, persistent relationship history, or trusted contacts. Dates and teammate ownership remain unassigned because no deadline or team roster has been supplied. Keep this checklist updated with evidence; an automated test does not establish Windows/browser compatibility.
+
+## Current implementation checkpoint
+
+| Task | Implemented | Remaining verification or scope |
+| --- | --- | --- |
+| 1 | Strict native protocol, foreground metadata, dirty subscriptions, self-contained helper, controlled WPF extraction | Real mail coverage, DPI and broader browser trees |
+| 2 | Local evidence/redaction, optional Jev adapter, debounce/cache/cancellation, exact expiring one-use action review | Live provider and representative accuracy evaluation |
+| 3 | Runnable sandboxed Electron panel, explicit monitoring, local pointer ring, safe IPC and text rendering | Offline OCR is not shipped; real browser support and occlusion remain separate gates |
+| 4 | Local speech/mute/replay/rate, bundled blank-input simulation, changed-action and pause invalidation | Intended-user, screen-reader, and clean-machine voice checks |
+| 5 | Single per-user unsigned NSIS package with self-contained helper/runtime | Clean-machine installation, signing and release publication |
+
+The implementation uses `apps/desktop/src/main/main.ts`, `preload.ts`, renderer HTML/TypeScript/CSS, and root `electron-builder.yml`. The simulation is bundled `renderer/demo.html` rather than a separate installed app. See `docs/development/desktop.md` for exact commands and runtime boundaries. Unchecked original items retain their broader validation requirements; this checkpoint does not claim universal coverage or completion of OCR/live-provider work.

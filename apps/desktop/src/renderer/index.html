@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Squeek</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./renderer.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <h1><span class="brand-ring" aria-hidden="true"></span>Squeek</h1>
+        <button
+          id="mute"
+          class="quiet-button"
+          type="button"
+          aria-pressed="false"
+        >
+          Mute
+        </button>
+      </header>
+      <main>
+        <section class="assessment" aria-labelledby="assessment-heading">
+          <div
+            id="result"
+            class="result"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span
+              id="warning-mark"
+              class="warning-mark"
+              aria-hidden="true"
+              hidden
+              >!</span
+            >
+            <h2 id="assessment-heading">Unknown</h2>
+          </div>
+          <div class="evidence-section">
+            <h3>Evidence</h3>
+            <ul id="evidence" class="evidence-list"></ul>
+          </div>
+          <div class="voice-controls">
+            <button id="cancel" class="primary-button" type="button" hidden>
+              Cancel
+            </button>
+            <button id="replay" class="outlined-button" type="button" disabled>
+              Replay
+            </button>
+            <details class="settings">
+              <summary>Voice settings</summary>
+              <label for="voice-rate">Voice rate</label>
+              <select id="voice-rate">
+                <option value="0.8">Slower</option>
+                <option value="1" selected>Normal</option>
+                <option value="1.2">Faster</option>
+              </select>
+            </details>
+          </div>
+          <details class="settings diagnostics-settings">
+            <summary>Diagnostics</summary>
+            <dl class="diagnostics">
+              <div>
+                <dt>Health</dt>
+                <dd id="health">Paused</dd>
+              </div>
+              <div>
+                <dt>Coverage</dt>
+                <dd id="coverage">Unknown</dd>
+              </div>
+              <div>
+                <dt>Revision</dt>
+                <dd id="revision">0</dd>
+              </div>
+            </dl>
+            <label class="checkbox-label" for="cloud"
+              ><input id="cloud" type="checkbox" disabled />Send redacted text
+              to Jev</label
+            >
+          </details>
+        </section>
+
+        <section class="controls" aria-labelledby="monitoring-heading">
+          <div class="section-heading">
+            <h2 id="monitoring-heading">Monitoring</h2>
+            <span id="monitoring-state" class="status-label">Paused</span>
+          </div>
+          <label for="browser">Browser</label>
+          <select id="browser">
+            <option value="chrome">Chrome</option>
+            <option value="msedge">Microsoft Edge</option>
+          </select>
+          <button id="monitor" class="primary-button" type="button">
+            Start monitoring
+          </button>
+
+          <details id="manual-check" class="manual-form">
+            <summary>Manual check</summary>
+            <form id="manual-form">
+              <label for="manual-text">Manual check</label>
+              <textarea
+                id="manual-text"
+                rows="3"
+                maxlength="8000"
+                spellcheck="false"
+              ></textarea>
+              <button id="check" class="primary-button" type="submit" disabled>
+                Check
+              </button>
+            </form>
+          </details>
+          <button id="demo" class="outlined-button" type="button">
+            Open demo
+          </button>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

@@ -35,12 +35,12 @@ public static class Protocol
         if (root.GetProperty("version").GetInt32() != 1 || root.GetProperty("sessionId").GetString() != sessionId)
             throw new InvalidDataException();
         var kind = root.GetProperty("kind").GetString();
-        if (kind is "hello" or "pause" or "shutdown")
+        if (kind is "hello" or "pause" or "shutdown" or "foreground" or "changes")
         {
             RequireKeys(root, "kind", "version", "sessionId");
             return new Command(kind);
         }
-        if (kind != "observe") throw new InvalidDataException();
+        if (kind is not ("observe" or "watch")) throw new InvalidDataException();
         RequireKeys(root, "kind", "version", "sessionId", "source", "region");
         var source = root.GetProperty("source");
         RequireKeys(source, "processId", "windowHandle", "processStartedAt");

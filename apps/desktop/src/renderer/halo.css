@@ -1,0 +1,17 @@
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  width: 48px;
+  height: 48px;
+}
+div {
+  position: absolute;
+  inset: 8px;
+  border: 3px solid #174e3d;
+  border-left-color: #a46c08;
+  border-top-color: transparent;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #faf7f155;
+}

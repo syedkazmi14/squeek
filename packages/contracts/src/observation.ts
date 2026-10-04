@@ -11,10 +11,11 @@ export interface Observation extends Envelope {
   spans: { text: string; rect: Rect }[];
 }
 export type ObserverCommand = Envelope & (
-  { kind: 'hello' | 'pause' | 'shutdown' } |
-  { kind: 'observe'; source: SourceIdentity; region: Rect }
+  { kind: 'hello' | 'pause' | 'shutdown' | 'foreground' | 'changes' } |
+  { kind: 'observe' | 'watch'; source: SourceIdentity; region: Rect }
 );
-export type ObserverEvent = Observation | (Envelope & (
+export interface Foreground extends Envelope { kind: 'foreground'; source: SourceIdentity; region: Rect; processName: 'chrome' | 'msedge' | 'Squeek.Fixture' }
+export type ObserverEvent = Observation | Foreground | (Envelope & (
   { kind: 'ready' | 'stopped' } |
   { kind: 'health'; state: 'available' | 'unsupported' | 'paused' | 'unavailable'; code: string }
 ));

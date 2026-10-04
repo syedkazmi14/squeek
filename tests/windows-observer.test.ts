@@ -53,3 +53,13 @@ test('native helper bounds command size and exits on truncated oversized input',
   assert.equal(output[1]?.code, 'invalid_command');
   assert.ok(output.every(frame => frame.kind !== 'observation'));
 });
+
+test('native metadata commands do not collect text and reject malformed watch scopes', { skip: process.platform !== 'win32' }, async () => {
+  const { output } = await run(id => [command(id, 'changes'), { ...command(id, 'watch'),
+    source: { processId: 1, windowHandle: '1', processStartedAt: 1 },
+    region: { x: 0, y: 0, width: 100, height: 100 } }, { ...command(id, 'foreground'), title: 'private' }, command(id, 'shutdown')]);
+  assert.equal(output[1]?.code, 'foreground_changed');
+  assert.equal(output[2]?.code, 'foreground_mismatch');
+  assert.equal(output[3]?.code, 'invalid_command');
+  assert.ok(output.every(frame => frame.kind !== 'observation'));
+});

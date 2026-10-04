@@ -9,6 +9,7 @@ createInterface({ input: process.stdin }).on('line', line => {
   if (mode === 'malformed') return process.stdout.write('private invalid content\n');
   if (mode === 'oversized') return process.stdout.write('x'.repeat(65537));
   if (command.kind === 'shutdown') { write({ kind: 'stopped' }); return process.exit(0); }
+  if (command.kind === 'foreground') { write({kind:'foreground',source:{processId:1234,windowHandle:'5432',processStartedAt:123456789},region:{x:0,y:0,width:100,height:100},processName:'chrome'}); return; }
   if (command.kind === 'observe') {
     const observation = { kind: 'observation', source: command.source, revision: 1, observedAt: 123456789,
       provenance: 'accessibility', coverage: 'partial', spans: [] };

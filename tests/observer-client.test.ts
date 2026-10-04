@@ -73,3 +73,21 @@ test('bridge rejects stale revisions and forged commands', async () => {
     await assert.rejects(observer.request(command), /protocol/i);
   } finally { observer.close(); }
 });
+
+test('bridge accepts foreground metadata and watch/change replies', async () => {
+ const {observer,sessionId}=client();
+ try {
+  const foreground=await observer.request({version:1,sessionId,kind:'foreground'});
+  assert.equal(foreground.kind,'foreground');
+  const watched=await observer.request({version:1,sessionId,kind:'watch',source,region:{x:0,y:0,width:100,height:100}});
+  assert.equal(watched.kind,'health');
+  const changed=await observer.request({version:1,sessionId,kind:'changes'});
+  assert.equal(changed.kind,'health');
+ } finally {observer.close();}
+});
+
+test('helper environment excludes provider credentials',async()=>{
+ const {observerEnvironment}=await import('../apps/desktop/src/main/observer-client.ts');
+ const env=observerEnvironment({SystemRoot:'C:/Windows',Path:'test-path',TEMP:'test-temp',TYPESAFE_API_KEY:'synthetic-secret',OTHER_TOKEN:'synthetic-secret'});
+ assert.deepEqual(env,{SystemRoot:'C:/Windows',Path:'test-path',TEMP:'test-temp'});
+});
