@@ -112,3 +112,26 @@ test("clicks are held only on a guarded link's ring or the open card", () => {
   f.guard.choose("back");
   assert.equal(f.guard.holdsClick({ x: 100, y: 100 }), false);
 });
+
+test('a link to a website registered days ago is upgraded to a warning', async () => {
+  const said: string[] = [];
+  const guard = new LinkGuard({
+    toDip: (rect) => rect,
+    cursor: () => ({ x: 5, y: 5 }),
+    show: () => {},
+    say: (text) => said.push(text),
+    speak: () => {},
+    open: () => {},
+    daysOld: async (domain) => (domain === 'netflix-account-help.com' ? 3 : 4000),
+  });
+  guard.hover({ url: 'https://netflix-account-help.com/login', text: 'Update payment', rect: { x: 0, y: 0, width: 10, height: 10 } });
+  assert.ok(guard.hovering);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(guard.view?.state, 'high_risk');
+  assert.match(said.at(-1)!, /set up only 3 days ago/);
+  guard.hover({ url: 'https://www.wikipedia.org/', text: 'Wikipedia', rect: { x: 0, y: 0, width: 10, height: 10 } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(guard.view, undefined);
+  guard.hover(undefined);
+  assert.ok(!guard.hovering);
+});

@@ -1,6 +1,7 @@
 import {
   assessLink,
   linkMessage,
+  registrableDomain,
   type LinkAssessment,
 } from "../../../../packages/detection/src/link.ts";
 
@@ -35,6 +36,8 @@ interface Options {
   say: (text: string, ms: number) => void;
   speak: (text: string) => void;
   open: (url: string) => void;
+  /** Days since the link's website was registered, looked up after the instant local check. */
+  daysOld?: (domain: string) => Promise<number | undefined>;
   now?: () => number;
 }
 interface Hovered {
@@ -43,6 +46,8 @@ interface Hovered {
   rect: Rect;
   result: LinkAssessment;
 }
+// Phishing sites are usually registered days before use.
+const NEW_SITE_DAYS = 30;
 // The ring drawn around a link is this much larger than the link on every side.
 const RING_PAD = 4;
 // Hovering back and forth over the same link should not repeat the voice.
@@ -77,6 +82,11 @@ export class LinkGuard {
   private readonly announced = new Map<string, number>();
   constructor(options: Options) {
     this.options = options;
+  }
+
+  /** True while the cursor is on a link, so other hover help stays out of the way. */
+  get hovering(): boolean {
+    return this.hovered !== undefined;
   }
 
   get view(): LinkView | undefined {
@@ -129,6 +139,29 @@ export class LinkGuard {
       this.announced.set(link.url, now);
       this.options.speak(message);
     }
+    void this.checkAge(link.url, result);
+  }
+
+  /** A brand-new website raises the warning once its registry answers. */
+  private async checkAge(url: string, result: LinkAssessment): Promise<void> {
+    if (!this.options.daysOld || !webPage(url) || !result.host || /^[\d.[\]:]+$/.test(result.host)) return;
+    const days = await this.options.daysOld(registrableDomain(new URL(url).hostname)).catch(() => undefined);
+    const hovered = this.hovered;
+    if (days === undefined || days >= NEW_SITE_DAYS || hovered?.url !== url || hovered.result !== result) return;
+    const upgraded: LinkAssessment = {
+      ...result,
+      state: result.state === "no_detected_signal" ? "caution" : "high_risk",
+      reasons: [
+        { ruleId: "new_site", message: `Its website was set up only ${days === 1 ? "1 day" : `${days} days`} ago, which scam sites often are` },
+        ...result.reasons,
+      ],
+    };
+    hovered.result = upgraded;
+    if (this.last?.result === result) this.last.result = upgraded;
+    if (!this.confirming) this.options.show(this.view);
+    const message = linkMessage(upgraded);
+    this.options.say(message, RISK_BUBBLE_MS);
+    this.options.speak(message);
   }
 
   /**

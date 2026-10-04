@@ -19,7 +19,18 @@ export const combinations: Combination[] = [
   { id: "romance-money-request", state: "suspicious", all: ["romance", "money"] },
   { id: "corroborated-amount-request", state: "suspicious", all: ["amount", "money"],
     any: ["pressure", "impersonation", "romance", "destination"] },
+  { id: "safe-account-demand", state: "suspicious", all: ["safe_account"], any: ["money", "pressure", "impersonation", "payment"] },
+  { id: "hardship-loan-request", state: "suspicious", all: ["money_ask", "amount"], any: ["hardship", "pressure", "romance"] },
+  { id: "hardship-payment-request", state: "suspicious", all: ["hardship", "payment"], any: ["money", "money_ask", "pressure"] },
+  { id: "callback-billing", state: "suspicious", all: ["callback", "billing_bait"], any: ["amount", "pressure"] },
+  { id: "prize-fee", state: "suspicious", all: ["prize"], any: ["fee_demand", "payment", "money"] },
+  { id: "extortion-payment", state: "suspicious", all: ["extortion"], any: ["payment", "money", "amount"] },
+  { id: "investment-pitch", state: "suspicious", all: ["investment"], any: ["romance", "payment", "pressure"] },
   { id: "pressured-money-mention", state: "caution", all: ["money"], any: ["pressure", "payment"] },
+  { id: "personal-money-request", state: "caution", all: ["money_ask"], any: ["hardship", "pressure", "romance", "amount"] },
+  { id: "callback-billing-mention", state: "caution", all: ["callback", "billing_bait"] },
+  { id: "fee-demand", state: "caution", all: ["fee_demand"], any: ["money", "pressure", "amount"] },
+  { id: "safe-account-mention", state: "caution", all: ["safe_account"] },
   { id: "directed-amount-request", state: "caution", all: ["money"], any: ["amount", "destination"] },
 ];
 

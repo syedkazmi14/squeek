@@ -90,9 +90,11 @@ async function handleTts(req, res) {
           text,
           model_id: MODEL_ID,
           voice_settings: {
-            stability: 0.5,
+            stability: 0.7,
             similarity_boost: 0.8,
             use_speaker_boost: true,
+            // Slow, steady delivery: many listeners are older adults.
+            speed: 0.8,
           },
         }),
       }

@@ -126,8 +126,8 @@ h3 {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 12px;
+  padding: 12px;
+  gap: 8px;
 }
 .app-header {
   display: flex;
@@ -195,15 +195,15 @@ h3 {
   position: relative;
   display: grid;
   place-items: center;
-  height: 110px;
+  height: 96px;
   margin-bottom: 6px;
 }
 .status-mascot {
   position: relative;
-  width: 136px;
-  height: 136px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
-  margin-top: -14px;
+  margin-top: 0;
   transform-origin: 50% 80%;
   animation: mascot-float 3s ease-in-out infinite;
   transition: filter 250ms ease;
@@ -211,7 +211,7 @@ h3 {
 .mascot-shadow {
   position: absolute;
   bottom: 3px;
-  width: 104px;
+  width: 88px;
   height: 10px;
   border-radius: 50%;
   background: radial-gradient(ellipse, rgb(27 26 23 / 18%), transparent 70%);
@@ -227,6 +227,14 @@ h3 {
   font-size: 16px;
   font-weight: 800;
   line-height: 1.25;
+}
+.status-card .eyebrow {
+  margin-bottom: 4px;
+}
+#status-description {
+  margin: 6px 12px 0;
+  font-size: 13px;
+  line-height: 1.45;
 }
 [data-mascot-status="watching"] .status-mascot {
   filter: hue-rotate(65deg) saturate(0.8);
@@ -273,11 +281,11 @@ h3 {
   }
 }
 .protection-controls {
-  margin-top: 12px;
+  margin-top: 8px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid var(--hairline);
   border-radius: 16px;
   background: var(--card);
@@ -366,60 +374,6 @@ select {
   font-size: 13px;
   background: var(--ground);
 }
-.empty-check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.activity {
-  margin-top: 10px;
-  padding: 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
-  background: var(--card);
-}
-.activity h3 {
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: var(--secondary);
-}
-.activity-row {
-  background: transparent;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 2px 0;
-  text-align: left;
-  font-size: 14px;
-}
-.activity-row:hover {
-  background: var(--neutral-soft);
-}
-.activity-icon {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--secondary);
-  background: var(--neutral-soft);
-}
-.activity-row[data-tone="warning"] .activity-icon {
-  color: var(--danger-ink);
-  background: var(--danger-soft);
-}
-.activity-copy {
-  flex: 1;
-  min-width: 0;
-}
-.activity-copy > span {
-  display: block;
-}
-.activity-copy .small {
-  font-weight: 400;
-}
 #open-manual {
   display: flex;
   align-items: center;
@@ -439,6 +393,12 @@ select {
 }
 #see-finding span {
   float: right;
+}
+#see-finding #finding-action-label {
+  float: none;
+}
+#see-finding[data-tone="neutral"] {
+  background: var(--neutral-soft);
 }
 .back-button {
   margin-bottom: 12px;
@@ -596,6 +556,104 @@ textarea {
 .evidence-list li:last-child {
   padding-bottom: 0;
 }
+.sender-card {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.sender-card h3 {
+  font-size: 12px;
+  font-weight: 800;
+}
+.sender-from {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.sender-checks {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sender-checks li {
+  position: relative;
+  padding: 6px 0 6px 22px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.sender-checks li::before {
+  position: absolute;
+  left: 0;
+  font-weight: 800;
+}
+.sender-checks li[data-tone="ok"]::before {
+  content: "✓";
+  color: var(--active);
+}
+.sender-checks li[data-tone="warn"] {
+  color: var(--danger-ink);
+}
+.sender-checks li[data-tone="warn"]::before {
+  content: "!";
+}
+.sender-checks li[data-tone="info"]::before {
+  content: "·";
+  color: var(--secondary);
+}
+.sender-review {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--neutral-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sender-review:empty {
+  display: none;
+}
+.sender-review[data-tone="warn"] {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
+.sender-review[data-tone="caution"] {
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+}
+.sender-lookup {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--secondary);
+}
+.sender-lookup:empty {
+  display: none;
+}
+.about-me {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.about-me summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+}
+.about-me label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 13px;
+}
+.about-me textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
 .next-step-card {
   margin: 12px 0;
   padding: 12px 14px;
@@ -603,18 +661,20 @@ textarea {
   border-radius: 16px;
   background: var(--neutral-soft);
 }
+.next-step-card[data-tone="warning"] {
+  border-color: var(--line-strong);
+  background: var(--warning-soft);
+}
 .next-step {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.55;
-  color: var(--secondary);
+  color: var(--ink);
+  font-weight: 600;
 }
 .finding-actions {
   display: grid;
   gap: 4px;
-}
-.finding-actions > .primary-button {
-  font-size: 13px;
 }
 .finding-secondary-actions {
   display: flex;
@@ -705,6 +765,29 @@ textarea {
   border: 1px solid var(--hairline);
   border-radius: 16px;
   background: var(--card);
+}
+.phone-details {
+  margin-top: 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.phone-details > summary {
+  min-height: 24px;
+  padding: 10px;
+  color: var(--secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+.phone-details[open] > summary {
+  padding-bottom: 0;
+}
+.phone-details .phone-link {
+  margin-top: 0;
+  padding: 8px 10px 10px;
+  border: 0;
+  background: transparent;
 }
 .phone-link h3 {
   margin: 0;

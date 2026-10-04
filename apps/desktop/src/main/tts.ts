@@ -2,7 +2,7 @@ const ELEVENLABS_BASE = "https://api.elevenlabs.io";
 // Same voice the local TTS server (server.js) uses.
 const VOICE_ID = "s3TPKV1kjDlVtZbl4Ksh";
 const MODEL_ID = process.env.ELEVENLABS_MODEL_ID || "eleven_flash_v2_5";
-const MAX_TEXT_LENGTH = 500;
+const MAX_TEXT_LENGTH = 700;
 const CONNECT_TIMEOUT_MS = 10000;
 // Enough for Replay of recent warnings without holding every message's audio.
 const CACHE_SIZE = 8;
@@ -53,9 +53,11 @@ export function createTts(
             text,
             model_id: MODEL_ID,
             voice_settings: {
-              stability: 0.5,
+              stability: 0.7,
               similarity_boost: 0.8,
               use_speaker_boost: true,
+              // Slow, steady delivery: many listeners are older adults.
+              speed: 0.8,
             },
           }),
         },

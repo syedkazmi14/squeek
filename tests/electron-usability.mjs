@@ -74,7 +74,7 @@ try {
   );
   await expect(page.locator(".app-header img")).toHaveCount(0);
   await expect(page.locator(".status-mascot")).toBeVisible();
-  await expect(page.locator("#empty-activity")).toBeVisible();
+  await expect(page.locator("#see-finding")).toBeHidden();
   await page.locator("#browser").focus();
   await expect(page.locator("#browser")).toBeFocused();
   await page.locator("#browser").selectOption("msedge");
@@ -120,8 +120,7 @@ try {
     "no-drag",
   );
   await expect(page.locator("#try-sample")).toHaveCount(0);
-  await expect(page.locator("#empty-activity")).toBeVisible();
-  await expect(page.locator("#latest-check")).toBeHidden();
+  await expect(page.locator("#see-finding")).toBeHidden();
   assert.equal(
     (await page.evaluate(() => window.squeek.invoke("state"))).cloudEnabled,
     false,
@@ -201,6 +200,7 @@ try {
   await capture("suspicious");
   await page.locator("#see-finding").click();
   await expect(page.locator("#replay")).toBeVisible();
+  await expect(page.locator("#detail-manual")).toHaveClass(/text-button/);
   await page.locator("#mute").click();
   await expect(page.locator("#replay")).toBeHidden();
   await page.locator("#mute").click();
@@ -230,6 +230,22 @@ try {
       state,
     );
   };
+  await fixture({
+    sync: { configured: true, connected: true, email: "friend@example.com" },
+  });
+  await expect(page.locator("#phone-details")).toBeVisible();
+  await expect(page.locator("#phone-details")).toHaveJSProperty("open", false);
+  await expect(page.locator("#phone-link")).toBeHidden();
+  await fixture({
+    sync: {
+      configured: true,
+      connected: true,
+      phoneWarning: { surface: "call", evidence: null, minutesAgo: 2 },
+    },
+  });
+  await expect(page.locator("#phone-details")).toHaveJSProperty("open", true);
+  await expect(page.locator("#phone-warning")).toBeVisible();
+  await fixture({});
   // Merge regression: the redesigned panel keeps main's voice and link listeners.
   // Synthetic state, denied microphone and intercepted speech never call a provider.
   await page.evaluate(() => {
@@ -276,8 +292,12 @@ try {
       .webContents.send("squeek:speak", { text: "Synthetic link warning." }),
   );
   await expect
-    .poll(() => page.evaluate(() => window.__qaVoice.spoken))
-    .toEqual([{ text: "Synthetic link warning.", rate: 1 }]);
+    .poll(() => page.evaluate(() => window.__qaVoice.spoken[0]?.text))
+    .toBe("Synthetic link warning.");
+  const localWarningRate = await page.evaluate(
+    () => window.__qaVoice.spoken[0]?.rate,
+  );
+  assert.ok(Math.abs(localWarningRate - 0.8) < 0.001);
   await page.evaluate(() => window.squeek.invoke("show"));
   await fixture({
     assessmentCurrent: false,
@@ -309,6 +329,11 @@ try {
   await fixture({ monitoring: true, health: "watching" });
   await expect(page.locator("#monitoring-state")).toHaveText(
     "Watching · foreground Chrome only",
+  );
+  await expect(page.locator("#status-label")).toBeVisible();
+  await expect(page.locator("#status-description")).toBeVisible();
+  await expect(page.locator("#status-description")).toContainText(
+    "Checking readable text in the active Chrome window.",
   );
   await expect(page.locator("#monitor")).toHaveText("Pause");
   await overviewFits();
@@ -364,7 +389,8 @@ try {
   );
   await capture("unknown-fixture");
   await overviewFits();
-  await page.locator("#latest-check").click();
+  await expect(page.locator("#see-finding")).toHaveText("View details →");
+  await page.locator("#see-finding").click();
   await expect(page.locator("#evidence-section")).toBeHidden();
   await expect(page.locator("#replay")).toBeHidden();
   await page.locator("#finding-view [data-back]").click();
@@ -375,6 +401,7 @@ try {
       coverage: "complete",
     },
   });
+  await expect(page.locator("#status-description")).toBeVisible();
   await expect(page.locator("#status-description")).toContainText(
     "I didn’t spot clear scam signs",
   );

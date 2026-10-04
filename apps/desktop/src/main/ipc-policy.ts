@@ -30,6 +30,11 @@ export function validateInput(action: unknown, value: unknown): unknown {
       throw Error("Invalid request");
     return value.trim();
   }
+  if (action === "profile") {
+    // A short note about the user, kept on this computer.
+    if (typeof value !== "string" || value.length > 300) throw Error("Invalid request");
+    return value.trim();
+  }
   if (action === "cloud") {
     if (typeof value !== "boolean") throw Error("Invalid request");
     return value;

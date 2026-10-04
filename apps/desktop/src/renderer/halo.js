@@ -62,11 +62,15 @@ function snap() {
 const BUBBLE_MS = 8000;
 const BUBBLE_FADE_IN = 180;
 const BUBBLE_FADE_OUT = 300;
-const BUBBLE_FONT = "600 14px system-ui, 'Segoe UI', sans-serif";
-const BUBBLE_MAX = 230;
-const BUBBLE_PAD_X = 12;
-const BUBBLE_PAD_Y = 9;
-const BUBBLE_LINE = 19;
+// Large enough for older eyes.
+const BUBBLE_FONT = "600 16px system-ui, 'Segoe UI', sans-serif";
+const BUBBLE_MAX = 290;
+const BUBBLE_PAD_X = 14;
+const BUBBLE_PAD_Y = 10;
+const BUBBLE_LINE = 22;
+// Words appear as Squeek says them: about the pace of its slowed voice.
+const TYPE_CHARS_PER_SECOND = 14;
+const TYPE_DELAY = 250;
 const BUBBLE_TAIL = 8;
 let bubble;
 
@@ -85,11 +89,14 @@ function wrap(text) {
   return lines;
 }
 
+let lastStatus;
 window.squeek.onState((state) => {
   if (["paused", "monitoring", "unknown", "risk"].includes(state.status))
     document.body.dataset.state = state.status;
+  const cleared = lastStatus === "risk" && state.status !== "risk";
+  lastStatus = state.status;
   // The warning no longer applies once the risk is gone.
-  if (state.status !== "risk" && bubble)
+  if (cleared && bubble)
     bubble.until = Math.min(bubble.until, performance.now() + BUBBLE_FADE_OUT);
 });
 window.squeek.onSay((message) => {
@@ -100,9 +107,9 @@ window.squeek.onSay((message) => {
     return;
   }
   const text = typeof message?.text === "string" ? message.text.trim() : "";
-  if (!text || text.length > 300) return;
+  if (!text || text.length > 500) return;
   const ms =
-    Number.isFinite(message?.ms) && message.ms >= 1000 && message.ms <= 15000
+    Number.isFinite(message?.ms) && message.ms >= 1000 && message.ms <= 45000
       ? message.ms
       : BUBBLE_MS;
   const now = performance.now();
@@ -434,13 +441,17 @@ function drawBubble(t, box) {
   ctx.fillRect(tipX - 6, baseY - 1, 12, 2);
   ctx.fillStyle = "#1B1A17";
   ctx.textBaseline = "middle";
-  bubble.lines.forEach((line, i) =>
+  // Typewriter: the bubble keeps its full size while the words fill in.
+  let shown = Math.max(0, Math.floor(((age - TYPE_DELAY) / 1000) * TYPE_CHARS_PER_SECOND));
+  bubble.lines.forEach((line, i) => {
+    if (shown <= 0) return;
     ctx.fillText(
-      line,
+      line.slice(0, shown),
       x + BUBBLE_PAD_X,
       y + BUBBLE_PAD_Y - 2 + BUBBLE_LINE * (i + 0.5),
-    ),
-  );
+    );
+    shown -= line.length + 1;
+  });
   ctx.restore();
 
   const pad = 16;

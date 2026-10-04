@@ -20,6 +20,8 @@ test('each extractor emits at most one signal per span, with verbatim excerpts',
 test('registry order is stable and extractor-major', () => {
   assert.deepEqual(extractors.map(e => e.id), [
     'impersonation', 'payment', 'amount', 'destination',
-    'credential', 'pressure', 'remote_access', 'romance', 'money',
+    'credential', 'pressure', 'remote_access', 'hardship', 'money_ask',
+    'safe_account', 'callback', 'billing_bait', 'fee_demand', 'prize',
+    'extortion', 'investment', 'romance', 'money',
   ]);
 });
