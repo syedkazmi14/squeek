@@ -13,12 +13,12 @@ test("IPC excludes foreign frames and unbounded or malformed commands", () => {
     validateInput("monitor", { enabled: true, browser: "other" }),
   );
   assert.throws(() => validateInput("execute", "anything"));
+  assert.throws(() => validateInput("resize", { phase: "start", x: 0, y: 0 }));
   assert.deepEqual(
     validateInput("monitor", { enabled: true, browser: "chrome" }),
     { enabled: true, browser: "chrome" },
   );
 });
-
 test("sidebar visibility requests are payload-free and limited to its frame", () => {
   assert.equal(validateInput("show", undefined), undefined);
   assert.equal(validateInput("hide", undefined), undefined);

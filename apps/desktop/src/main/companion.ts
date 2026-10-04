@@ -15,6 +15,7 @@ interface WindowPort {
   isVisible(): boolean;
   isDestroyed(): boolean;
   setBounds(bounds: Area): void;
+  getBounds(): Area;
 }
 export interface Pointer extends Point {
   /** True when the overlay moved or reappeared, so the ghost should snap instead of fly. */
@@ -43,11 +44,21 @@ function sameArea(a: Area | undefined, b: Area) {
   );
 }
 export function sidebarBounds(area: Area): Area {
-  const width = Math.max(1, Math.min(520, area.width - 24)),
-    height = Math.max(1, area.height - 24);
+  const width = Math.max(1, Math.min(360, area.width - 24)),
+    height = Math.max(1, Math.min(520, area.height - 24));
   return {
     x: area.x + area.width - width - Math.min(12, area.width - width),
     y: area.y + Math.min(12, area.height - height),
+    width,
+    height,
+  };
+}
+export function clampSidebarBounds(bounds: Area, area: Area): Area {
+  const width = Math.max(1, Math.min(bounds.width, area.width));
+  const height = Math.max(1, Math.min(bounds.height, area.height));
+  return {
+    x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - width)),
+    y: Math.max(area.y, Math.min(bounds.y, area.y + area.height - height)),
     width,
     height,
   };
@@ -58,6 +69,7 @@ export class Companion {
   private timer: unknown;
   private visible = true;
   private area: Area | undefined;
+  private sidebarArea: Area | undefined;
   private position: Point | undefined;
   private alertKey: string | undefined;
   private alertedAt = 0;
@@ -92,9 +104,15 @@ export class Companion {
   showSidebar(focus = false) {
     const { panel } = this.options;
     if (panel.isDestroyed()) return;
+    const area = this.options.workArea(this.options.cursor());
+    const previous = this.sidebarArea ? panel.getBounds() : undefined;
+    const fixed = sidebarBounds(area);
     panel.setBounds(
-      sidebarBounds(this.options.workArea(this.options.cursor())),
+      previous && sameArea(this.sidebarArea, area)
+        ? clampSidebarBounds({ ...fixed, x: previous.x, y: previous.y }, area)
+        : fixed,
     );
+    this.sidebarArea = area;
     if (focus) panel.show();
     else panel.showInactive();
   }

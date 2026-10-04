@@ -288,7 +288,25 @@ function refreshTray() {
   if (!tray || tray.isDestroyed()) return;
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Settings", click: () => companion?.showSidebar(true) },
+      { label: "Open Squeek", click: () => companion?.showSidebar(true) },
+      {
+        label: "Settings",
+        submenu: [
+          {
+            label: "Send redacted text to Jev",
+            type: "checkbox",
+            enabled: providerGate.configured,
+            checked: state.cloudEnabled,
+            click: (item) => setCloudEnabled(item.checked),
+          },
+          {
+            label: "Open demo",
+            click: () => {
+              void openDemo();
+            },
+          },
+        ],
+      },
       {
         label: "Talk to Squeek (or hold Ctrl)",
         enabled: conversation.configured,
@@ -323,6 +341,23 @@ function refreshTray() {
       { label: "Quit", click: () => app.quit() },
     ]),
   );
+}
+function setCloudEnabled(enabled: boolean) {
+  pause();
+  providerGate.setEnabled(enabled);
+  state.cloudEnabled = enabled;
+  publish();
+}
+async function openDemo() {
+  if (!demo || demo.isDestroyed()) {
+    demo = secureWindow({ width: 680, height: 800 });
+    await demo.loadURL("squeek://app/demo.html");
+    demo.on("closed", () => {
+      reviews.invalidate();
+      demoAction = undefined;
+      demoAssessment = undefined;
+    });
+  } else demo.show();
 }
 function pause() {
   if (reviewExpiry) clearTimeout(reviewExpiry);
@@ -364,8 +399,8 @@ function secureWindow(options: {
   const { sidebar = false, ...dimensions } = options;
   const window = new BrowserWindow({
     ...dimensions,
-    minWidth: sidebar ? 320 : 480,
-    minHeight: sidebar ? 360 : 600,
+    minWidth: sidebar ? 1 : 480,
+    minHeight: sidebar ? 1 : 600,
     frame: !sidebar,
     skipTaskbar: sidebar,
     alwaysOnTop: sidebar,
@@ -499,7 +534,7 @@ app.whenReady().then(async () => {
     return net.fetch(pathToFileURL(join(root, name)).href);
   });
   tts.warm();
-  panel = secureWindow({ width: 520, height: 820, sidebar: true });
+  panel = secureWindow({ width: 360, height: 520, sidebar: true });
   panel.on("close", (event) => {
     if (!quitting) {
       event.preventDefault();
@@ -572,10 +607,7 @@ app.whenReady().then(async () => {
             return structuredClone(state);
           }
           if (action === "cloud") {
-            pause();
-            providerGate.setEnabled(input as boolean);
-            state.cloudEnabled = input as boolean;
-            publish();
+            setCloudEnabled(input as boolean);
             return structuredClone(state);
           }
           if (action === "check") {
@@ -599,15 +631,7 @@ app.whenReady().then(async () => {
             return structuredClone(state);
           }
           if (action === "demo") {
-            if (!demo || demo.isDestroyed()) {
-              demo = secureWindow({ width: 680, height: 800 });
-              await demo.loadURL("squeek://app/demo.html");
-              demo.on("closed", () => {
-                reviews.invalidate();
-                demoAction = undefined;
-                demoAssessment = undefined;
-              });
-            } else demo.show();
+            await openDemo();
             return undefined;
           }
         }

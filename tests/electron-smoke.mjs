@@ -24,7 +24,9 @@ const errors = [];
 try {
   const page = await application.firstWindow();
   page.on("pageerror", (error) => errors.push(error.message));
-  await expect(page.locator("#health")).toHaveText("paused");
+  await expect(page.locator("#monitoring-state")).toHaveText(
+    "Protection paused",
+  );
   await expect
     .poll(() =>
       application.evaluate(({ BrowserWindow }) =>
@@ -52,9 +54,14 @@ try {
   assert.deepEqual(haloFlags, { focusable: false, onTop: true });
   await application.evaluate(({ screen }) => {
     screen.__originalCursor = screen.getCursorScreenPoint;
-    const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+    const area = screen.getDisplayNearestPoint(
+      screen.getCursorScreenPoint(),
+    ).workArea;
     let tick = 0;
-    screen.getCursorScreenPoint = () => ({ x: area.x + 80 + (tick++ % 20), y: area.y + 80 });
+    screen.getCursorScreenPoint = () => ({
+      x: area.x + 80 + (tick++ % 20),
+      y: area.y + 80,
+    });
   });
   let overlay;
   try {
@@ -63,7 +70,8 @@ try {
       bounds: BrowserWindow.getAllWindows()
         .find((w) => w.webContents.getURL() === "squeek://app/halo.html")
         .getBounds(),
-      area: screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea,
+      area: screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+        .workArea,
     }));
   } finally {
     await application.evaluate(({ screen }) => {
@@ -78,7 +86,9 @@ try {
   );
   const duplicate = spawn(
     executablePath ?? electronExecutable,
-    executablePath ? [`--user-data-dir=${profile}`] : [".", `--user-data-dir=${profile}`],
+    executablePath
+      ? [`--user-data-dir=${profile}`]
+      : [".", `--user-data-dir=${profile}`],
     { env, stdio: "ignore", windowsHide: true },
   );
   const duplicateExit = await new Promise((resolve, reject) => {
@@ -86,10 +96,20 @@ try {
       duplicate.kill();
       reject(Error("Duplicate companion did not exit"));
     }, 5000);
-    duplicate.once("error", (error) => { clearTimeout(timer); reject(error); });
-    duplicate.once("exit", (code) => { clearTimeout(timer); resolve(code); });
+    duplicate.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    duplicate.once("exit", (code) => {
+      clearTimeout(timer);
+      resolve(code);
+    });
   });
-  assert.equal(duplicateExit, 0, "second launch must use the existing tray instance");
+  assert.equal(
+    duplicateExit,
+    0,
+    "second launch must use the existing tray instance",
+  );
   const haloPage = application
     .windows()
     .find((window) => window.url() === "squeek://app/halo.html");
@@ -181,6 +201,8 @@ try {
         .workArea,
     };
   });
+  assert.equal(dock.bounds.width, 360);
+  assert.equal(dock.bounds.height, Math.min(520, dock.area.height - 24));
   assert.ok(dock.bounds.x + dock.bounds.width <= dock.area.x + dock.area.width);
   assert.ok(
     dock.bounds.y + dock.bounds.height <= dock.area.y + dock.area.height,
@@ -208,13 +230,13 @@ try {
     voices > 0,
     "Windows local voices must be available for this machine validation",
   );
-  await page.locator("#manual-check summary").click();
+  await page.locator("#open-manual").click();
   await page
     .locator("#manual-text")
     .fill("IRS: send money using gift cards immediately.");
   await page.locator("#check").click();
   await expect(page.locator("#assessment-heading")).toHaveText(
-    "Hey, this is a scam, don't click on it",
+    "This looks suspicious.",
   );
   await expect(page.locator("#evidence li")).toHaveCount(4);
   const box = await page.locator("#assessment-heading").boundingBox();
@@ -224,16 +246,50 @@ try {
       box.y + box.height < (await page.evaluate(() => innerHeight)),
   );
   await expect(page.locator("#replay")).toBeEnabled();
+  await page.evaluate(() => {
+    // Capture native voice selection without playing repeated QA audio aloud.
+    window.__qaSpeech = [];
+    window.__qaCancelled = 0;
+    speechSynthesis.speak = (utterance) =>
+      window.__qaSpeech.push({
+        text: utterance.text,
+        rate: utterance.rate,
+        local: utterance.voice?.localService,
+      });
+    speechSynthesis.cancel = () => {
+      window.__qaCancelled++;
+    };
+  });
+  await page.locator("#replay").click();
+  assert.deepEqual(await page.evaluate(() => window.__qaSpeech), [
+    { text: "Hey, this is a scam, don't click on it", rate: 1, local: true },
+  ]);
   await page.locator("#mute").click();
+  assert.ok(await page.evaluate(() => window.__qaCancelled > 0));
   await expect(page.locator("#mute")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#replay")).toBeDisabled();
+  await expect(page.locator("#replay")).toBeHidden();
   await page.screenshot({ path: "artifacts/qa/warning.png" });
-  await page.locator("#cancel").click();
-  await expect(page.locator("#assessment-heading")).toHaveText("Unknown");
+  await application.evaluate(({ Menu }) => {
+    const original = Menu.buildFromTemplate;
+    Menu.buildFromTemplate = (template) => {
+      if (template.some((item) => item.label === "Settings"))
+        globalThis.__qaTray = template;
+      return original.call(Menu, template);
+    };
+  });
+  await page.locator("#clear-check").click();
+  await expect(page.locator("#status-heading")).toHaveText(
+    "Ready when you are.",
+  );
   const demoPromise = application.waitForEvent("window", (page) =>
     page.url().includes("demo.html"),
   );
-  await page.locator("#demo").click();
+  await application.evaluate(() =>
+    globalThis.__qaTray
+      .find((item) => item.label === "Settings")
+      .submenu.find((item) => item.label === "Open demo")
+      .click(),
+  );
   const demo = await demoPromise;
   await demo.waitForLoadState("domcontentloaded");
   await demo
@@ -307,7 +363,9 @@ try {
       .find((w) => w.webContents.getURL() === "squeek://app/index.html")
       .show(),
   );
-  await expect(page.locator("#monitoring-state")).toHaveText("Paused");
+  await expect(page.locator("#monitoring-state")).toHaveText(
+    "Protection paused",
+  );
   assert.equal(
     await application.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()

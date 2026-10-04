@@ -13,119 +13,221 @@
   </head>
   <body>
     <div class="app-shell">
-      <header class="app-header">
-        <h1><img class="brand-mark" src="./mark.png" alt="" />Squeek</h1>
+      <header class="app-header" title="Drag to move Squeek">
+        <h1>Squeek</h1>
         <div class="header-actions">
           <button
             id="mute"
-            class="quiet-button"
+            class="icon-button"
             type="button"
+            aria-label="Mute warning audio"
+            title="Mute warning audio"
             aria-pressed="false"
           >
-            Mute
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+              <path
+                class="sound-on"
+                d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"
+              />
+              <path class="sound-off" d="m16 9 6 6m0-6-6 6" />
+            </svg>
           </button>
-          <button id="close" class="quiet-button close-button" type="button">
-            Close
+          <button
+            id="close"
+            class="icon-button"
+            type="button"
+            aria-label="Close panel"
+            title="Close panel"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
           </button>
         </div>
       </header>
-      <main>
-        <section class="assessment" aria-labelledby="assessment-heading">
-          <p id="last-review" hidden>Last review</p>
+      <main class="panel-content" id="panel-content">
+        <section id="overview" aria-label="Overview">
           <div
-            id="result"
-            class="result"
+            id="status-card"
+            class="status-card"
             role="status"
             aria-live="polite"
             aria-atomic="true"
           >
-            <span id="warning-mark" class="warning-mark" aria-hidden="true" hidden></span>
-            <h2 id="assessment-heading">Unknown</h2>
+            <div class="mascot-stage" aria-hidden="true">
+              <span class="mascot-shadow"></span>
+              <canvas class="status-mascot" aria-hidden="true"></canvas>
+            </div>
+            <div id="status-copy">
+              <p class="eyebrow" id="status-label"></p>
+              <h2 id="status-heading">Ready when you are.</h2>
+              <p id="status-description" class="secondary"></p>
+            </div>
           </div>
-          <div class="evidence-section">
-            <h3>Evidence</h3>
-            <ul id="evidence" class="evidence-list"></ul>
+          <div class="protection-controls">
+            <div class="browser-row">
+              <span class="section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" />
+                  <path d="m8 12 3 3 5-6" />
+                </svg>
+              </span>
+              <div class="browser-copy">
+                <label for="browser">Browser protection</label>
+                <p id="monitoring-state" class="small secondary">
+                  Protection paused
+                </p>
+              </div>
+              <select id="browser" aria-label="Browser">
+                <option value="chrome">Chrome</option>
+                <option value="msedge">Microsoft Edge</option>
+              </select>
+            </div>
+            <button
+              id="see-finding"
+              class="primary-button full-width"
+              type="button"
+              hidden
+            >
+              See what I found <span aria-hidden="true">→</span>
+            </button>
+            <button
+              id="monitor"
+              class="primary-button full-width"
+              type="button"
+            >
+              Start protection
+            </button>
           </div>
+          <section class="activity" aria-labelledby="activity-heading">
+            <h3 id="activity-heading">Latest check</h3>
+            <div id="empty-activity" class="empty-check">
+              <span class="section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M8 3h8v4H8zM8 5H5v16h14V5h-3M8 12h8M8 16h5" />
+                </svg>
+              </span>
+              <p class="small secondary">
+                No checks yet.<br />Your next check will appear here.
+              </p>
+            </div>
+            <button id="latest-check" class="activity-row" type="button" hidden>
+              <span id="activity-icon" class="activity-icon" aria-hidden="true"
+                >!</span
+              >
+              <span class="activity-copy"
+                ><span id="activity-title"></span
+                ><span id="activity-time" class="small secondary"></span
+              ></span>
+              <span aria-hidden="true">›</span>
+            </button>
+          </section>
+          <button id="open-manual" class="text-button full-width" type="button">
+            <span class="section-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 4h16v12H9l-5 4V4Z" />
+                <path d="M8 8h8M8 12h5" />
+              </svg>
+            </span>
+            <span class="manual-label">Check something</span>
+            <span class="manual-arrow" aria-hidden="true">→</span>
+          </button>
           <div class="talk" id="talk-section" hidden>
-            <button id="talk" class="primary-button" type="button">
+            <button id="talk" class="primary-button full-width" type="button">
               Talk to Squeek
             </button>
-            <p class="talk-hint">
-              Or hold Ctrl anywhere while you talk, and let go when you're done.
+            <p class="talk-hint small secondary">
+              Or hold Ctrl while you talk, then release it when you’re done.
             </p>
-            <p id="talk-heard" class="talk-heard" hidden></p>
+            <p id="talk-heard" class="talk-heard small" hidden></p>
           </div>
-          <div class="voice-controls">
-            <button id="cancel" class="primary-button" type="button" hidden>
-              Cancel
-            </button>
-            <button id="replay" class="outlined-button" type="button" disabled>
-              Replay
-            </button>
-            <details class="settings">
-              <summary>Voice settings</summary>
-              <label for="voice-rate">Voice rate</label>
-              <select id="voice-rate">
-                <option value="0.8">Slower</option>
-                <option value="1" selected>Normal</option>
-                <option value="1.2">Faster</option>
-              </select>
-            </details>
-          </div>
-          <details class="settings diagnostics-settings">
-            <summary>Diagnostics</summary>
-            <dl class="diagnostics">
-              <div>
-                <dt>Health</dt>
-                <dd id="health">Paused</dd>
-              </div>
-              <div>
-                <dt>Coverage</dt>
-                <dd id="coverage">Unknown</dd>
-              </div>
-              <div>
-                <dt>Revision</dt>
-                <dd id="revision">0</dd>
-              </div>
-            </dl>
-            <label class="checkbox-label" for="cloud"
-              ><input id="cloud" type="checkbox" disabled />Send redacted text
-              to Jev</label
-            >
-          </details>
         </section>
-
-        <section class="controls" aria-labelledby="monitoring-heading">
-          <div class="section-heading">
-            <h2 id="monitoring-heading">Monitoring</h2>
-            <span id="monitoring-state" class="status-label">Paused</span>
-          </div>
-          <label for="browser">Browser</label>
-          <select id="browser">
-            <option value="chrome">Chrome</option>
-            <option value="msedge">Microsoft Edge</option>
-          </select>
-          <button id="monitor" class="primary-button" type="button">
-            Start monitoring
+        <section id="manual-view" aria-labelledby="manual-heading" hidden>
+          <button class="back-button" data-back type="button">
+            <span aria-hidden="true">←</span> Back
           </button>
-
-          <details id="manual-check" class="manual-form">
-            <summary>Manual check</summary>
-            <form id="manual-form">
-              <label for="manual-text">Manual check</label>
-              <textarea
-                id="manual-text"
-                rows="3"
-                maxlength="8000"
-                spellcheck="false"
-              ></textarea>
-              <button id="check" class="primary-button" type="submit" disabled>
-                Check
-              </button>
-            </form>
-          </details>
-          <button id="demo" class="outlined-button" type="button">
-            Open demo
+          <h2 id="manual-heading" tabindex="-1">Check something</h2>
+          <p id="manual-description" class="secondary">
+            Paste a message you’re unsure about. Squeek will look for scam
+            signs.
+          </p>
+          <form id="manual-form">
+            <label for="manual-text">Message to check</label>
+            <textarea
+              id="manual-text"
+              rows="4"
+              maxlength="8000"
+              spellcheck="false"
+              required
+              aria-describedby="manual-note check-feedback"
+            ></textarea>
+            <p id="manual-note" class="small secondary">
+              Checks the text you paste. This pauses browser protection.
+            </p>
+            <p
+              id="check-feedback"
+              class="feedback"
+              role="status"
+              aria-live="polite"
+            ></p>
+            <button
+              id="check"
+              class="primary-button full-width"
+              type="submit"
+              disabled
+            >
+              Check message
+            </button>
+            <button
+              id="cancel"
+              class="text-button full-width"
+              type="button"
+              hidden
+            >
+              Cancel check
+            </button>
+          </form>
+        </section>
+        <section id="finding-view" aria-labelledby="assessment-heading" hidden>
+          <button class="back-button" data-back type="button">
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <p id="last-review" class="small secondary" hidden>
+            Previous check · no longer current
+          </p>
+          <div id="finding-summary" class="finding-summary">
+            <p id="finding-label" class="eyebrow">CHECK RESULT</p>
+            <h2 id="assessment-heading" tabindex="-1"></h2>
+            <p id="finding-description" class="secondary"></p>
+          </div>
+          <section
+            id="evidence-section"
+            class="evidence-section"
+            aria-labelledby="evidence-heading"
+            hidden
+          >
+            <h3 id="evidence-heading">What caught my eye</h3>
+            <ul id="evidence" class="evidence-list"></ul>
+          </section>
+          <p id="next-step" class="next-step"></p>
+          <button
+            id="detail-manual"
+            class="primary-button full-width"
+            type="button"
+          >
+            Check another message
+          </button>
+          <button
+            id="replay"
+            class="text-button full-width"
+            type="button"
+            hidden
+          >
+            Replay warning
+          </button>
+          <button id="clear-check" class="text-button full-width" type="button">
+            Clear this check
           </button>
         </section>
       </main>
