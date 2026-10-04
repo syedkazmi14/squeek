@@ -324,6 +324,16 @@ final class AppModel: ObservableObject {
       case .clear: Notifications.post(title: "Squeek took a message", body: incident.evidenceRedacted ?? "Open Squeek to see who called.")
       case .unknown: return
       }
+    } else if incident.platform == "windows", incident.surface == "link", incident.userId == userId,
+      incident.level == .danger || incident.level == .caution
+    {
+      // The person pointed at a risky link on their computer.
+      let site = incident.indicatorValue ?? "a website"
+      Notifications.post(
+        title: "Squeek on your PC",
+        body: incident.level == .danger
+          ? "You pointed at a dangerous link to \(site) on your computer. Don't click it."
+          : "You pointed at a link to \(site) on your computer that looks risky. Be careful.")
     } else if incident.level != .danger || incident.deviceId == localSettings.deviceId {
       return
     } else if incident.userId != userId {

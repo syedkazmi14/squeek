@@ -28,7 +28,7 @@ import { createTts } from "./tts.ts";
 import { LinkGuard, type LinkChoice, type LinkView } from "./link-guard.ts";
 import { createConversation } from "./conversation.ts";
 import { PushToTalk, watchTalkKey } from "./push-to-talk.ts";
-import { createSync, incidentFor } from "./sync.ts";
+import { createSync, incidentFor, incidentForLink } from "./sync.ts";
 import { createJevProvider } from "../../../../packages/providers/src/jev.ts";
 import {
   assess,
@@ -265,6 +265,9 @@ const linkGuard = new LinkGuard({
   toDip: (rect) => screen.screenToDipRect(null, rect),
   cursor: () => screen.getCursorScreenPoint(),
   show: (view?: LinkView) => {
+    // Pointing at a risky link also tells the iPhone (just the website, once per ten minutes).
+    const forPhone = view && incidentForLink(view);
+    if (forPhone) void sync.reportIncident(forPhone);
     const overlay = haloReady();
     watchGuard(!!view?.guarded);
     if (!overlay) return;

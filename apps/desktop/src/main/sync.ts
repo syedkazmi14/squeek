@@ -32,9 +32,11 @@ export interface PhoneWarning {
 }
 export interface IncidentInput {
   risk: "high_risk" | "caution";
-  surface: "browser" | "text";
+  surface: "browser" | "text" | "link";
   ruleIds: string[];
   evidence: string | null;
+  /** The website a link points to, when the warning is about one. */
+  domain?: string;
 }
 export interface SyncView {
   /** False when this build has no backend configured; the panel hides the whole section. */
@@ -79,6 +81,25 @@ export function incidentFor(
     surface,
     ruleIds: [...new Set(assessment.evidence.map((item) => item.ruleId))].slice(0, 12),
     evidence: joined ? joined.slice(0, MAX_EVIDENCE) : null,
+  };
+}
+
+const DOMAIN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+
+/**
+ * A warning for a risky link the person pointed at, so their iPhone hears about it too. Only the
+ * website the link goes to is sent, never the page or the link's path and query.
+ */
+export function incidentForLink(link: { state: string; host: string }): IncidentInput | undefined {
+  if (link.state !== "high_risk" && link.state !== "caution") return undefined;
+  const domain = link.host.trim().toLowerCase().replace(/^www\./, "");
+  if (domain.length > 253 || !DOMAIN.test(domain)) return undefined;
+  return {
+    risk: link.state,
+    surface: "link",
+    ruleIds: ["link_hover"],
+    evidence: `A link to ${domain}`,
+    domain,
   };
 }
 
@@ -250,7 +271,7 @@ export function createSync(
     const current = session;
     if (!current) return;
     try {
-      const key = `${input.surface}|${input.risk}|${input.evidence ?? ""}`;
+      const key = `${input.surface}|${input.risk}|${input.evidence ?? ""}|${input.domain ?? ""}`;
       const seen = recentlySent.get(key);
       if (seen !== undefined && now() - seen < SAME_WARNING_MS) return;
       if (!(await historyOn())) return;
@@ -268,6 +289,7 @@ export function createSync(
           categories: [],
           rule_ids: input.ruleIds,
           evidence_redacted: input.evidence,
+          ...(input.domain ? { indicator_kind: "domain", indicator_value: input.domain } : {}),
         },
       });
       if (res && !res.ok) {

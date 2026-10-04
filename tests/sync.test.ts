@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createSync, incidentFor, SAME_WARNING_MS, type SyncStorage } from "../apps/desktop/src/main/sync.ts";
+import { createSync, incidentFor, incidentForLink, SAME_WARNING_MS, type SyncStorage } from "../apps/desktop/src/main/sync.ts";
 import type { Assessment } from "../packages/detection/src/index.ts";
 
 const config = { url: "https://example.supabase.co", anonKey: "anon-key" };
@@ -194,4 +194,32 @@ test("signing out forgets the session", async () => {
   await sync.signOut();
   assert.equal(sync.view().connected, false);
   assert.equal(store.value, undefined);
+});
+
+test("a risky link the person points at becomes a short warning with only its website", () => {
+  assert.deepEqual(incidentForLink({ state: "high_risk", host: "Paypal-Account-Verify.example" }), {
+    risk: "high_risk", surface: "link", ruleIds: ["link_hover"], evidence: "A link to paypal-account-verify.example",
+    domain: "paypal-account-verify.example",
+  });
+  assert.equal(incidentForLink({ state: "caution", host: "www.bit.ly" })!.domain, "bit.ly");
+  assert.equal(incidentForLink({ state: "no_detected_signal", host: "google.com" }), undefined);
+  assert.equal(incidentForLink({ state: "unknown", host: "example.com" }), undefined);
+  for (const host of ["an unknown place", "", "localhost", "evil.example/path?token=1", "a b.com", "x".repeat(300) + ".com"])
+    assert.equal(incidentForLink({ state: "high_risk", host }), undefined, host);
+});
+
+test("a link warning is stored with its website as the indicator and sent once", async () => {
+  const fake = backend();
+  const sync = createSync(config, fake.fetchImpl, memory(), { newId: () => "device-1" });
+  await sync.signIn("syed@example.com");
+  const warning = incidentForLink({ state: "high_risk", host: "usps-redelivery-fee.example" })!;
+  await sync.reportIncident(warning);
+  await sync.reportIncident(warning);
+  const sent = to(fake.calls, "POST", "/rest/v1/incidents");
+  assert.equal(sent.length, 1);
+  const row = sent[0]!.body as Record<string, unknown>;
+  assert.equal(row.surface, "link");
+  assert.equal(row.indicator_kind, "domain");
+  assert.equal(row.indicator_value, "usps-redelivery-fee.example");
+  assert.equal(row.evidence_redacted, "A link to usps-redelivery-fee.example");
 });
