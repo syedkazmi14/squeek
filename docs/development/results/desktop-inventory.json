@@ -1,0 +1,19 @@
+{
+  "files": [
+    "dist/desktop/demo.html",
+    "dist/desktop/demo.js",
+    "dist/desktop/halo.css",
+    "dist/desktop/halo.html",
+    "dist/desktop/halo.js",
+    "dist/desktop/icon.png",
+    "dist/desktop/index.html",
+    "dist/desktop/main.mjs",
+    "dist/desktop/preload.cjs",
+    "dist/desktop/renderer.js",
+    "dist/desktop/styles.css",
+    "dist/desktop/tray-icon.png",
+    "package.json"
+  ],
+  "runtimeDependencies": 0,
+  "scope": "Actual electron-builder win-x64 directory output on macOS with executable resource editing disabled; observer absent; incomplete diagnostic build, no installer"
+}

@@ -1,0 +1,14 @@
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createPackage } from "@electron/asar";
+import { desktopFiles } from "./release-policy.ts";
+import { auditDesktopArchive } from "./audit-package.ts";
+const root = "artifacts/desktop-inspection";
+await rm(root, { recursive: true, force: true });
+await mkdir(`${root}/source/dist/desktop`, { recursive: true });
+for (const name of desktopFiles) await copyFile(`dist/desktop/${name}`, `${root}/source/dist/desktop/${name}`);
+const metadata = JSON.parse(await readFile("package.json", "utf8"));
+await writeFile(`${root}/source/package.json`, JSON.stringify({ name: metadata.name, version: metadata.version, main: metadata.main }));
+await createPackage(`${root}/source`, `${root}/app.asar`);
+const report = await auditDesktopArchive(`${root}/app.asar`, process.env.TYPESAFE_API_KEY?.trim() ? [process.env.TYPESAFE_API_KEY] : []);
+await writeFile(`${root}/inventory.json`, JSON.stringify({ ...report, scope: "Allowlisted desktop bundle snapshot only; not electron-builder output, a Windows package, or installation proof" }, null, 2) + "\n");
+console.log(`Desktop snapshot inspected: ${report.files.length} files, zero runtime dependencies. Full Windows package remains unverified.`);

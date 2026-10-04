@@ -10,12 +10,17 @@
     "observer:probe": "node scripts/observer-probe.ts",
     "build": "node scripts/build-desktop.mjs",
     "start": "electron .",
-    "package:win": "npm run observer:build && npm run build && electron-builder --win nsis",
+    "package:win": "node scripts/package-windows.ts",
+    "release:audit": "node scripts/audit-package.ts",
+    "release:inspect-desktop": "npm run build && node scripts/inspect-desktop.ts",
+    "evaluate": "node scripts/evaluate-detection.ts",
+    "test:usability": "npm run build && node tests/electron-usability.mjs",
     "test:desktop": "npm run build && node tests/electron-smoke.mjs",
     "test:chrome": "node tests/chrome-extraction.mjs",
     "desktop:setup": "node node_modules/electron/install.js"
   },
   "devDependencies": {
+    "@electron/asar": "3.4.1",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.4",
     "electron": "44.5.1",

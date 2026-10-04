@@ -1,5 +1,5 @@
 import type { Observation } from "../../contracts/src/observation.ts";
-import { sourceId, type Assessment } from "./index.ts";
+import { detectionPolicyVersion, sourceId, type Assessment } from "./index.ts";
 export interface SchedulerClock {
   now(): number;
   setTimeout(callback: () => void, ms: number): unknown;
@@ -28,7 +28,8 @@ export class AssessmentScheduler {
   private latest: Observation | undefined;
   private generation = 0;
   private paused = false;
-  private active = new Set<AbortController>();
+  private active = new Map<AbortController, number>();
+  private waitingForCapacity = false;
   private cache = new Map<
     string,
     { assessment: Assessment; expires: number }
@@ -72,9 +73,11 @@ export class AssessmentScheduler {
     const unchanged =
       this.latest && this.key(this.latest) === this.key(observation);
     this.latest = observation;
-    if (unchanged && (this.timer !== undefined || this.active.size > 0)) return;
+    if (unchanged && (this.timer !== undefined || [...this.active].some(([controller, generation]) =>
+      generation === this.generation && !controller.signal.aborted))) return;
+    this.waitingForCapacity = false;
     this.generation++;
-    for (const controller of this.active) {
+    for (const controller of this.active.keys()) {
       if (!controller.signal.aborted) {
         controller.abort();
         this.stats.cancelled++;
@@ -109,7 +112,13 @@ export class AssessmentScheduler {
     this.clearTimer();
     this.latest = undefined;
     this.cache.clear();
-    for (const controller of this.active) controller.abort();
+    this.waitingForCapacity = false;
+    for (const controller of this.active.keys()) {
+      if (!controller.signal.aborted) {
+        controller.abort();
+        this.stats.cancelled++;
+      }
+    }
   }
   private clearTimer() {
     if (this.timer !== undefined) this.clock.clearTimeout(this.timer);
@@ -118,7 +127,7 @@ export class AssessmentScheduler {
   }
   private key(o: Observation) {
     return JSON.stringify([
-      "policy-1",
+      detectionPolicyVersion,
       "jev-1.13.0",
       o.sessionId,
       o.source,
@@ -143,15 +152,18 @@ export class AssessmentScheduler {
     const observation = this.latest;
     if (!observation || this.paused) return;
     const generation = this.generation;
-    if (
-      this.active.size >= 2 ||
-      this.stats.requests >= (this.options.maxRequests ?? 100)
-    ) {
+    if (this.stats.requests >= (this.options.maxRequests ?? 100)) {
       this.degraded(observation);
       return;
     }
+    if (this.active.size >= 2) {
+      this.waitingForCapacity = true;
+      this.degraded(observation);
+      return;
+    }
+    this.waitingForCapacity = false;
     const controller = new AbortController();
-    this.active.add(controller);
+    this.active.set(controller, generation);
     this.stats.requests++;
     try {
       const result = await this.options.assess(observation, controller.signal);
@@ -191,6 +203,12 @@ export class AssessmentScheduler {
         this.degraded(observation);
     } finally {
       this.active.delete(controller);
+      // A cancelled transport may settle late. Dispatch retained latest content
+      // when capacity returns, even if the native source emits no further event.
+      if (this.waitingForCapacity && !this.paused && this.active.size < 2 && this.timer === undefined) {
+        this.waitingForCapacity = false;
+        void this.run();
+      }
     }
   }
 }

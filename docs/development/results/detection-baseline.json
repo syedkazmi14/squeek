@@ -1,0 +1,613 @@
+{
+  "schemaVersion": 1,
+  "corpusSha256": "afede8bdc7d4d4a40307956d0064e9949a98458c0cd76de7aeff58f2addf1532",
+  "split": "held-out",
+  "conditions": {
+    "generatedAt": "2026-10-04T01:55:00.263Z",
+    "node": "v24.21.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "syntheticOnly": true,
+    "alertThreshold": "caution or high_risk",
+    "unknownScamsCountAsFalseNegatives": true,
+    "ambiguousExcludedFromBinaryDenominators": true,
+    "latencyRepeats": 100,
+    "performanceScope": "This Node detector process only, after warmup; 1s idle then 1s saturated synthetic activity. Not Electron/native observer or browser monitoring."
+  },
+  "local": {
+    "counts": {
+      "cases": 44,
+      "scams": 20,
+      "legitimate": 16,
+      "ambiguous": 8,
+      "falseNegatives": 11,
+      "falsePositives": 5,
+      "truePositives": 9,
+      "ambiguousAlerts": 3,
+      "ambiguousUnknown": 3,
+      "ambiguousNoSignal": 2,
+      "unknown": 6
+    },
+    "byCategory": {
+      "adversarial": {
+        "cases": 6,
+        "scams": 3,
+        "legitimate": 2,
+        "ambiguous": 1,
+        "falseNegatives": 2,
+        "falsePositives": 1,
+        "truePositives": 1,
+        "ambiguousAlerts": 0,
+        "ambiguousUnknown": 0,
+        "ambiguousNoSignal": 1,
+        "unknown": 0
+      },
+      "coverage": {
+        "cases": 7,
+        "scams": 4,
+        "legitimate": 2,
+        "ambiguous": 1,
+        "falseNegatives": 2,
+        "falsePositives": 0,
+        "truePositives": 2,
+        "ambiguousAlerts": 0,
+        "ambiguousUnknown": 1,
+        "ambiguousNoSignal": 0,
+        "unknown": 4
+      },
+      "irs": {
+        "cases": 6,
+        "scams": 3,
+        "legitimate": 2,
+        "ambiguous": 1,
+        "falseNegatives": 2,
+        "falsePositives": 0,
+        "truePositives": 1,
+        "ambiguousAlerts": 0,
+        "ambiguousUnknown": 1,
+        "ambiguousNoSignal": 0,
+        "unknown": 1
+      },
+      "ordinary": {
+        "cases": 4,
+        "scams": 0,
+        "legitimate": 3,
+        "ambiguous": 1,
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "truePositives": 0,
+        "ambiguousAlerts": 0,
+        "ambiguousUnknown": 0,
+        "ambiguousNoSignal": 1,
+        "unknown": 0
+      },
+      "payment": {
+        "cases": 6,
+        "scams": 3,
+        "legitimate": 2,
+        "ambiguous": 1,
+        "falseNegatives": 2,
+        "falsePositives": 1,
+        "truePositives": 1,
+        "ambiguousAlerts": 1,
+        "ambiguousUnknown": 0,
+        "ambiguousNoSignal": 0,
+        "unknown": 0
+      },
+      "phishing": {
+        "cases": 6,
+        "scams": 3,
+        "legitimate": 2,
+        "ambiguous": 1,
+        "falseNegatives": 2,
+        "falsePositives": 2,
+        "truePositives": 1,
+        "ambiguousAlerts": 0,
+        "ambiguousUnknown": 1,
+        "ambiguousNoSignal": 0,
+        "unknown": 1
+      },
+      "remote_access": {
+        "cases": 3,
+        "scams": 1,
+        "legitimate": 1,
+        "ambiguous": 1,
+        "falseNegatives": 0,
+        "falsePositives": 0,
+        "truePositives": 1,
+        "ambiguousAlerts": 1,
+        "ambiguousUnknown": 0,
+        "ambiguousNoSignal": 0,
+        "unknown": 0
+      },
+      "romance": {
+        "cases": 6,
+        "scams": 3,
+        "legitimate": 2,
+        "ambiguous": 1,
+        "falseNegatives": 1,
+        "falsePositives": 1,
+        "truePositives": 2,
+        "ambiguousAlerts": 1,
+        "ambiguousUnknown": 0,
+        "ambiguousNoSignal": 0,
+        "unknown": 0
+      }
+    },
+    "byCoverage": {
+      "complete": {
+        "cases": 37,
+        "scams": 17,
+        "legitimate": 15,
+        "ambiguous": 5,
+        "falseNegatives": 9,
+        "falsePositives": 5,
+        "truePositives": 8,
+        "ambiguousAlerts": 3,
+        "ambiguousUnknown": 0,
+        "ambiguousNoSignal": 2,
+        "unknown": 0
+      },
+      "partial": {
+        "cases": 7,
+        "scams": 3,
+        "legitimate": 1,
+        "ambiguous": 3,
+        "falseNegatives": 2,
+        "falsePositives": 0,
+        "truePositives": 1,
+        "ambiguousAlerts": 0,
+        "ambiguousUnknown": 3,
+        "ambiguousNoSignal": 0,
+        "unknown": 6
+      }
+    },
+    "latency": {
+      "samples": 44,
+      "p50Ms": 0.014416999999994573,
+      "p95Ms": 0.5649169999999941,
+      "maxMs": 0.9868330000000043
+    },
+    "rows": [
+      {
+        "id": "h01",
+        "category": "irs",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h02",
+        "category": "irs",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h03",
+        "category": "irs",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "payment paraphrase"
+      },
+      {
+        "id": "h04",
+        "category": "irs",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h05",
+        "category": "irs",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h06",
+        "category": "irs",
+        "label": "ambiguous",
+        "coverage": "partial",
+        "state": "unknown",
+        "providerHealth": "local_only",
+        "limitation": "missing request and identity"
+      },
+      {
+        "id": "h07",
+        "category": "romance",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h08",
+        "category": "romance",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h09",
+        "category": "romance",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "relationship history and paraphrase"
+      },
+      {
+        "id": "h10",
+        "category": "romance",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h11",
+        "category": "romance",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h12",
+        "category": "romance",
+        "label": "ambiguous",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": "cannot verify relationship or purpose"
+      },
+      {
+        "id": "h13",
+        "category": "phishing",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h14",
+        "category": "phishing",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h15",
+        "category": "phishing",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "unverified destination and credential collection outside observed text"
+      },
+      {
+        "id": "h16",
+        "category": "phishing",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h17",
+        "category": "phishing",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h18",
+        "category": "phishing",
+        "label": "ambiguous",
+        "coverage": "partial",
+        "state": "unknown",
+        "providerHealth": "local_only",
+        "limitation": "hidden URL destination"
+      },
+      {
+        "id": "h19",
+        "category": "payment",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h20",
+        "category": "payment",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h21",
+        "category": "payment",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "business email compromise and unknown bank details"
+      },
+      {
+        "id": "h22",
+        "category": "payment",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h23",
+        "category": "payment",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "caution",
+        "providerHealth": "local_only",
+        "limitation": "ordinary deadline and payment overlap"
+      },
+      {
+        "id": "h24",
+        "category": "payment",
+        "label": "ambiguous",
+        "coverage": "complete",
+        "state": "caution",
+        "providerHealth": "local_only",
+        "limitation": "legitimacy of payment unknown"
+      },
+      {
+        "id": "h25",
+        "category": "remote_access",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h26",
+        "category": "remote_access",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h27",
+        "category": "remote_access",
+        "label": "ambiguous",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": "cannot authenticate authorized support"
+      },
+      {
+        "id": "h28",
+        "category": "adversarial",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h29",
+        "category": "adversarial",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "obfuscation"
+      },
+      {
+        "id": "h30",
+        "category": "adversarial",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "non-English"
+      },
+      {
+        "id": "h31",
+        "category": "adversarial",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": "quotation versus active request"
+      },
+      {
+        "id": "h32",
+        "category": "adversarial",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "provider prompt injection"
+      },
+      {
+        "id": "h33",
+        "category": "adversarial",
+        "label": "ambiguous",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "unsupported assurance"
+      },
+      {
+        "id": "h34",
+        "category": "coverage",
+        "label": "scam",
+        "coverage": "partial",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": "partial request still has evidence"
+      },
+      {
+        "id": "h35",
+        "category": "coverage",
+        "label": "scam",
+        "coverage": "partial",
+        "state": "unknown",
+        "providerHealth": "local_only",
+        "limitation": "image-only request; OCR not shipped"
+      },
+      {
+        "id": "h36",
+        "category": "coverage",
+        "label": "scam",
+        "coverage": "partial",
+        "state": "unknown",
+        "providerHealth": "local_only",
+        "limitation": "scam demand outside extracted region"
+      },
+      {
+        "id": "h37",
+        "category": "coverage",
+        "label": "legitimate",
+        "coverage": "partial",
+        "state": "unknown",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h38",
+        "category": "coverage",
+        "label": "ambiguous",
+        "coverage": "partial",
+        "state": "unknown",
+        "providerHealth": "local_only",
+        "limitation": "blank accessibility content"
+      },
+      {
+        "id": "h39",
+        "category": "coverage",
+        "label": "scam",
+        "coverage": "complete",
+        "state": "high_risk",
+        "providerHealth": "local_only",
+        "limitation": "request spans multiple accessible elements"
+      },
+      {
+        "id": "h40",
+        "category": "coverage",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h41",
+        "category": "ordinary",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h42",
+        "category": "ordinary",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h43",
+        "category": "ordinary",
+        "label": "legitimate",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": null
+      },
+      {
+        "id": "h44",
+        "category": "ordinary",
+        "label": "ambiguous",
+        "coverage": "complete",
+        "state": "no_detected_signal",
+        "providerHealth": "local_only",
+        "limitation": "missing context"
+      }
+    ]
+  },
+  "warmLocalLatency": {
+    "samples": 4400,
+    "p50Ms": 0.007999999999995566,
+    "p95Ms": 0.01216600000000767,
+    "maxMs": 0.2148339999999962
+  },
+  "processProfile": {
+    "idle": {
+      "elapsedMs": 1002.178375,
+      "assessments": 0,
+      "cpuUserMs": 3.07,
+      "cpuSystemMs": 0.567,
+      "cpuPercentOfOneCore": 0.36290944713310147,
+      "rssBeforeBytes": 84377600,
+      "rssAfterBytes": 84426752,
+      "sampledPeakRssBytes": 84426752,
+      "heapUsedBeforeBytes": 9936568,
+      "heapUsedAfterBytes": 9990328
+    },
+    "activity": {
+      "elapsedMs": 1000.8130420000002,
+      "assessments": 131200,
+      "cpuUserMs": 993.663,
+      "cpuSystemMs": 18.829,
+      "cpuPercentOfOneCore": 101.16694702305847,
+      "rssBeforeBytes": 84426752,
+      "rssAfterBytes": 84787200,
+      "sampledPeakRssBytes": 84787200,
+      "heapUsedBeforeBytes": 9999560,
+      "heapUsedAfterBytes": 9788448
+    }
+  },
+  "live": {
+    "status": "not_tested",
+    "reason": "Live Jev requires --jev, explicit --request-cap and private development credential."
+  },
+  "pending": [
+    "Real Chrome/Edge extraction",
+    "Windows steady-state monitoring CPU/memory",
+    "Autonomous browser-to-warning-to-speech latency",
+    "Representative real-world accuracy",
+    "Intended-user testing"
+  ]
+}

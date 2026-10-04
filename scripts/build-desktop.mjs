@@ -1,6 +1,8 @@
 import { ringPng } from "./ring-icon.mjs";
-import { mkdir, copyFile, writeFile } from "node:fs/promises";
+import { mkdir, copyFile, writeFile, rm } from "node:fs/promises";
 import { build } from "esbuild";
+// Release builds must not carry stale bundles, source maps or hand-copied assets.
+await rm("dist/desktop", { recursive: true, force: true });
 await mkdir("dist/desktop", { recursive: true });
 await build({
   entryPoints: ["apps/desktop/src/main/main.ts"],

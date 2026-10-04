@@ -4,6 +4,7 @@ import type {
 } from "../../contracts/src/observation.ts";
 import type { JevProvider } from "../../providers/src/jev.ts";
 import { redact } from "./redact.ts";
+export const detectionPolicyVersion = "local-2";
 export interface Assessment {
   state: "no_detected_signal" | "caution" | "high_risk" | "unknown";
   source: SourceIdentity;
@@ -21,17 +22,17 @@ const rules: [string, RegExp][] = [
   ["payment", /\b(gift cards?|crypto|wire transfer|bitcoin)\b/i],
   [
     "credential",
-    /\b(send|share|give|provide)\b[^.!?\n]{0,40}\b(password|verification code|one.time code|PIN|recovery phrase)\b/i,
+    /\b(send|share|give|provide)\b[^.!?\n]{0,40}\b(password(?!\s+reset\s+(?:instructions|guidance|link|procedure)\b)|verification code|one.time code|PIN|recovery phrase)\b/i,
   ],
   ["pressure", /\b(immediately|urgent|secret|do not tell|today|arrest)\b/i],
   [
     "remote_access",
     /\b(install|download|allow)\b[^.!?\n]{0,40}\b(anydesk|teamviewer|remote access)\b/i,
   ],
-  ["romance", /\b(love|sweetheart|romance)\b/i],
+  ["romance", /\b(I love you|my love|our love|sweetheart|romance)\b/i],
   [
     "money",
-    /\b(send|transfer|pay)\b[^.!?\n]{0,40}\b(money|payment|funds|gift cards?|crypto)\b/i,
+    /\b(send|transfer|pay|buy)\b[^.!?\n]{0,40}\b(money|payment|funds|gift cards?|crypto|bitcoin|wire transfer)\b/i,
   ],
 ];
 function negatedRequest(text: string, index: number): boolean {
@@ -39,7 +40,10 @@ function negatedRequest(text: string, index: number): boolean {
     text
       .slice(Math.max(0, index - 80), index)
       .split(/[.!?\n]/)
-      .at(-1) ?? "";
+      .at(-1)?.replace(/[’‘]/g, "'") ?? "";
+  // Negating hesitation/delay still asks for disclosure; it is not safety advice.
+  if (/\b(?:do not|don't|must not|should not)\s+(?:hesitate|delay|forget|refuse)\b/i.test(prefix))
+    return false;
   return /\b(?:never|do not|don't|must not|should not|will not|won't|does not)\s+(?:\w+\s+){0,4}$/i.test(
     prefix,
   );

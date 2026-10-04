@@ -18,7 +18,9 @@ Redaction cannot guarantee removal of every personal detail. Never test a live p
 
 ## Packaging
 
-`npm.cmd run observer:build` builds the self-contained Windows helper, C# policy checks, and controlled WPF fixture. `npm.cmd run package:win` builds Electron and a per-user NSIS installer under `artifacts/installer`. It includes only desktop bundles and observer/runtime resources. Development SDKs, `.env`, test fixtures, raw messages, and development dependencies are excluded.
+`npm.cmd run observer:build` builds the self-contained Windows helper, C# policy checks, and controlled WPF fixture. `npm.cmd run package:win` requires a Windows build host, cleans this worktree's output, builds a directory, validates its contents, then generates a per-user NSIS installer from that exact directory under `artifacts/installer`. Desktop files and observer/runtime resources are explicitly filtered. The audit fails for missing runtimes, unexpected resources, development assets/dependencies and recognized secret material. Its size/hash inventories are under `artifacts/qa`. See [release gates](installation.md) for prerequisites, inspection limits, signing and the disposable installation checklist.
+
+On this macOS follow-up, an actual electron-builder Windows x64 **diagnostic directory** was inspected with executable resource editing disabled. Its ASAR contained 13 files (12 desktop assets plus metadata), no dependency packages, environment files, SDKs, fixtures or raw correspondence. The self-contained helper was absent, so the full package audit failed. This directory is incomplete and not a release; no NSIS installer was produced by this follow-up. The helper audit/standard-user Windows gates remain unverified.
 
 The local installer is unsigned. This machine's Device Guard policy blocked the latest unpacked executable; the development Electron runtime still launches. Building the package does not prove installation or successful launch on a clean Windows machine. Standard-user installation, signing, Windows security prompts, multi-monitor/DPI behavior, actual bank/mail pages, screen-reader behavior, and older-user usability still need separate testing.
 
@@ -26,10 +28,15 @@ The local installer is unsigned. This machine's Device Guard policy blocked the 
 
 - `npm.cmd test`: contracts, local detection, fake provider transport, scheduler, action binding, observer bridge, native policy/protocol, monitoring and controlled native extraction.
 - `npm.cmd run typecheck`: strict TypeScript checking.
-- `npm.cmd run test:desktop`: real Electron launch and affected UI/security/review flows on synthetic user-entered text. Requires local Windows speech voices.
+- `npm.cmd run test:desktop`: real Electron launch and affected UI/security/review flows on synthetic user-entered text. Requires local speech voices; Windows release verification needs an actual Windows run.
+- `npm.cmd run test:usability`: development Electron content-size/zoom and keyboard checks on synthetic text; records contrast gaps. This does not establish Windows display scaling or screen-reader/participant results.
+- `npm.cmd run evaluate`: deterministic held-out detection outcomes, measured local latency/Node CPU/memory, fake-clock scheduling counters, and simulated provider failures. Optional bounded live synthetic evaluation is documented in `evaluation.md`.
+- `npm.cmd run release:audit`: inspects the real Windows unpacked directory and writes per-file sizes/hashes only on content success. Signature/install/runtime behavior remain separate checks.
 - `npm.cmd run test:chrome`: optional fresh owned Chrome window extraction probe. It never requests content from an unrelated foreground PID. This is a controlled technical page, not Gmail coverage.
 
-Playwright controls the test-owned Electron/Chrome processes because no Browser plugin is available for native Electron testing. Debugging ports/pipes are test tooling only and are not enabled by the distributed app. Screenshot output and temporary test profiles are local verification artifacts.
+Playwright controls the test-owned native Electron/Chrome processes. These tests do not automate the Codex in-app browser. Debugging ports/pipes are test tooling only and are not enabled by the distributed app. Screenshot output and temporary test profiles are local verification artifacts.
+
+The macOS follow-up used the existing native Electron Playwright harness plus a separate native usability harness. The installed in-app browser skill's connection failed during bootstrap; no external browser reading or browser-extraction workaround occurred. Both Electron suites passed on macOS only. The original Windows always-on-top failure remains unresolved by these platform-specific results.
 
 ## Dependency review
 
