@@ -19,8 +19,8 @@ export function normalize(observation: Observation): NormalizedObservation {
 
 /** Slice the ORIGINAL text using normalized offsets, so excerpts stay verbatim. */
 export function sliceOriginal(span: NormalizedSpan, start: number, end: number): string {
-  if (start >= end) return "";
-  const first = span.map[start] ?? 0;
-  const last = span.map[Math.min(end, span.map.length) - 1] ?? first;
+  if (start >= end || start < 0 || start >= span.map.length) return "";
+  const first = span.map[start]!;
+  const last = span.map[Math.min(end, span.map.length) - 1]!;
   return span.original.slice(first, last + 1);
 }

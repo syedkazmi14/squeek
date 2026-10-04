@@ -54,3 +54,26 @@ test('sliceOriginal clamps end beyond text length', () => {
   assert.equal(sliceOriginal(span, 0, 10), 'hello');
   assert.equal(sliceOriginal(span, 2, 100), 'llo');
 });
+
+test('sliceOriginal returns empty when start is beyond map length', () => {
+  const result = normalize(observation('hello'));
+  const span = result.spans[0]!;
+  assert.equal(sliceOriginal(span, 10, 12), '');
+  assert.equal(sliceOriginal(span, 5, 6), '');
+  assert.equal(sliceOriginal(span, 100, 102), '');
+});
+
+test('sliceOriginal returns empty when start is negative', () => {
+  const result = normalize(observation('hello'));
+  const span = result.spans[0]!;
+  assert.equal(sliceOriginal(span, -1, 3), '');
+  assert.equal(sliceOriginal(span, -5, 5), '');
+  assert.equal(sliceOriginal(span, -10, 10), '');
+});
+
+test('sliceOriginal returns empty when start equals map length', () => {
+  const result = normalize(observation('hello'));
+  const span = result.spans[0]!;
+  assert.equal(sliceOriginal(span, 5, 6), '');
+  assert.equal(sliceOriginal(span, 5, 10), '');
+});
