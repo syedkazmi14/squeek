@@ -90,8 +90,8 @@ function step(t) {
     ty = mouse.y - uy * HOVER;
   vel.x += (tx - pos.x) * 0.035;
   vel.y += (ty - pos.y) * 0.035;
-  vel.x *= 0.84;
-  vel.y *= 0.84;
+  vel.x *= 0.76;
+  vel.y *= 0.76;
   // idle bob
   vel.y += Math.sin(t * 0.0025) * 0.04;
   pos.x += vel.x;
