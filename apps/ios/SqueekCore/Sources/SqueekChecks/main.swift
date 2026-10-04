@@ -89,6 +89,22 @@ let decodedCheckIn = try? JSONDecoder().decode(
   from: Data(#"{"id":"4","protected_user_id":"a","helper_id":"b","status":"call_me","created_at":"2026-10-05T10:00:00.123456+00:00","answered_at":null}"#.utf8))
 check("check-in decodes from the server", decodedCheckIn?.status == "call_me" && decodedCheckIn?.date != nil, "\(String(describing: decodedCheckIn))")
 
+// "Worth a look": likely scams, plus risky links pointed at on the PC, unreviewed, two at most.
+func warning(_ id: String, risk: String, platform: String = "ios", surface: String = "call", user: String = "me", minutes: Double, action: String? = nil) -> Incident {
+  let stamp = Timestamps.format(Date().addingTimeInterval(-minutes * 60))
+  let json = #"{"id":"\#(id)","user_id":"\#(user)","device_id":null,"platform":"\#(platform)","surface":"\#(surface)","risk":"\#(risk)","categories":[],"rule_ids":[],"evidence_redacted":null,"indicator_kind":null,"indicator_value":null,"user_action":\#(action.map { "\"\($0)\"" } ?? "null"),"created_at":"\#(stamp)"}"#
+  return try! JSONDecoder().decode(Incident.self, from: Data(json.utf8))
+}
+let hover = warning("hover", risk: "caution", platform: "windows", surface: "link", minutes: 5)
+check("a cautious PC link is worth a look", Incident.needingALook([hover], me: "me").map(\.id) == ["hover"], "")
+check("a cautious ordinary call is not", Incident.needingALook([warning("c", risk: "caution", minutes: 5)], me: "me").isEmpty, "")
+check("an old PC link is not", Incident.needingALook([warning("old", risk: "caution", platform: "windows", surface: "link", minutes: 60 * 25)], me: "me").isEmpty, "")
+check("a reviewed PC link is not", Incident.needingALook([warning("r", risk: "caution", platform: "windows", surface: "link", minutes: 5, action: "reviewed")], me: "me").isEmpty, "")
+check("somebody else's PC link is not", Incident.needingALook([warning("o", risk: "caution", platform: "windows", surface: "link", user: "aisha", minutes: 5)], me: "me").isEmpty, "")
+let mixed = [hover, warning("scam1", risk: "high_risk", minutes: 50), warning("scam2", risk: "high_risk", minutes: 10), warning("scam3", risk: "high_risk", minutes: 90)]
+check("likely scams come first, newest first, two at most", Incident.needingALook(mixed, me: "me").map(\.id) == ["scam2", "scam1"], "\(Incident.needingALook(mixed, me: "me").map(\.id))")
+check("a PC link fills the spare place", Incident.needingALook([hover, warning("scam2", risk: "high_risk", minutes: 10)], me: "me").map(\.id) == ["scam2", "hover"], "")
+
 // A caller the gate put through is told apart from an ordinary taken message.
 func call(_ evidence: String?, _ risk: String) -> Incident {
   let json = #"{"id":"i","user_id":"u","device_id":null,"platform":"ios","surface":"call","risk":"\#(risk)","categories":[],"rule_ids":[],"evidence_redacted":\#(evidence.map { "\"\($0)\"" } ?? "null"),"indicator_kind":null,"indicator_value":null,"user_action":null,"created_at":"2026-10-04T10:00:00.000Z"}"#

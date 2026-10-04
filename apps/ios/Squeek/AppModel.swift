@@ -333,14 +333,15 @@ final class AppModel: ObservableObject {
         title: "Squeek on your PC",
         body: incident.level == .danger
           ? "You pointed at a dangerous link to \(site) on your computer. Don't click it."
-          : "You pointed at a link to \(site) on your computer that looks risky. Be careful.")
+          : "You pointed at a link to \(site) on your computer that looks risky. Be careful.",
+        opensActivity: true)
     } else if incident.level != .danger || incident.deviceId == localSettings.deviceId {
       return
     } else if incident.userId != userId {
       let who = memberName(incident.userId) ?? "Someone you help"
-      Notifications.post(title: "Squeek warning", body: "\(who) got something that looks like a scam.")
+      Notifications.post(title: "Squeek warning", body: "\(who) got something that looks like a scam.", opensActivity: true)
     } else if incident.platform == "windows" {
-      Notifications.post(title: "Squeek on your PC", body: "Your computer warned you about a likely scam.")
+      Notifications.post(title: "Squeek on your PC", body: "Your computer warned you about a likely scam.", opensActivity: true)
     } else {
       return
     }

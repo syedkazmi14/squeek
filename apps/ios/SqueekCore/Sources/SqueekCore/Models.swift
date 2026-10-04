@@ -307,6 +307,27 @@ public struct Incident: Codable, Sendable, Identifiable, Equatable {
   public var date: Date? { Timestamps.parse(createdAt) }
   /// Written by Squeek's call screener on the server rather than by one of the person's devices.
   public var isScreenedCall: Bool { surface == "call" && deviceId == nil }
+  /// The warnings nobody has looked at yet that Activity puts at the top ("Worth a look"): likely
+  /// scams from the last three days, and risky links the person pointed at on their computer in the
+  /// last day (a hover is only a hint, so even a cautious one counts). Likely scams first, then
+  /// newest, at most two, so a screen full of red boxes isn't alarming; the rest stay in the list.
+  public static func needingALook(_ incidents: [Incident], me: String?, now: Date = Date()) -> [Incident] {
+    let threeDays = now.addingTimeInterval(-3 * 24 * 3600)
+    let oneDay = now.addingTimeInterval(-24 * 3600)
+    let unseen = incidents.filter { incident in
+      guard incident.userAction == nil, let date = incident.date else { return false }
+      if incident.level == .danger { return date > threeDays }
+      return incident.level == .caution && incident.isPCLinkWarning && incident.userId == me && date > oneDay
+    }
+    let ordered = unseen.sorted {
+      let (a, b) = ($0.level == .danger ? 0 : 1, $1.level == .danger ? 0 : 1)
+      return a != b ? a < b : ($0.date ?? .distantPast) > ($1.date ?? .distantPast)
+    }
+    return Array(ordered.prefix(2))
+  }
+
+  /// A risky link the person pointed at on their computer (the PC's link guard writes these).
+  public var isPCLinkWarning: Bool { platform == "windows" && surface == "link" }
   /// A caller who said the secret word and was put through to the person (call-webhook writes "Trusted caller").
   public var isTrustedCaller: Bool { isScreenedCall && risk == "clear" && (evidenceRedacted ?? "").hasPrefix("Trusted caller") }
 }

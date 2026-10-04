@@ -7,13 +7,8 @@ struct ActivityView: View {
   @EnvironmentObject private var model: AppModel
   @State private var showSignIn = false
 
-  /// Likely scams nobody has looked at yet, from the last few days. They get their own place at the top.
-  private var needsLook: [Incident] {
-    let lately = Date().addingTimeInterval(-3 * 24 * 3600)
-    // Two at most: a screen full of red boxes is alarming, and the rest are still in the list below.
-    return Array(
-      model.incidents.filter { $0.level == .danger && $0.userAction == nil && ($0.date ?? .distantPast) > lately }.prefix(2))
-  }
+  /// Warnings nobody has looked at yet; they get their own place at the top.
+  private var needsLook: [Incident] { Incident.needingALook(model.incidents, me: model.userId) }
 
   private var groups: [(title: String, items: [Incident])] {
     let calendar = Calendar.current

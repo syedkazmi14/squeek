@@ -14,11 +14,13 @@ enum Notifications {
     await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .authorized
   }
 
-  static func post(title: String, body: String) {
+  /// `opensActivity`: tapping the notification goes to the Activity tab, where the warning is.
+  static func post(title: String, body: String, opensActivity: Bool = false) {
     let content = UNMutableNotificationContent()
     content.title = title
     content.body = body
     content.sound = .default
+    if opensActivity { content.userInfo = ["tab": "activity"] }
     let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
     UNUserNotificationCenter.current().add(request)
   }
@@ -58,5 +60,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     _ center: UNUserNotificationCenter, willPresent notification: UNNotification
   ) async -> UNNotificationPresentationOptions {
     [.banner, .sound, .list]
+  }
+
+  func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    guard response.notification.request.content.userInfo["tab"] as? String == "activity" else { return }
+    await MainActor.run { AppModel.shared.selectedTab = .activity }
   }
 }
