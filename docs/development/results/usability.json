@@ -1,0 +1,559 @@
+{
+  "platform": "darwin",
+  "architecture": "arm64",
+  "scope": "Development Electron with synthetic manual input; not packaged Windows or participant testing",
+  "keyboard": [
+    "Mute toggled with Enter",
+    "Voice disclosure opened with Enter",
+    "Voice rate select operated with keys",
+    "Manual check submitted with Enter"
+  ],
+  "dimensions": [
+    {
+      "requestedWidth": 320,
+      "requestedHeight": 640,
+      "zoom": 1,
+      "width": 320,
+      "height": 640,
+      "devicePixelRatio": 2,
+      "scrollWidth": 320,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 103.15625,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.4296875,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 284,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 284,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 284,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 284,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 284,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    },
+    {
+      "requestedWidth": 400,
+      "requestedHeight": 720,
+      "zoom": 1,
+      "width": 400,
+      "height": 720,
+      "devicePixelRatio": 2,
+      "scrollWidth": 400,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 103.15625,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.4296875,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 364,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 364,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 364,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 364,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 364,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 364,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 364,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 364,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 364,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 364,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    },
+    {
+      "requestedWidth": 520,
+      "requestedHeight": 820,
+      "zoom": 1,
+      "width": 520,
+      "height": 820,
+      "devicePixelRatio": 2,
+      "scrollWidth": 520,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 119.15625,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.4296875,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 476,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 476,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 476,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 476,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 476,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    },
+    {
+      "requestedWidth": 760,
+      "requestedHeight": 800,
+      "zoom": 1,
+      "width": 760,
+      "height": 800,
+      "devicePixelRatio": 2,
+      "scrollWidth": 760,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 119.15625,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.4296875,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 716,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 716,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 716,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 716,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 716,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 716,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 716,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 716,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 716,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 716,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    },
+    {
+      "requestedWidth": 1200,
+      "requestedHeight": 900,
+      "zoom": 1,
+      "width": 1200,
+      "height": 900,
+      "devicePixelRatio": 2,
+      "scrollWidth": 1200,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 119.15625,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.4296875,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 509,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 509,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 509,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 509,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 544,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 544,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 544,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 544,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 544,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 544,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    },
+    {
+      "requestedWidth": 640,
+      "requestedHeight": 720,
+      "zoom": 2,
+      "width": 320,
+      "height": 360,
+      "devicePixelRatio": 4,
+      "scrollWidth": 320,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 103.15234375,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.42578125,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 284,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 284,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 284,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 284,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 284,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 284,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    },
+    {
+      "requestedWidth": 1040,
+      "requestedHeight": 900,
+      "zoom": 2,
+      "width": 520,
+      "height": 450,
+      "devicePixelRatio": 4,
+      "scrollWidth": 520,
+      "controls": [
+        {
+          "id": "mute",
+          "width": 119.15234375,
+          "height": 60
+        },
+        {
+          "id": "close",
+          "width": 73.42578125,
+          "height": 60
+        },
+        {
+          "id": "cancel",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "Voice settings",
+          "width": 476,
+          "height": 54
+        },
+        {
+          "id": "voice-rate",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "Diagnostics",
+          "width": 476,
+          "height": 54
+        },
+        {
+          "id": "browser",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "monitor",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "Manual check",
+          "width": 476,
+          "height": 54
+        },
+        {
+          "id": "manual-text",
+          "width": 476,
+          "height": 116
+        },
+        {
+          "id": "check",
+          "width": 476,
+          "height": 60
+        },
+        {
+          "id": "demo",
+          "width": 476,
+          "height": 60
+        }
+      ],
+      "bodyFontPx": 20,
+      "lastReviewFontPx": 18,
+      "lastReviewColor": "rgb(164, 108, 8)",
+      "bodyColor": "rgb(24, 43, 37)",
+      "backgroundColor": "rgb(250, 247, 241)"
+    }
+  ],
+  "contrast": {
+    "body": 13.917678317055115,
+    "lastReview": 4.154672890218066
+  },
+  "issues": [
+    "18px normal Last review text has contrast below 4.5:1; shared renderer fix needs coordination"
+  ],
+  "pending": [
+    "Actual Windows display scaling/multiple monitors",
+    "Narrator screen reader",
+    "Physical speech output",
+    "Packaged accessibility",
+    "Intended-user feedback"
+  ]
+}

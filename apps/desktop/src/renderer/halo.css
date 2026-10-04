@@ -1,0 +1,80 @@
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Link warnings. The overlay only takes the mouse while the cursor is on one of these. */
+#link-ring {
+  position: absolute;
+  box-sizing: border-box;
+  border: 3px solid #f58a2e;
+  border-radius: 6px;
+  background: rgba(245, 138, 46, 0.1);
+  box-shadow: 0 0 0 4px rgba(245, 138, 46, 0.22);
+  pointer-events: none;
+}
+#link-ring[data-state="high_risk"] {
+  border-color: #d9361a;
+  background: rgba(217, 54, 26, 0.1);
+  box-shadow: 0 0 0 4px rgba(217, 54, 26, 0.22);
+}
+#link-ring.guarded {
+  pointer-events: auto;
+  cursor: pointer;
+}
+#link-card {
+  position: absolute;
+  box-sizing: border-box;
+  width: 320px;
+  padding: 16px 18px;
+  border: 1px solid #e9e4d6;
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 8px 28px rgba(27, 26, 23, 0.22);
+  color: #1b1a17;
+  font: 15px/1.4 system-ui, "Segoe UI", sans-serif;
+}
+#link-card h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #b8321a;
+}
+#link-card p {
+  margin: 0 0 14px;
+  overflow-wrap: anywhere;
+}
+.link-actions {
+  display: flex;
+  gap: 10px;
+}
+.link-actions button {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+#link-back {
+  border: 0;
+  background: #1b1a17;
+  color: #fffdf8;
+}
+#link-open {
+  border: 1.5px solid #c9c2b2;
+  background: transparent;
+  color: #1b1a17;
+}
+[hidden] {
+  display: none !important;
+}

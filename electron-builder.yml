@@ -1,0 +1,48 @@
+appId: com.squeek.desktop
+productName: Squeek
+asar: true
+directories:
+  output: artifacts/installer
+files:
+  - dist/desktop/main.mjs
+  - dist/desktop/preload.cjs
+  - dist/desktop/renderer.js
+  - dist/desktop/index.html
+  - dist/desktop/styles.css
+  - dist/desktop/demo.html
+  - dist/desktop/demo.js
+  - dist/desktop/halo.html
+  - dist/desktop/halo.css
+  - dist/desktop/halo.js
+  - dist/desktop/icon.png
+  - dist/desktop/tray-icon.png
+  - dist/desktop/mark.png
+  - dist/desktop/Nunito-Regular.ttf
+  - dist/desktop/Nunito-Bold.ttf
+  - dist/desktop/Nunito-ExtraBold.ttf
+  - dist/desktop/Nunito-Black.ttf
+  - dist/desktop/OFL.txt
+  - package.json
+  - '!node_modules/**'
+extraResources:
+  - from: artifacts/observer
+    to: observer
+    filter:
+      - '*.dll'
+      - Squeek.Observer.exe
+      - Squeek.Observer.deps.json
+      - Squeek.Observer.runtimeconfig.json
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  signExecutable: false
+  icon: dist/desktop/icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  artifactName: Squeek-Setup-${version}.${ext}

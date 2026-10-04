@@ -1,6 +1,6 @@
 # Squeek scam protection: design and build proposal
 
-Status: revised design proposal for a single-install Electron app. No product code or live API integration has been implemented.
+Status: design for a single-install Electron app. Development has started with the TypeScript observation contract and a self-contained Windows helper probe; real-browser extraction, Electron UI, detection, and live API integration remain unverified or unimplemented. Follow the [implementation plan](../plans/2026-10-03-squeek-implementation.md) and [Windows feasibility check](../../development/windows-observation-check.md).
 
 Cost and security decisions are included below. A plain-language version for teammates is available in [Squeek explained](../../squeek-explained.md).
 

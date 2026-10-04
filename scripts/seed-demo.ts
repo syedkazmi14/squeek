@@ -38,10 +38,10 @@ async function ensureUser(email: string): Promise<string> {
   throw new Error(`could not create or find ${email}`);
 }
 
-async function must<T>(label: string, run: PromiseLike<{ data: T; error: { message: string } | null }>): Promise<T> {
+async function must<T>(label: string, run: PromiseLike<{ data: T; error: { message: string } | null }>): Promise<NonNullable<T>> {
   const { data, error } = await run;
   if (error) throw new Error(`${label}: ${error.message}`);
-  return data;
+  return data as NonNullable<T>;
 }
 
 const syed = await ensureUser("syed@example.com");

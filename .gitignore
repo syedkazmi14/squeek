@@ -1,9 +1,21 @@
-# Local secrets
+# Dependencies and build output
+node_modules/
+dist/
+artifacts/
+.tools/
+**/bin/
+**/obj/
+*.log
+.superpowers/
+# Local secrets (the example file is kept)
 *.local
 .env
 .env.*
+!.env.example
 # Supabase CLI state
 supabase/.temp/
 supabase/.branches/
 # OS
 .DS_Store
+# Deno lockfiles
+deno.lock

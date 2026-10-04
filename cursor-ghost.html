@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cursor Ghost</title>
+<style>
+  :root {
+    --bg: #000;
+    --hint: #6b6b6b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #000; --hint: #6b6b6b; }
+  }
+  :root[data-theme="dark"] { --bg: #000; --hint: #6b6b6b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body { background: var(--bg); touch-action: none; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hint {
+    position: fixed; left: 16px; bottom: 16px;
+    font: 13px/1.4 system-ui, sans-serif; color: var(--hint);
+    pointer-events: none; user-select: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint">Move your cursor around</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+const R = 17;            // body radius
+const S = R / 46;        // scale for features sized against the original radius
+const HOVER = 30;// distance the ghost keeps from the cursor
+const N = 56;            // outline points
+
+const mouse = { x: W / 2 + 120, y: H / 2 };
+const pos = { x: W / 2, y: H / 2 };
+const vel = { x: 0, y: 0 };
+const prevVel = { x: 0, y: 0 };
+const tail = { x: -0.6, y: 0.8 };
+const eye = { x: 0, y: 0, vx: 0, vy: 0 };
+
+const dirs = [], radii = [], radV = [];
+for (let i = 0; i < N; i++) {
+  const a = (i / N) * Math.PI * 2;
+  dirs.push({ x: Math.cos(a), y: Math.sin(a), a });
+  radii.push(R); radV.push(0);
+}
+
+window.addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('pointerdown', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  for (let i = 0; i < N; i++) radV[i] += (Math.random() - 0.3) * 1.9;
+});
+
+let blinkT = 0, nextBlink = performance.now() + 2500;
+
+function step(t) {
+  // Follow: hover at a distance from the cursor, springy and floaty
+  let dx = mouse.x - pos.x, dy = mouse.y - pos.y;
+  let dist = Math.hypot(dx, dy) || 0.0001;
+  const ux = dx / dist, uy = dy / dist;
+  const tx = mouse.x - ux * HOVER, ty = mouse.y - uy * HOVER;
+  vel.x += (tx - pos.x) * 0.035;
+  vel.y += (ty - pos.y) * 0.035;
+  vel.x *= 0.84; vel.y *= 0.84;
+  // idle bob
+  vel.y += Math.sin(t * 0.0025) * 0.04;
+  pos.x += vel.x; pos.y += vel.y;
+
+  const ax = vel.x - prevVel.x, ay = vel.y - prevVel.y;
+  prevVel.x = vel.x; prevVel.y = vel.y;
+  const speed = Math.hypot(vel.x, vel.y);
+
+  // Tail points away from the cursor and against motion, with a downward resting bias
+  let wx = -ux * 0.9 - vel.x * 0.12;
+  let wy = -uy * 0.9 - vel.y * 0.12 + 0.55;
+  const wl = Math.hypot(wx, wy) || 1;
+  wx /= wl; wy /= wl;
+  tail.x += (wx - tail.x) * 0.06;
+  tail.y += (wy - tail.y) * 0.06;
+  const tailAng = Math.atan2(tail.y, tail.x);
+  const tailLen = (24 + Math.min(speed * 0.5, 1) + Math.sin(t * 0.004)) * S;
+
+  // Body jiggle: each outline point is a radial spring, coupled to neighbours
+  for (let i = 0; i < N; i++) {
+    const d = dirs[i];
+    let diff = d.a - tailAng;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    const c = Math.max(0, Math.cos(diff));
+    let rest = R + tailLen * Math.pow(c, 9);
+    // squash/stretch along velocity
+    rest -= Math.max(-1.7, Math.min(1.3, (d.x * vel.x + d.y * vel.y) * 0.09));
+    // idle wobble
+    rest += Math.sin(t * 0.003 + d.a * 3) * 0.6 + Math.sin(t * 0.0047 - d.a * 2) * 0.45;
+
+    radV[i] += (rest - radii[i]) * 0.25;
+    // inertia: leading side compresses when accelerating
+    radV[i] -= Math.max(-0.7, Math.min(0.5, (d.x * ax + d.y * ay) * 0.3));
+    const prev = radii[(i - 1 + N) % N], next = radii[(i + 1) % N];
+    radV[i] += ((prev + next) / 2 - radii[i]) * 0.18;
+    radV[i] *= 0.77;
+  }
+  for (let i = 0; i < N; i++) radii[i] += radV[i];
+
+  // Eyes: look toward the cursor, lag behind body acceleration
+  const look = Math.min(dist / 160, 1);
+  const etx = ux * 9 * S * look, ety = uy * 7 * S * look;
+  eye.vx += (etx - eye.x) * 0.1 - ax * 0.4;
+  eye.vy += (ety - eye.y) * 0.1 - ay * 0.4;
+  const mx = 9 * S;
+  const pl = Math.hypot(eye.x, eye.y);
+  if (pl > mx * 0.7) {
+    const pull = (pl - mx * 0.7) * 0.35 / pl;
+    eye.vx -= eye.x * pull; eye.vy -= eye.y * pull;
+  }
+  eye.vx *= 0.8; eye.vy *= 0.8;
+  eye.x += eye.vx; eye.y += eye.vy;
+  const ml = Math.hypot(eye.x, eye.y);
+  if (ml > mx) {
+    const nx = eye.x / ml, ny = eye.y / ml;
+    eye.x = nx * mx; eye.y = ny * mx;
+    const out = eye.vx * nx + eye.vy * ny;
+    if (out > 0) { eye.vx -= nx * out; eye.vy -= ny * out; }
+  }
+
+  // Blink
+  if (t > nextBlink) { blinkT = t; nextBlink = t + 2200 + Math.random() * 3500; }
+}
+
+function draw(t) {
+  ctx.fillStyle = getComputedStyle(document.body).backgroundColor;
+  ctx.fillRect(0, 0, W, H);
+
+  const pts = dirs.map((d, i) => ({ x: pos.x + d.x * radii[i], y: pos.y + d.y * radii[i] }));
+
+  const g = ctx.createRadialGradient(pos.x - R * 0.35, pos.y - R * 0.45, R * 0.1, pos.x, pos.y, R * 1.5);
+  g.addColorStop(0, '#FFD860');
+  g.addColorStop(0.55, '#FFC53A');
+  g.addColorStop(1, '#F0A920');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  const last = pts[N - 1];
+  ctx.moveTo((last.x + pts[0].x) / 2, (last.y + pts[0].y) / 2);
+  for (let i = 0; i < N; i++) {
+    const p = pts[i], q = pts[(i + 1) % N];
+    ctx.quadraticCurveTo(p.x, p.y, (p.x + q.x) / 2, (p.y + q.y) / 2);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Eyes
+  const bt = (t - blinkT) / 160;
+  const blink = bt >= 0 && bt < 1 ? Math.abs(Math.cos(bt * Math.PI)) : 1;
+  const ex = pos.x + eye.x, ey = pos.y - 4 * S + eye.y;
+  ctx.fillStyle = '#000';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    let cx = ex + s * 15 * S - pos.x, cy = ey - pos.y;
+    const cl = Math.hypot(cx, cy), lim = Math.min(...radii) * 0.72 - 7.4 * S;
+    if (cl > lim) { cx *= lim / cl; cy *= lim / cl; }
+    ctx.ellipse(pos.x + cx, pos.y + cy, 6.2 * S, Math.max(7.4 * S * blink, 0.8), 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+let last = performance.now(), acc = 0;
+const STEP = 1000 / 60;
+function frame(now) {
+  acc += Math.min(now - last, 100);
+  last = now;
+  while (acc >= STEP) { step(now); acc -= STEP; }
+  draw(now);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

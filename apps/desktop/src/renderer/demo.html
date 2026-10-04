@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Squeek</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="demo">
+      <h1>Squeek</h1>
+      <h2>Simulation</h2>
+      <form id="payment">
+        <label
+          >Message<textarea
+            id="message"
+            maxlength="8000"
+            rows="4"
+          ></textarea></label
+        ><label
+          >Recipient<input id="recipient" maxlength="200" required /></label
+        ><label>Amount<input id="amount" maxlength="200" required /></label
+        ><label
+          >Destination<input id="destination" maxlength="200" required /></label
+        ><button type="submit">Review</button>
+      </form>
+      <p id="result" role="status">Unknown</p>
+      <section id="review" hidden>
+        <h2>Review</h2>
+        <pre id="details"></pre>
+        <button id="cancel">Cancel</button
+        ><button id="continue">Continue simulation</button>
+      </section>
+    </main>
+    <script src="demo.js"></script>
+  </body>
+</html>
