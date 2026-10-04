@@ -49,15 +49,9 @@ Skip the Supabase values to run on-device only: checks use local rules, the bloc
 
 ### Free Apple accounts
 
-A free (Personal Team) account can't sign three of the capabilities in `project.yml`: Sign in with Apple, Push Notifications and Network Extension (DNS settings). To build anyway, delete these three lines from the `Clickey` target's `entitlements` and run `xcodegen` again:
+Set `CLICKEY_ACCOUNT = Free` (the default) for a free Personal Team. The app then signs without Push Notifications, Sign in with Apple and Network Extension (protective DNS), and hides those features. Set it to `Paid` with a paid Apple Developer Program team to turn them back on. The two entitlement sets are `Clickey/Clickey-Free.entitlements` and `Clickey/Clickey-Paid.entitlements`.
 
-```yaml
-aps-environment: development
-com.apple.developer.applesignin: [Default]
-com.apple.developer.networking.networkextension: [dns-settings]
-```
-
-Email sign-in, call blocking, SMS filtering, the Share sheet and Safari still work. Free-account builds expire after 7 days.
+Email sign-in, call blocking, SMS filtering, the Share sheet and Safari warnings all work on a free team. Free-team builds expire after 7 days, and the iPhone must be connected to the Mac the first time so Xcode can register it.
 
 ## Demo script
 

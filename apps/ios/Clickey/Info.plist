@@ -35,6 +35,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ClickeyAccount</key>
+	<string>$(CLICKEY_ACCOUNT)</string>
 	<key>ClickeyAppBundleId</key>
 	<string>$(CLICKEY_BUNDLE_ID)</string>
 	<key>ClickeyAppGroup</key>

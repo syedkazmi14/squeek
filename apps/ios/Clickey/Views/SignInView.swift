@@ -25,7 +25,7 @@ struct WelcomeView: View {
           VStack(spacing: 16) {
             Button("Sign in with email") { showSignIn = true }
               .buttonStyle(PrimaryButtonStyle())
-            AppleSignInButton()
+            if ClickeyConfig.hasPaidAccount { AppleSignInButton() }
             Button("Use without an account", action: continueWithoutAccount)
               .buttonStyle(SecondaryButtonStyle())
           }

@@ -39,11 +39,13 @@ struct SettingsView: View {
       }
       Section("Protections") {
         NavigationLink("Set up protections") { SetupGuideView() }
-        Toggle(
-          "Block dangerous websites in all apps",
-          isOn: Binding(
-            get: { model.protectiveDNSEnabled },
-            set: { on in Task { await model.setProtectiveDNS(on) } }))
+        if ClickeyConfig.hasPaidAccount {
+          Toggle(
+            "Block dangerous websites in all apps",
+            isOn: Binding(
+              get: { model.protectiveDNSEnabled },
+              set: { on in Task { await model.setProtectiveDNS(on) } }))
+        }
       }
       if model.isSignedIn {
         Section {
@@ -86,8 +88,10 @@ struct SettingsView: View {
       } else {
         Text("Not signed in. Checks run on this iPhone only.").foregroundStyle(Theme.secondaryInk)
         Button("Sign in with email") { showSignIn = true }
-        AppleSignInButton()
-          .listRowInsets(EdgeInsets())
+        if ClickeyConfig.hasPaidAccount {
+          AppleSignInButton()
+            .listRowInsets(EdgeInsets())
+        }
         if localOnly {
           Button("Show the welcome screen") { localOnly = false }
         }

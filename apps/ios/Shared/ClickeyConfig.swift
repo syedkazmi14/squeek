@@ -20,6 +20,9 @@ enum ClickeyConfig {
   /// Bundle id of the containing app, also used for extension identifiers.
   static var appBundleId: String { value("ClickeyAppBundleId") }
 
+  /// Push, Sign in with Apple and protective DNS need a paid Apple Developer Program account.
+  static var hasPaidAccount: Bool { value("ClickeyAccount").lowercased() == "paid" }
+
   static var isBackendConfigured: Bool { supabaseURL != nil && !supabaseAnonKey.isEmpty }
 
   static var appVersion: String {

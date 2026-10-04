@@ -62,7 +62,9 @@ struct ProtectionSummary: View {
     VStack(alignment: .leading, spacing: 14) {
       Text("Your protection").font(.title2.weight(.semibold))
       row("Scam calls", on: model.callBlockingStatus == .enabled, detail: "Blocks and labels reported numbers")
-      row("Dangerous websites", on: model.protectiveDNSEnabled, detail: "Blocks known bad sites in every app")
+      if ClickeyConfig.hasPaidAccount {
+        row("Dangerous websites", on: model.protectiveDNSEnabled, detail: "Blocks known bad sites in every app")
+      }
       row(
         "Sync with your computer", on: model.isSignedIn,
         detail: model.isSignedIn ? (model.email ?? "Signed in") : "Not signed in")

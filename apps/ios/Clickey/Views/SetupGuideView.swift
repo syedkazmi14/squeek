@@ -45,6 +45,7 @@ struct SetupGuideView: View {
             .buttonStyle(SecondaryButtonStyle())
         }
 
+        if ClickeyConfig.hasPaidAccount {
         step(
           "Block dangerous websites everywhere", done: model.protectiveDNSEnabled,
           steps: [
@@ -55,6 +56,7 @@ struct SetupGuideView: View {
         ) {
           Button("Install") { Task { await model.setProtectiveDNS(true) } }
             .buttonStyle(PrimaryButtonStyle())
+        }
         }
 
         step(
