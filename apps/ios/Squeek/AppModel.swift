@@ -522,7 +522,9 @@ final class AppModel: ObservableObject {
             ? "Squeek: \(alert.headline). Be careful, and check with someone you trust before you act."
             : "Squeek: \(alert.headline). Don't pay, send codes or click anything yet.")
       }
-      if isSignedIn, keepsHistory {
+      // Backend, not isSignedIn: Check Before Paying runs this in a background launch, before the
+      // app's own sign-in flow has set that.
+      if Backend.shared.isSignedIn, keepsHistory {
         await Backend.shared.recordLocalIncident(
           surface: .text, domain: nil, evidence: alert.excerpt, categories: [], risk: alert.isCaution ? "caution" : "high_risk",
           deviceId: deviceId)
@@ -869,12 +871,14 @@ final class AppModel: ObservableObject {
   static let riskWindow: TimeInterval = 30 * 60
 
   /// The latest likely scam aimed at this person in the risk window, unless they already chose to
-  /// go ahead and pay after seeing the pause for it.
+  /// go ahead and pay after seeing the pause for it. With none of those, the latest warning that
+  /// something "may be a scam" counts, so a cautious reading still gets a pause before paying.
   func recentRisk(now: Date = Date()) -> Incident? {
-    incidents.first {
-      $0.userId == userId && $0.level == .danger && $0.userAction != "opened_anyway"
+    let recent = incidents.filter {
+      $0.userId == userId && $0.userAction != "opened_anyway"
         && ($0.date ?? .distantPast) > now.addingTimeInterval(-Self.riskWindow)
     }
+    return recent.first { $0.level == .danger } ?? recent.first { $0.level == .caution }
   }
 
   /// For Check Before Paying when iOS starts the app in the background just to run it: fetches the

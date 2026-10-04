@@ -12,6 +12,9 @@ struct CheckBeforePayingIntent: AppIntent {
   @MainActor
   func perform() async throws -> some IntentResult {
     let model = AppModel.shared
+    // A Screen Guard warning is still waiting in the App Group until the app next opens; turn it
+    // into a recorded warning now so the pause can see it.
+    await model.ingestScreenGuardAlerts()
     await model.loadRecentIncidents()
     guard let risk = model.recentRisk() else { return .result() }
     model.pause = PaymentPause(incident: risk)

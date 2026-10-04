@@ -22,6 +22,9 @@ struct PaymentPause: Identifiable {
       return text
     }
     let source = incident.platform == "windows" ? "on your computer" : "on this iPhone"
+    if incident.level == .caution {
+      return "Squeek noticed something \(source) \(when) that may be a scam (\(Labels.surface(incident.surface).lowercased()))."
+    }
     return "Squeek warned you about a likely scam \(source) \(when) (\(Labels.surface(incident.surface).lowercased()))."
   }
 
@@ -34,7 +37,9 @@ struct PaymentPause: Identifiable {
   var liveActivityText: String {
     incident.isScreenedCall
       ? "Squeek answered a scam call. Pause before you pay anyone."
-      : "Squeek caught a likely scam. Pause before you pay anyone."
+      : incident.level == .caution
+        ? "Squeek noticed something that may be a scam. Pause before you pay anyone."
+        : "Squeek caught a likely scam. Pause before you pay anyone."
   }
 
   /// Read aloud when the pause opens.
