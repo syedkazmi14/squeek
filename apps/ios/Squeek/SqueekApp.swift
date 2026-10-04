@@ -20,6 +20,7 @@ struct SqueekApp: App {
       case .active:
         model.appBecameActive()
         Task {
+          await model.ingestScreenGuardAlerts()
           await model.refreshAll()
           await model.refreshProtectionStatus()
           model.updateLiveActivity()

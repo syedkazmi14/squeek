@@ -46,7 +46,7 @@ struct HomeView: View {
   }
 
   private var firstOffGuard: SqueekGuard {
-    SqueekGuard.allCases.first { !model.isOn($0) } ?? .calls
+    SqueekGuard.core.first { !model.isOn($0) } ?? .calls
   }
 }
 

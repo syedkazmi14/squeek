@@ -62,6 +62,7 @@ targets:
       - package: SqueekCore
       - package: Pow
       - target: SqueekWidgets
+      - target: ScreenGuardExtension
       - target: CallDirectoryExtension
       - target: MessageFilterExtension
       - target: ShareExtension
@@ -107,6 +108,34 @@ targets:
         CFBundleDisplayName: Squeek
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  # Optional Screen Guard: a broadcast the person starts from the app. It reads the screen's text on
+  # the phone every 30 seconds. See ScreenGuardExtension/SampleHandler.swift.
+  ScreenGuardExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - ScreenGuardExtension
+      - path: ../../packages/detection/rules/rules.json
+        buildPhase: resources
+    dependencies:
+      - package: SqueekCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID).ScreenGuard
+    info:
+      path: ScreenGuardExtension/Info.plist
+      properties:
+        <<: *sharedInfo
+        CFBundleDisplayName: Squeek Screen Guard
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.broadcast-services-upload
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SampleHandler
+          RPBroadcastProcessMode: RPBroadcastProcessModeSampleBuffer
+    entitlements:
+      path: ScreenGuardExtension/ScreenGuardExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [$(SQUEEK_APP_GROUP)]
 
   CallDirectoryExtension:
     type: app-extension

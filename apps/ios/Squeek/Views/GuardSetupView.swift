@@ -88,6 +88,14 @@ struct GuardSetupView: View {
             .secondaryAction()
         }
 
+        card(.screen, lines: [
+          "Tap Start Screen Guard, then Start Broadcast. Squeek then reads the words on your screen about every 30 seconds, on your iPhone.",
+          "Pictures and the words it reads are never saved or sent anywhere. Only if something looks like a scam, Squeek keeps a short note with private details removed.",
+          "A red bar shows while it runs. To stop, tap the red bar or press and hold Screen Recording in Control Center. It also stops when your iPhone restarts.",
+        ]) {
+          ScreenGuardActions()
+        }
+
         card(.person, lines: [
           "Pick a family member or friend you trust.",
           "When something looks like a scam, they can help you check, and you can ask them with one tap.",
@@ -112,7 +120,7 @@ struct GuardSetupView: View {
     }
     .task { await model.refreshProtectionStatus() }
     .fullScreenCover(item: $practice) { pause in PaymentPauseView(pause: pause) }
-    .onAppear { if expanded == nil { expanded = focus ?? SqueekGuard.allCases.first { !model.isOn($0) } } }
+    .onAppear { if expanded == nil { expanded = focus ?? SqueekGuard.core.first { !model.isOn($0) } } }
   }
 
   private func card<Actions: View>(

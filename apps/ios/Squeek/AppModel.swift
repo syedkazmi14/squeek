@@ -55,6 +55,9 @@ final class AppModel: ObservableObject {
   /// Check-ins from the last day, asked of me or by me.
   @Published private(set) var checkIns: [CheckIn] = []
 
+  /// Whether the Screen Guard broadcast is running. The extension reports it in the App Group.
+  @Published private(set) var screenGuardOn = false
+
   /// This person's Squeek phone line, where unanswered calls are forwarded. Nil until claimed.
   @Published private(set) var screeningLine: String?
   @Published private(set) var hasSafeWord = false
@@ -114,12 +117,13 @@ final class AppModel: ObservableObject {
     case .web: return webGuardOn
     case .payments: return paymentsGuardOn
     case .person: return members.count > 1
+    case .screen: return screenGuardOn
     }
   }
 
   /// Guards that are on, for Home and the Live Activity.
-  var protectionsOn: Int { SqueekGuard.allCases.filter(isOn).count }
-  var protectionsTotal: Int { SqueekGuard.allCases.count }
+  var protectionsOn: Int { SqueekGuard.core.filter(isOn).count }
+  var protectionsTotal: Int { SqueekGuard.core.count }
 
   var deviceId: String {
     if let id = localSettings.deviceId { return id }
@@ -298,6 +302,7 @@ final class AppModel: ObservableObject {
   /// Background App Refresh (free for any developer account) stands in for push notifications:
   /// iOS wakes the app every so often, and new warnings from the PC or family become local alerts.
   func backgroundRefresh() async {
+    await ingestScreenGuardAlerts()
     await refreshAll()
     incidents.filter(isNewSinceAlertsStarted).reversed().forEach(alertIfNeeded)
     BackgroundRefresh.schedule()
@@ -500,6 +505,28 @@ final class AppModel: ObservableObject {
     guard !isDemo else { return }
     callBlockingStatus = await CallDirectorySync.status()
     notificationsOn = await Notifications.isAuthorized()
+    screenGuardOn = store?.screenGuardStatus()?.isRunning() ?? false
+  }
+
+  /// Collects what Screen Guard found while the app was closed. If its notification didn't go out,
+  /// shows it now. A likely scam is recorded like any other warning, so it reaches Activity and the
+  /// payment pause.
+  func ingestScreenGuardAlerts() async {
+    guard !isDemo, let store else { return }
+    let alerts = store.takeScreenGuardAlerts()
+    guard !alerts.isEmpty else { return }
+    let keepsHistory = store.settings().historySync
+    for alert in alerts {
+      if !alert.notified {
+        Notifications.post(title: "This screen looks like a scam", body: "Squeek: \(alert.headline). Don't pay, send codes or click anything yet.")
+      }
+      if isSignedIn, keepsHistory {
+        await Backend.shared.recordLocalIncident(
+          surface: .text, domain: nil, evidence: alert.excerpt, categories: [], deviceId: deviceId)
+      }
+    }
+    await loadRecentIncidents()
+    updateLiveActivity()
   }
 
   #if DEBUG
@@ -517,6 +544,7 @@ final class AppModel: ObservableObject {
       notificationsOn = true
       screeningLine = "+16822041962"
       hasSafeWord = true
+      screenGuardOn = DemoData.argument("-SqueekScreenGuard") == "on"
       contacts = DemoData.contacts
       checkIns = DemoData.checkIns
     }

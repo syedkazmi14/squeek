@@ -116,7 +116,7 @@ final class Backend: @unchecked Sendable {
   /// Records a warning the phone found on its own when the server didn't record one (the server was
   /// unreachable, or the phone's rules were stricter). Without it a dangerous site Safari blocked
   /// offline would never reach Activity or the payment pause. Skips repeats within ten minutes.
-  func recordLocalIncident(surface: Surface, domain: String?, deviceId: String?) async {
+  func recordLocalIncident(surface: Surface, domain: String?, evidence: String? = nil, categories: [String]? = nil, deviceId: String?) async {
     guard let client = try? requireClient(), let userId else { return }
     struct Row: Encodable {
       let userId: String
@@ -147,8 +147,10 @@ final class Backend: @unchecked Sendable {
         if !same.isEmpty { return }
       }
       let row = Row(
-        userId: userId, deviceId: deviceId, surface: surface.rawValue, categories: domain == nil ? [] : ["link"],
-        evidenceRedacted: domain, indicatorKind: domain == nil ? nil : "domain", indicatorValue: domain)
+        userId: userId, deviceId: deviceId, surface: surface.rawValue,
+        categories: categories ?? (domain == nil ? [] : ["link"]),
+        evidenceRedacted: (evidence ?? domain).map { String($0.prefix(280)) },
+        indicatorKind: domain == nil ? nil : "domain", indicatorValue: domain)
       try await client.from("incidents").insert(row).execute()
     } catch {
       // Best effort: the warning itself was already shown.
