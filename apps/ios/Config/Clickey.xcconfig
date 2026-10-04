@@ -1,0 +1,15 @@
+// Shared build settings for the app and all extensions.
+// Put your own values in Config/Secrets.xcconfig (git-ignored); copy Secrets.example.xcconfig to start.
+
+// Your Apple Developer Team ID (Xcode › Settings › Accounts). Required to sign extensions.
+CLICKEY_TEAM_ID =
+
+// Bundle ids must be unique across all developers, so change the prefix to something you own.
+CLICKEY_BUNDLE_ID = dev.squeek.clickey
+CLICKEY_APP_GROUP = group.$(CLICKEY_BUNDLE_ID)
+
+// Supabase project host only (xcconfig treats "//" as a comment, so no https://).
+SUPABASE_HOST = your-project.supabase.co
+SUPABASE_ANON_KEY =
+
+#include? "Secrets.xcconfig"

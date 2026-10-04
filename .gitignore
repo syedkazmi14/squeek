@@ -1,0 +1,9 @@
+# Local secrets
+*.local
+.env
+.env.*
+# Supabase CLI state
+supabase/.temp/
+supabase/.branches/
+# OS
+.DS_Store

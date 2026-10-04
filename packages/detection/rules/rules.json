@@ -1,0 +1,182 @@
+{
+  "version": "2026.10.03-1",
+  "_note": "Shared by the Edge Functions (TypeScript) and the iPhone app and extensions (Swift). Patterns use the common subset of JavaScript and ICU regular expressions and are matched case-insensitively. Warning wording in `messages` is draft wording and still needs team approval.",
+  "redaction": [
+    { "id": "url_query", "pattern": "(https?://[^\\s?#]+)\\?[^\\s#]+", "replacement": "$1?[query removed]" },
+    { "id": "email", "pattern": "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", "replacement": "[email]" },
+    { "id": "card_number", "pattern": "\\b\\d(?:[ -]?\\d){12,18}\\b", "replacement": "[card number]" },
+    { "id": "ssn", "pattern": "\\b\\d{3}-\\d{2}-\\d{4}\\b", "replacement": "[ssn]" },
+    { "id": "account_number", "pattern": "\\b(account|acct|routing)( number| no\\.?| #|#)?:? ?\\d{6,17}\\b", "replacement": "$1 [number]" },
+    { "id": "code", "pattern": "\\b(code|pin|passcode|otp)( is|:)? ?\\d{4,8}\\b", "replacement": "$1 [code]" },
+    { "id": "crypto_btc", "pattern": "\\b(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}\\b", "replacement": "[crypto address]" },
+    { "id": "crypto_eth", "pattern": "\\b0x[a-f0-9]{40}\\b", "replacement": "[crypto address]" },
+    { "id": "phone", "pattern": "(?:\\+?1[ .-]?)?\\(?\\b\\d{3}\\)?[ .-]?\\d{3}[ .-]?\\d{4}\\b", "replacement": "[phone]" }
+  ],
+  "signals": [
+    {
+      "id": "impersonation_government", "category": "impersonation", "weight": 2,
+      "label": "Claims to be from a government agency",
+      "patterns": ["\\b(IRS|Internal Revenue Service|Social Security Administration|Medicare|FBI|U\\.?S\\.? Marshals?|Customs and Border|Department of Justice|sheriff'?s? (office|department))\\b", "\\bsocial security number (has been|is|was) (suspended|compromised|blocked)"]
+    },
+    {
+      "id": "impersonation_business", "category": "impersonation", "weight": 1,
+      "label": "Uses a well-known company's name",
+      "patterns": ["\\b(Amazon|Apple|iCloud|Microsoft|PayPal|Netflix|Wells Fargo|Chase|Bank of America|Geek Squad|Norton|McAfee|USPS|FedEx|UPS|Coinbase)\\b.{0,60}\\b(account|order|subscription|package|delivery|refund|support|security|charge|renewal)"]
+    },
+    {
+      "id": "urgency", "category": "pressure", "weight": 2,
+      "label": "Pressure to act right away",
+      "patterns": ["\\b(act|respond|reply|call|pay|verify) (now|immediately|right away|today)\\b", "\\bwithin (24|48) hours\\b", "\\bfinal (notice|warning)\\b", "\\b(account|card|service) (will be|has been|is) (suspended|locked|closed|frozen|disabled)", "\\burgent(ly)?\\b", "\\bimmediate action\\b", "\\blast chance\\b", "\\bexpires? (today|tonight|in \\d+ (hours|minutes))"]
+    },
+    {
+      "id": "threat", "category": "pressure", "weight": 2,
+      "label": "Threatens arrest, fines or legal trouble",
+      "patterns": ["\\b(arrest(ed)?|lawsuit|legal action|jail|deport(ed|ation)?|warrant|penalt(y|ies))\\b"]
+    },
+    {
+      "id": "secrecy", "category": "secrecy", "weight": 3,
+      "label": "Asks you to keep it secret",
+      "patterns": ["\\b(don'?t|do not) (tell|inform|contact|call) (anyone|anybody|your (bank|family|children|kids|son|daughter))", "\\bkeep (this|it) (confidential|secret|private|between us)", "\\bthis is (strictly )?confidential\\b"]
+    },
+    {
+      "id": "gift_card", "category": "payment", "weight": 3,
+      "label": "Asks for payment with gift cards",
+      "patterns": ["\\bgift ?cards?\\b", "\\b(google play|itunes|steam|apple|amazon|target|walmart|ebay|razer gold) (gift )?cards?\\b", "\\bscratch (off )?the (back|code)\\b"]
+    },
+    {
+      "id": "crypto_payment", "category": "payment", "weight": 2,
+      "label": "Asks for cryptocurrency",
+      "patterns": ["\\b(bitcoin|crypto(currency)?|btc|usdt|tether|ethereum)\\b", "\\b(bitcoin|crypto) (atm|kiosk|machine)\\b", "\\bwallet address\\b"]
+    },
+    {
+      "id": "wire_payment", "category": "payment", "weight": 2,
+      "label": "Asks for a payment that's hard to undo",
+      "patterns": ["\\bwire (transfer|the money|the funds)\\b", "\\b(western union|moneygram|zelle|venmo|cash ?app)\\b", "\\bsend (cash|money) (by|through|via|in the) (mail|courier|overnight)"]
+    },
+    {
+      "id": "credential_request", "category": "credentials", "weight": 3,
+      "label": "Asks for passwords, codes or account details",
+      "patterns": ["\\b(verify|confirm|update|validate|re-?activate) (your )?(account|identity|password|login|payment (details|information|method)|billing( information)?)\\b", "\\b(enter|provide|send|share|tell (me|us)|give (me|us)) (your )?(password|pin|passcode|verification code|security code|one[- ]time code|otp|social security( number)?|ssn|card number|bank (details|login))\\b", "\\b(reply|replying|respond|responding) with (your )?(bank (details|information)|password|pin|card number|social security( number)?|ssn)\\b"]
+    },
+    {
+      "id": "code_request", "category": "credentials", "weight": 3,
+      "label": "Asks you to share a security code",
+      "patterns": ["\\b(read|send|share|tell|give) (me |us )?(the |that |your )?(\\d-digit )?(code|verification code)\\b", "\\bcode (we|i) (just )?sent\\b"]
+    },
+    {
+      "id": "remote_access", "category": "remote_access", "weight": 3,
+      "label": "Asks to control your computer or phone",
+      "patterns": ["\\b(anydesk|teamviewer|ultraviewer|logmein|quick ?assist|supremo)\\b", "\\bremote (access|desktop|support|connection)\\b", "\\bscreen ?shar(e|ing)\\b", "\\blet (me|us) (access|connect to|into) your (computer|device|phone)"]
+    },
+    {
+      "id": "tech_support", "category": "impersonation", "weight": 2,
+      "label": "Claims your device has a problem",
+      "patterns": ["\\b(virus|malware|hacked|infected|compromised|pornographic)\\b.{0,60}\\b(call|contact|phone)\\b", "\\byour (computer|device|phone|iphone|pc) (is|has been) (infected|hacked|locked|compromised)", "\\bcall (microsoft|apple|windows) (support|help)"]
+    },
+    {
+      "id": "prize", "category": "prize", "weight": 2,
+      "label": "Promises a prize or free money",
+      "patterns": ["\\byou('ve| have)? won\\b", "\\bclaim your (prize|reward|refund|winnings)\\b", "\\b(lottery|sweepstakes|inheritance|unclaimed (funds|money))\\b", "\\bcongratulations\\b.{0,40}\\b(selected|winner|won)\\b"]
+    },
+    {
+      "id": "romance_money", "category": "romance", "weight": 2,
+      "label": "Romantic contact asking for money",
+      "patterns": ["\\b(my|our) (love|darling|sweetheart|dear|honey)\\b.{0,120}\\b(money|send|transfer|fee|ticket|visa|hospital|customs)\\b", "\\b(stuck|stranded) (in|at)\\b.{0,40}\\b(need|send) (money|help)\\b", "\\bi('ll| will) pay you back\\b"]
+    },
+    {
+      "id": "delivery_problem", "category": "delivery", "weight": 2,
+      "label": "Says there's a problem with a delivery",
+      "patterns": ["\\b(package|parcel|delivery|shipment)\\b.{0,40}\\b(failed|held|on hold|could not be delivered|undeliverable|suspended)\\b", "\\bredelivery fee\\b", "\\bupdate (your )?(delivery|shipping) (address|details|information)\\b"]
+    },
+    {
+      "id": "overpayment", "category": "payment", "weight": 2,
+      "label": "Refund or overpayment trick",
+      "patterns": ["\\boverpa(id|yment)\\b", "\\bsent you too much\\b", "\\bpay (it|the difference|the rest) back\\b", "\\brefund of \\$"]
+    },
+    {
+      "id": "call_back", "category": "pressure", "weight": 1,
+      "label": "Pushes you to call a number",
+      "patterns": ["\\bcall\\b.{0,25}\\[phone\\]", "\\bcall (us|this number|the number below|back) (now|immediately|today|right away)\\b"]
+    }
+  ],
+  "policy": {
+    "cautionScore": 2,
+    "highRiskScore": 5,
+    "highRiskCombos": [
+      ["payment", "impersonation"],
+      ["payment", "pressure"],
+      ["payment", "secrecy"],
+      ["credentials", "impersonation"],
+      ["credentials", "pressure"],
+      ["remote_access", "impersonation"],
+      ["remote_access", "pressure"],
+      ["romance", "payment"]
+    ],
+    "excerptRadius": 60
+  },
+  "links": {
+    "shorteners": ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "buff.ly", "rebrand.ly", "cutt.ly", "shorturl.at", "rb.gy", "tiny.cc", "s.id", "t.ly", "bl.ink", "lnkd.in"],
+    "suspiciousTlds": ["zip", "mov", "xyz", "top", "click", "country", "gq", "tk", "ml", "cf", "ga", "work", "support", "rest", "cam", "icu", "buzz", "lol", "quest", "sbs", "cfd", "monster"],
+    "secondLevelSuffixes": ["co.uk", "org.uk", "gov.uk", "ac.uk", "com.au", "net.au", "org.au", "co.nz", "co.jp", "co.in", "com.br", "com.mx", "co.za"],
+    "lureWords": ["login", "signin", "secure", "verify", "verification", "account", "update", "support", "billing", "wallet", "unlock", "refund", "claim"],
+    "brands": {
+      "paypal": ["paypal.com", "paypal.me"],
+      "apple": ["apple.com", "icloud.com", "apple.co"],
+      "icloud": ["icloud.com", "apple.com"],
+      "amazon": ["amazon.com", "amazon.co.uk", "amazon.ca", "amazon.de", "amzn.to", "amazon.jobs"],
+      "microsoft": ["microsoft.com", "live.com", "office.com", "microsoftonline.com", "outlook.com"],
+      "netflix": ["netflix.com"],
+      "chase": ["chase.com"],
+      "wellsfargo": ["wellsfargo.com"],
+      "bankofamerica": ["bankofamerica.com", "bofa.com"],
+      "usps": ["usps.com"],
+      "fedex": ["fedex.com"],
+      "ups": ["ups.com"],
+      "irs": ["irs.gov"],
+      "ssa": ["ssa.gov"],
+      "medicare": ["medicare.gov"],
+      "venmo": ["venmo.com"],
+      "zelle": ["zellepay.com"],
+      "coinbase": ["coinbase.com"],
+      "google": ["google.com", "goo.gl", "youtube.com", "gmail.com"],
+      "facebook": ["facebook.com", "fb.com", "meta.com"],
+      "geeksquad": ["geeksquad.com", "bestbuy.com"]
+    },
+    "shortBrandMaxLength": 4
+  },
+  "messages": {
+    "high_risk": {
+      "headline": "This looks like a scam",
+      "speech": "This looks like a scam. Don't click links, call numbers, or send money or codes from this message. If you're not sure, check with someone you trust."
+    },
+    "caution": {
+      "headline": "Be careful with this",
+      "speech": "Be careful. This has some warning signs. Check with someone you trust before you do anything it asks."
+    },
+    "no_detected_signal": {
+      "headline": "No warning signs found",
+      "speech": "I didn't find warning signs. That doesn't prove it's safe, so stay careful with any request for money or codes."
+    },
+    "unknown": {
+      "headline": "Couldn't fully check this",
+      "speech": "I couldn't fully check this. Please treat it carefully."
+    },
+    "link_malicious": {
+      "headline": "Don't open this link",
+      "speech": "This link is known to be dangerous. Don't open it."
+    },
+    "link_suspicious": {
+      "headline": "This link looks suspicious",
+      "speech": "This link has warning signs. It's safer not to open it."
+    },
+    "link_no_signal": {
+      "headline": "No warning signs in this link",
+      "speech": "I didn't find warning signs in this link. That doesn't prove it's safe."
+    },
+    "link_unknown": {
+      "headline": "Couldn't check this link",
+      "speech": "I couldn't check this link. Please be careful with it."
+    },
+    "reasons_prefix": "Warning signs:"
+  }
+}

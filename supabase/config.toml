@@ -1,0 +1,17 @@
+# Supabase CLI config. Settings not listed here are left as they are on the hosted project.
+project_id = "squeek"
+
+[auth]
+# The iPhone app signs in from the emailed link, which reopens the app at this URL.
+additional_redirect_urls = ["clickey://login-callback"]
+
+[auth.email]
+# Codes are 6 digits if an email template ever shows {{ .Token }}. Free projects can't edit
+# templates without custom SMTP, so the default emails contain a sign-in link instead.
+otp_length = 6
+otp_expiry = 3600
+
+# The PC shows a pairing QR code before anyone is signed in on it, so this function
+# checks its own short-lived secrets instead of a user JWT.
+[functions.pair-device]
+verify_jwt = false
