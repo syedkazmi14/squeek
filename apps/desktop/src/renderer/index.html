@@ -235,7 +235,14 @@
             Previous check · no longer current
           </p>
           <div id="finding-summary" class="finding-summary">
-            <p id="finding-label" class="eyebrow">CHECK RESULT</p>
+            <div class="finding-badge">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" />
+                <path class="finding-check" d="m8 12 3 3 5-6" />
+                <path class="finding-warning" d="M12 8v5m0 3h.01" />
+              </svg>
+              <p id="finding-label" class="eyebrow">CHECK RESULT</p>
+            </div>
             <h2 id="assessment-heading" tabindex="-1"></h2>
             <p id="finding-description" class="secondary"></p>
           </div>
@@ -248,25 +255,32 @@
             <h3 id="evidence-heading">What caught my eye</h3>
             <ul id="evidence" class="evidence-list"></ul>
           </section>
-          <p id="next-step" class="next-step"></p>
-          <button
-            id="detail-manual"
-            class="primary-button full-width"
-            type="button"
-          >
-            Check another message
-          </button>
-          <button
-            id="replay"
-            class="text-button full-width"
-            type="button"
-            hidden
-          >
-            Replay warning
-          </button>
-          <button id="clear-check" class="text-button full-width" type="button">
-            Clear this check
-          </button>
+          <section class="next-step-card" aria-labelledby="next-step-heading">
+            <h3 id="next-step-heading">What to do next</h3>
+            <p id="next-step" class="next-step"></p>
+          </section>
+          <div class="finding-actions">
+            <button
+              id="detail-manual"
+              class="primary-button full-width"
+              type="button"
+            >
+              Check another message
+            </button>
+            <div class="finding-secondary-actions">
+              <button
+                id="replay"
+                class="text-button"
+                type="button"
+                hidden
+              >
+                Replay warning
+              </button>
+              <button id="clear-check" class="text-button" type="button">
+                Clear this check
+              </button>
+            </div>
+          </div>
         </section>
       </main>
     </div>

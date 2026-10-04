@@ -31,6 +31,8 @@
   --accent-hover: #f2b91f;
   --danger-ink: #7a1a14;
   --danger-soft: #f8e3e1;
+  --warning-ink: #754813;
+  --warning-soft: #fff0c2;
   --active: #1f7a4d;
   --shadow: 0 4px 16px rgb(27 26 23 / 5%);
   --card-radius: 20px;
@@ -270,14 +272,6 @@ h3 {
     opacity: 0.45;
   }
 }
-.finding-summary[data-tone="warning"] {
-  background: var(--danger-soft);
-  border-color: transparent;
-}
-.finding-summary[data-tone="warning"] h2,
-.finding-summary[data-tone="warning"] .eyebrow {
-  color: var(--danger-ink);
-}
 .protection-controls {
   margin-top: 12px;
   display: grid;
@@ -483,37 +477,155 @@ textarea {
   display: none;
 }
 .finding-summary {
-  padding: 16px;
-  border-radius: var(--card-radius);
+  padding: 14px;
+  border-radius: 16px;
   background: var(--card);
   border: 1px solid var(--hairline);
 }
-.finding-summary .eyebrow,
+.finding-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  color: var(--secondary);
+  background: var(--neutral-soft);
+}
+.finding-badge .eyebrow {
+  color: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.05em;
+}
+.finding-badge svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.finding-summary[data-tone="warning"] .finding-badge {
+  color: var(--warning-ink);
+  background: var(--warning-soft);
+}
+.finding-warning,
+.finding-summary[data-tone="warning"] .finding-check {
+  display: none;
+}
+.finding-summary[data-tone="warning"] .finding-warning {
+  display: block;
+}
 .finding-summary h2 {
   margin-bottom: 8px;
+  font-size: 20px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+#finding-description {
+  font-size: 13px;
+  line-height: 1.55;
 }
 #last-review {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+#last-review::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+#finding-view > .back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 8px;
+  padding: 8px;
+  margin-left: -8px;
+  font-size: 13px;
+  color: var(--secondary);
 }
 .evidence-section {
-  margin-top: 20px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.evidence-section h3,
+.next-step-card h3 {
+  font-size: 12px;
+  font-weight: 800;
 }
 .evidence-list {
   margin: 8px 0 0;
-  padding-left: 20px;
+  padding: 0;
+  list-style: none;
 }
 .evidence-list li {
-  margin-bottom: 12px;
-  padding-left: 4px;
+  position: relative;
+  padding: 8px 0 8px 18px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.evidence-list li::marker {
-  color: var(--secondary);
+.evidence-list li::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--neutral-soft);
+}
+.evidence-list li:last-child {
+  padding-bottom: 0;
+}
+.next-step-card {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--neutral-soft);
 }
 .next-step {
-  margin: 16px 0;
-  font-size: 14px;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--secondary);
+}
+.finding-actions {
+  display: grid;
+  gap: 4px;
+}
+.finding-actions > .primary-button {
+  font-size: 13px;
+}
+.finding-secondary-actions {
+  display: flex;
+  gap: 4px;
+}
+.finding-secondary-actions button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 6px;
+  font-size: 12px;
+  color: var(--secondary);
 }
 /* The separate, existing simulated payment window keeps its form layout. */
 .demo {

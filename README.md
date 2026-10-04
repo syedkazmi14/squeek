@@ -63,6 +63,8 @@ npm.cmd run release:audit
 
 Squeek starts in the Windows tray with its cursor companion visible and the review sidebar hidden. Use the tray to start Chrome or Edge monitoring or open Settings. Only the selected foreground browser is eligible for observation. Closing the sidebar leaves enabled monitoring running; Pause and Quit are explicit tray actions. New suspicious assessments open the sidebar automatically. Manual check accepts user-entered text; Open demo opens a local simulation whose exact action requires review. External pages receive advisory warnings only.
 
+Run `npm run preview:layout` to open the results layout with clearly labeled sample data. This separate preview uses mock checks; it does not start browser observation or connect to cloud services.
+
 The default and packaged app use local English rules and Windows local speech. Image-only content, unsupported accessibility trees, incomplete reads, and unknown identities remain coverage gaps. OCR and live Gmail/Edge compatibility are not verified or shipped.
 
 Jev is optional in development. Configure `TYPESAFE_API_KEY` in a private `.env`, then explicitly enable **Send redacted text to Jev**. No key is included in the installer; packaged cloud support needs a separately authorized authenticated backend. No microphone, continuous cloud video, payments, or contact messages are included.
