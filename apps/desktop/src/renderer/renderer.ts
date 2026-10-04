@@ -367,7 +367,11 @@ function refreshControls(): void {
     current.assessment?.state !== "high_risk" ||
     current.assessmentCurrent === false ||
     !(current.cloudVoice || localVoice());
-  finding.hidden = !suspicious() || pendingChecks > 0;
+  finding.hidden = !current.assessment || pendingChecks > 0;
+  element("finding-action-label").textContent = suspicious()
+    ? "See what I found"
+    : "View details";
+  finding.dataset.tone = suspicious() ? "warning" : "neutral";
   setOutputAwake(
     current.cloudVoice === true &&
       !muted &&
@@ -456,12 +460,12 @@ function refreshStatus(): void {
               : "neutral";
   element("status-card").dataset.mascotStatus = mascotStatus;
   element("status-heading").title = description;
-  element("status-description").hidden = true;
+  element("status-description").hidden = !description;
   element("status-card").dataset.idle = String(idle);
   element("status-heading").textContent = title;
   element("status-description").textContent = description;
   element("status-label").textContent = label;
-  element("status-label").hidden = true;
+  element("status-label").hidden = !label;
   element("status-card").dataset.tone =
     suspicious() && pendingChecks === 0 ? "warning" : "neutral";
   element("monitoring-state").textContent = monitoringText;
@@ -477,9 +481,14 @@ const phoneKinds: Record<string, string> = {
 };
 /** The "Your iPhone" card: sign in with the phone's email, or see that it's linked. */
 function renderPhone(view: SyncView | undefined): void {
+  const details = element<HTMLDetailsElement>("phone-details");
   const card = element("phone-link");
-  card.hidden = !view?.configured;
-  if (!view?.configured) return;
+  details.hidden = !view?.configured;
+  if (!view?.configured) {
+    details.open = false;
+    return;
+  }
+  if (view.phoneWarning) details.open = true;
   const form = element<HTMLFormElement>("phone-form");
   const connected = view.connected;
   form.hidden = connected;
@@ -627,6 +636,9 @@ function render(next: AppState): void {
       ? " AI review was unavailable; this uses local checks."
       : "");
   element("next-step").textContent = result().next;
+  element("next-step-card").dataset.tone = suspicious()
+    ? "warning"
+    : "neutral";
   element("finding-summary").dataset.tone = suspicious()
     ? "warning"
     : "neutral";
@@ -643,32 +655,6 @@ function render(next: AppState): void {
     evidence.append(quote);
   }
   element("evidence-section").hidden = !evidence.childElementCount;
-  // The backend exposes one transient assessment, not a persisted activity feed.
-  element("empty-activity").hidden = !!current.assessment;
-  element("latest-check").hidden = !current.assessment;
-  element("activity-heading").textContent =
-    current.assessmentCurrent === false && current.assessment
-      ? "Previous check"
-      : "Latest check";
-  element("activity-title").textContent =
-    (
-      {
-        high_risk: "Scam signs found",
-        caution: "Needs a closer look",
-        no_detected_signal: "No clear warning",
-        unknown: "More context needed",
-      } as Record<string, string>
-    )[current.assessment?.state ?? "unknown"] ?? "View check";
-  element("activity-icon").textContent = suspicious() ? "!" : "·";
-  element("latest-check").dataset.tone = suspicious() ? "warning" : "neutral";
-  const timestamp = current.assessment?.assessedAt;
-  element("activity-time").textContent =
-    timestamp && Number.isFinite(timestamp)
-      ? new Date(timestamp).toLocaleTimeString([], {
-          hour: "numeric",
-          minute: "2-digit",
-        })
-      : "View details";
   refreshControls();
   if (view === "finding" && !current.assessment)
     setView(
@@ -736,8 +722,7 @@ element<HTMLFormElement>("manual-form").addEventListener("submit", (event) => {
 });
 for (const id of ["open-manual", "detail-manual"])
   element(id).addEventListener("click", () => setView("manual"));
-for (const id of ["see-finding", "latest-check"])
-  element(id).addEventListener("click", () => setView("finding"));
+element("see-finding").addEventListener("click", () => setView("finding"));
 for (const back of document.querySelectorAll<HTMLButtonElement>("[data-back]"))
   back.addEventListener("click", () => setView("overview"));
 element("cancel").addEventListener("click", () => {

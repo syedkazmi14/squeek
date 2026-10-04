@@ -90,7 +90,8 @@
               type="button"
               hidden
             >
-              See what I found <span aria-hidden="true">→</span>
+              <span id="finding-action-label">See what I found</span>
+              <span aria-hidden="true">→</span>
             </button>
             <button
               id="monitor"
@@ -100,29 +101,6 @@
               Start protection
             </button>
           </div>
-          <section class="activity" aria-labelledby="activity-heading">
-            <h3 id="activity-heading">Latest check</h3>
-            <div id="empty-activity" class="empty-check">
-              <span class="section-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M8 3h8v4H8zM8 5H5v16h14V5h-3M8 12h8M8 16h5" />
-                </svg>
-              </span>
-              <p class="small secondary">
-                No checks yet.<br />Your next check will appear here.
-              </p>
-            </div>
-            <button id="latest-check" class="activity-row" type="button" hidden>
-              <span id="activity-icon" class="activity-icon" aria-hidden="true"
-                >!</span
-              >
-              <span class="activity-copy"
-                ><span id="activity-title"></span
-                ><span id="activity-time" class="small secondary"></span
-              ></span>
-              <span aria-hidden="true">›</span>
-            </button>
-          </section>
           <section class="sender-card" data-sender aria-label="About the sender" hidden>
             <h3>About the sender</h3>
             <p class="sender-from"></p>
@@ -130,44 +108,41 @@
             <p class="sender-review" role="status"></p>
             <p class="sender-lookup"></p>
           </section>
-          <section
-            id="phone-link"
-            class="phone-link"
-            aria-labelledby="phone-link-heading"
-            hidden
-          >
-            <h3 id="phone-link-heading">Your iPhone</h3>
-            <p id="phone-link-copy" class="small secondary"></p>
-            <p id="phone-warning" class="phone-warning" role="status" hidden></p>
-            <form id="phone-form" class="phone-form">
-              <label for="phone-email">Email you use on your iPhone</label>
-              <input
-                id="phone-email"
-                type="email"
-                autocomplete="email"
-                inputmode="email"
-                maxlength="254"
-                spellcheck="false"
-              />
+          <details id="phone-details" class="phone-details" hidden>
+            <summary>Your iPhone</summary>
+            <section id="phone-link" class="phone-link" aria-label="Your iPhone">
+              <p id="phone-link-copy" class="small secondary"></p>
+              <p id="phone-warning" class="phone-warning" role="status" hidden></p>
+              <form id="phone-form" class="phone-form">
+                <label for="phone-email">Email you use on your iPhone</label>
+                <input
+                  id="phone-email"
+                  type="email"
+                  autocomplete="email"
+                  inputmode="email"
+                  maxlength="254"
+                  spellcheck="false"
+                />
+                <button
+                  id="phone-connect"
+                  class="primary-button full-width"
+                  type="submit"
+                  disabled
+                >
+                  Connect
+                </button>
+              </form>
               <button
-                id="phone-connect"
-                class="primary-button full-width"
-                type="submit"
-                disabled
+                id="phone-disconnect"
+                class="outlined-button full-width"
+                type="button"
+                hidden
               >
-                Connect
+                Disconnect
               </button>
-            </form>
-            <button
-              id="phone-disconnect"
-              class="outlined-button full-width"
-              type="button"
-              hidden
-            >
-              Disconnect
-            </button>
-            <p id="phone-error" class="small phone-error" role="alert" hidden></p>
-          </section>
+              <p id="phone-error" class="small phone-error" role="alert" hidden></p>
+            </section>
+          </details>
           <button id="open-manual" class="text-button full-width" type="button">
             <span class="section-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -283,18 +258,11 @@
             <p class="sender-review" role="status"></p>
             <p class="sender-lookup"></p>
           </section>
-          <section class="next-step-card" aria-labelledby="next-step-heading">
+          <section id="next-step-card" class="next-step-card" aria-labelledby="next-step-heading">
             <h3 id="next-step-heading">What to do next</h3>
             <p id="next-step" class="next-step"></p>
           </section>
           <div class="finding-actions">
-            <button
-              id="detail-manual"
-              class="primary-button full-width"
-              type="button"
-            >
-              Check another message
-            </button>
             <div class="finding-secondary-actions">
               <button
                 id="replay"
@@ -308,6 +276,9 @@
                 Clear this check
               </button>
             </div>
+            <button id="detail-manual" class="text-button full-width" type="button">
+              Check another message
+            </button>
           </div>
         </section>
       </main>
