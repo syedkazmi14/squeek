@@ -35,6 +35,12 @@ for (const name of [
   "halo.html",
   "halo.css",
   "halo.js",
+  "mark.png",
+  "Nunito-Regular.ttf",
+  "Nunito-Bold.ttf",
+  "Nunito-ExtraBold.ttf",
+  "Nunito-Black.ttf",
+  "OFL.txt",
 ])
   await copyFile(`apps/desktop/src/renderer/${name}`, `dist/desktop/${name}`);
 

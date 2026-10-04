@@ -1,18 +1,74 @@
+/*
+ * Squeek's look on the desktop matches the iPhone app: two warm neutrals (cream and charcoal), one
+ * yellow taken from the mascot, and Nunito. Yellow fills buttons and marks; it never colours body
+ * text. Warnings use their own red, orange and green so they never read as branding.
+ * Tokens mirror apps/ios/Shared/Theme.swift.
+ */
+@font-face {
+  font-family: "Nunito";
+  font-weight: 400;
+  src: url("Nunito-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 700;
+  src: url("Nunito-Bold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 800;
+  src: url("Nunito-ExtraBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Nunito";
+  font-weight: 900;
+  src: url("Nunito-Black.ttf") format("truetype");
+}
+
 :root {
-  color-scheme: light;
-  --ivory: #faf7f1;
-  --surface: #fffdf9;
-  --ink: #182b25;
-  --forest: #174e3d;
-  --forest-hover: #103d2f;
-  --ochre: #a46c08;
-  --line: #d4d7cf;
-  --muted: #4c5a52;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  color-scheme: light dark;
+  --ground: #f7f4ec;
+  --ink: #1b1a17;
+  --card: #fffdf8;
+  --hairline: #e9e4d6;
+  --line-strong: #cfc8b6;
+  --secondary: #5c5850;
+  --neutral-soft: #efebdf;
+  --accent: #ffc83a;
+  --accent-hover: #f2b91f;
+  --on-accent: #1b1a17;
+  --accent-ink: #9a6500;
+  --accent-soft: #fff0c2;
+  --danger: #b3261e;
+  --danger-ink: #7a1a14;
+  --danger-soft: #f8e3e1;
+  --safe: #1f7a4d;
+  --focus: #1b1a17;
+  --shadow: rgba(27, 26, 23, 0.07);
+  font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
   font-size: 20px;
   line-height: 1.5;
   color: var(--ink);
-  background: var(--ivory);
+  background: var(--ground);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #151412;
+    --ink: #f7f4ec;
+    --card: #211f1c;
+    --hairline: #2e2b27;
+    --line-strong: #4a453e;
+    --secondary: #b8b2a6;
+    --neutral-soft: #2a2723;
+    --accent-ink: #ffc83a;
+    --accent-soft: #3a3220;
+    --danger: #ff8a80;
+    --danger-ink: #ffc9c3;
+    --danger-soft: #3a1c1a;
+    --safe: #6fcf97;
+    --focus: #ffc83a;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
 }
 
 * {
@@ -23,50 +79,57 @@ body {
 }
 button,
 select,
-textarea {
+textarea,
+input {
   font: inherit;
 }
 button,
 select {
   min-height: 60px;
-  border-radius: 10px;
+  border-radius: 18px;
 }
 button {
   padding: 12px 22px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
 }
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 button:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
+input:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--ochre);
-  outline-offset: 4px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 button:not(:disabled):active {
   transform: translateY(1px);
 }
 select,
-textarea {
+textarea,
+input:not([type="checkbox"]) {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #8c978f;
+  border: 1.5px solid var(--line-strong);
   color: var(--ink);
-  background: var(--surface);
+  background: var(--card);
+}
+input:not([type="checkbox"]) {
+  min-height: 60px;
+  border-radius: 14px;
 }
 textarea {
-  border-radius: 10px;
+  border-radius: 14px;
   resize: vertical;
   min-height: 110px;
 }
 label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: 700;
 }
 h1,
 h2,
@@ -77,19 +140,19 @@ p {
 h1 {
   display: flex;
   align-items: center;
-  gap: 18px;
-  font:
-    600 38px/1.2 Georgia,
-    serif;
+  gap: 14px;
+  font-size: 38px;
+  line-height: 1.2;
+  font-weight: 900;
 }
 h2 {
   font-size: 24px;
   line-height: 1.4;
-  font-weight: 600;
+  font-weight: 800;
 }
 h3 {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 800;
 }
 [hidden] {
   display: none !important;
@@ -104,20 +167,15 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding-bottom: 26px;
-  border-bottom: 2px solid var(--ochre);
+  gap: 12px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--hairline);
 }
-.brand-ring {
-  display: inline-block;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  border: 4px solid var(--forest);
-  border-top-color: transparent;
-  border-left-color: var(--ochre);
-  border-radius: 50%;
-  transform: rotate(-25deg);
+.brand-mark {
+  display: block;
+  height: 44px;
+  width: auto;
+  flex: 0 0 auto;
 }
 main {
   display: grid;
@@ -127,43 +185,59 @@ main {
 }
 .section-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: space-between;
   margin-bottom: 22px;
 }
 .status-label {
-  font-size: 18px;
-  color: var(--muted);
+  padding: 2px 14px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--secondary);
+  background: var(--neutral-soft);
 }
+
+/* Buttons: yellow is the one main action; everything else is a quiet outline. */
 .primary-button {
   width: 100%;
   margin-top: 16px;
-  border: 1px solid var(--forest);
-  background: var(--forest);
-  color: #fff;
+  border: 1px solid rgba(27, 26, 23, 0.14);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 .primary-button:hover:not(:disabled) {
-  background: var(--forest-hover);
+  background: var(--accent-hover);
 }
 .outlined-button,
 .quiet-button {
-  border: 1px solid var(--forest);
+  border: 1.5px solid var(--line-strong);
   background: transparent;
-  color: var(--forest);
+  color: var(--ink);
 }
 .outlined-button:hover:not(:disabled),
 .quiet-button:hover:not(:disabled) {
-  background: #edf1e9;
+  background: var(--card);
 }
 .quiet-button {
   min-width: 105px;
 }
+
+/* The controls sit on a card, like a settings group on the phone. */
+.controls {
+  align-self: start;
+  padding: 24px;
+  border: 1px solid var(--hairline);
+  border-radius: 26px;
+  background: var(--card);
+  box-shadow: 0 6px 16px var(--shadow);
+}
 .manual-form {
-  margin-top: 24px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  padding-top: 6px;
+  border-top: 1px solid var(--hairline);
 }
 .manual-form form {
   padding-top: 14px;
@@ -172,48 +246,77 @@ main {
   width: 100%;
   margin-top: 14px;
 }
+
+/* What Squeek found: a sentence and plain rows, not boxes. */
 .assessment {
   padding-right: 34px;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--hairline);
 }
 .result {
   display: flex;
-  gap: 18px;
+  gap: 14px;
   align-items: flex-start;
-  padding-bottom: 24px;
+  margin-bottom: 22px;
   scroll-margin-top: 24px;
 }
 .result h2 {
   font-size: 30px;
-  line-height: 1.35;
+  line-height: 1.3;
+  font-weight: 900;
   overflow-wrap: anywhere;
 }
 .warning-mark {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border: 2px solid var(--ochre);
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  margin-top: 0.7em;
   border-radius: 50%;
-  text-align: center;
-  font-size: 28px;
-  line-height: 36px;
-  color: var(--ochre);
+  background: var(--danger);
+}
+/* A likely scam is the one thing that earns a coloured box, as on the phone. */
+.result:has(#warning-mark:not([hidden])) {
+  padding: 18px 20px;
+  border-radius: 26px;
+  background: var(--danger-soft);
+}
+.result:has(#warning-mark:not([hidden])) h2 {
+  color: var(--danger-ink);
+}
+#last-review {
+  margin-bottom: 14px;
+  font-size: 18px;
+  color: var(--secondary);
 }
 .evidence-section {
-  border-top: 1px solid var(--line);
-  padding-top: 22px;
+  padding-top: 4px;
 }
 .evidence-list {
   list-style: none;
   padding: 0;
-  margin: 20px 0 26px;
+  margin: 8px 0 26px;
 }
 .evidence-list li {
-  border-left: 3px solid var(--ochre);
-  padding-left: 18px;
-  margin-bottom: 18px;
+  position: relative;
+  padding: 14px 0 14px 28px;
+  border-top: 1px solid var(--hairline);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+.evidence-list li:first-child {
+  border-top: 0;
+}
+.evidence-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 1.3em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--secondary);
+}
+.result:has(#warning-mark:not([hidden])) ~ .evidence-section li::before {
+  background: var(--danger);
 }
 .voice-controls {
   display: grid;
@@ -225,17 +328,39 @@ main {
 .voice-controls label {
   margin: 12px 0 0;
 }
-.settings {
+
+details.settings,
+.manual-form {
   margin-top: 8px;
 }
 summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   min-height: 52px;
   padding-block: 12px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-right: 2.5px solid currentColor;
+  border-bottom: 2.5px solid currentColor;
+  transform: rotate(45deg) translateY(-3px);
+  transition: transform 0.2s ease;
+}
+details[open] > summary::after {
+  transform: rotate(-135deg);
 }
 .diagnostics-settings {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hairline);
   margin-top: 16px;
 }
 .diagnostics {
@@ -250,10 +375,11 @@ summary {
   margin: 8px 0;
 }
 .diagnostics dt {
-  color: var(--muted);
+  color: var(--secondary);
 }
 .diagnostics dd {
   margin: 0;
+  font-weight: 700;
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -264,16 +390,49 @@ summary {
   min-height: 60px;
   margin-top: 18px;
   font-size: 18px;
+  font-weight: 400;
 }
 .checkbox-label input {
   width: 26px;
   height: 26px;
   flex: 0 0 26px;
-  accent-color: var(--forest);
+  accent-color: var(--accent);
 }
-.checkbox-label input:focus-visible {
-  outline: 3px solid var(--ochre);
-  outline-offset: 4px;
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.close-button {
+  min-width: 70px;
+  padding-inline: 12px;
+  font-size: 18px;
+}
+
+/* The simulated payment window shares these styles until it gets its own. */
+.demo {
+  display: block;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 30px 36px;
+}
+.demo form {
+  display: grid;
+  gap: 14px;
+  margin: 20px 0;
+}
+.demo button {
+  margin-top: 8px;
+  border: 1px solid rgba(27, 26, 23, 0.14);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.demo pre {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--card);
+  white-space: pre-wrap;
 }
 
 @media (max-width: 760px) {
@@ -288,26 +447,26 @@ summary {
     padding-right: 0;
     border-right: 0;
   }
-  .controls {
-    border-top: 1px solid var(--line);
-    padding-top: 26px;
-  }
   .result {
     min-height: auto;
   }
 }
-@media (max-width: 400px) {
-  .app-shell {
-    padding: 18px;
+@media (max-width: 480px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+  .header-actions {
+    margin-left: auto;
   }
   h1 {
     font-size: 32px;
     gap: 12px;
   }
-  .brand-ring {
-    width: 30px;
-    height: 30px;
-    flex-basis: 30px;
+  .brand-mark {
+    height: 36px;
+  }
+  .controls {
+    padding: 20px;
   }
   .quiet-button {
     min-width: 85px;
@@ -318,43 +477,7 @@ summary {
   button:not(:disabled):active {
     transform: none;
   }
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.app-header {
-  gap: 12px;
-}
-.app-header h1 {
-  font-size: 34px;
-  gap: 12px;
-}
-.app-header .brand-ring {
-  width: 32px;
-  height: 32px;
-  flex-basis: 32px;
-}
-.close-button {
-  min-width: 70px;
-  padding-inline: 12px;
-  font-size: 18px;
-}
-#last-review {
-  color: var(--ochre);
-  font-size: 18px;
-  margin-bottom: 16px;
-}
-@media (max-width: 480px) {
-  .app-header {
-    flex-wrap: wrap;
-  }
-  .header-actions {
-    margin-left: auto;
-  }
-  .app-header h1 {
-    font-size: 30px;
+  summary::after {
+    transition: none;
   }
 }

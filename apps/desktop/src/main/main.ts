@@ -230,7 +230,7 @@ function secureWindow(options: {
     alwaysOnTop: sidebar,
     resizable: !sidebar,
     show: false,
-    backgroundColor: "#f5f1e8",
+    backgroundColor: "#f7f4ec",
     title: "Squeek",
     webPreferences: {
       preload: join(root, "preload.cjs"),
@@ -319,6 +319,11 @@ app.whenReady().then(async () => {
         "halo.html",
         "halo.css",
         "halo.js",
+        "mark.png",
+        "Nunito-Regular.ttf",
+        "Nunito-Bold.ttf",
+        "Nunito-ExtraBold.ttf",
+        "Nunito-Black.ttf",
       ].includes(name)
     )
       return new Response("", { status: 404 });

@@ -16,6 +16,12 @@ files:
   - dist/desktop/halo.js
   - dist/desktop/icon.png
   - dist/desktop/tray-icon.png
+  - dist/desktop/mark.png
+  - dist/desktop/Nunito-Regular.ttf
+  - dist/desktop/Nunito-Bold.ttf
+  - dist/desktop/Nunito-ExtraBold.ttf
+  - dist/desktop/Nunito-Black.ttf
+  - dist/desktop/OFL.txt
   - package.json
   - '!node_modules/**'
 extraResources:

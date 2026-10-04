@@ -1,6 +1,8 @@
 export const desktopFiles = [
   "main.mjs", "preload.cjs", "renderer.js", "index.html", "styles.css",
   "demo.html", "demo.js", "halo.html", "halo.css", "halo.js", "icon.png", "tray-icon.png",
+  // The mascot and the Nunito type (SIL Open Font License) the interface is drawn in.
+  "mark.png", "Nunito-Regular.ttf", "Nunito-Bold.ttf", "Nunito-ExtraBold.ttf", "Nunito-Black.ttf", "OFL.txt",
 ] as const;
 // Observed in the pinned Electron 44.5.1 Windows x64 distribution.
 export const electronRuntimeFiles = [
