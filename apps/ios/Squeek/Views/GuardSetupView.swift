@@ -52,8 +52,8 @@ struct GuardSetupView: View {
         }
 
         card(.texts, manual: $model.textsGuardOn, lines: [
-          "Open Settings › Apps › Messages › Unknown & Spam, and turn on Filter Unknown Senders. Squeek only shows in the list below once that is on.",
-          "Under Text Message Filtering, choose Squeek.",
+          "Open the Messages app, tap the Filters button, then Manage Filtering.",
+          "Turn on Screen Unknown Senders, then tap Text Message Filter and choose Squeek.",
           "Likely scams from unknown numbers go to Junk. This filter can't see iMessages or texts from your contacts.",
           "Optional, to also check every text you get: open Shortcuts, tap Automation, the + button, then Message. Leave the sender empty, pick Run Immediately, and tap Next.",
           "Choose New Blank Automation, add the action Screen a Message from Squeek, tap Message and choose Shortcut Input.",
