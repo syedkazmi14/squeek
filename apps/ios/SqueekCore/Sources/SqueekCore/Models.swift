@@ -307,6 +307,8 @@ public struct Incident: Codable, Sendable, Identifiable, Equatable {
   public var date: Date? { Timestamps.parse(createdAt) }
   /// Written by Squeek's call screener on the server rather than by one of the person's devices.
   public var isScreenedCall: Bool { surface == "call" && deviceId == nil }
+  /// A caller who said the secret word and was put through to the person (call-webhook writes "Trusted caller").
+  public var isTrustedCaller: Bool { isScreenedCall && risk == "clear" && (evidenceRedacted ?? "").hasPrefix("Trusted caller") }
 }
 
 /// A call Squeek's phone agent answered (supabase/functions/call-webhook). No audio or transcript:

@@ -27,3 +27,7 @@ verify_jwt = false
 # Demo sign-in takes only an email, on the domains in the SQUEEK_DEMO_SIGN_IN_DOMAINS secret.
 [functions.demo-sign-in]
 verify_jwt = false
+
+# The ElevenLabs agent checks the secret word with a shared secret instead of a sign-in token.
+[functions.verify-safe-word]
+verify_jwt = false

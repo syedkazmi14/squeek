@@ -89,6 +89,15 @@ let decodedCheckIn = try? JSONDecoder().decode(
   from: Data(#"{"id":"4","protected_user_id":"a","helper_id":"b","status":"call_me","created_at":"2026-10-05T10:00:00.123456+00:00","answered_at":null}"#.utf8))
 check("check-in decodes from the server", decodedCheckIn?.status == "call_me" && decodedCheckIn?.date != nil, "\(String(describing: decodedCheckIn))")
 
+// A caller the gate put through is told apart from an ordinary taken message.
+func call(_ evidence: String?, _ risk: String) -> Incident {
+  let json = #"{"id":"i","user_id":"u","device_id":null,"platform":"ios","surface":"call","risk":"\#(risk)","categories":[],"rule_ids":[],"evidence_redacted":\#(evidence.map { "\"\($0)\"" } ?? "null"),"indicator_kind":null,"indicator_value":null,"user_action":null,"created_at":"2026-10-04T10:00:00.000Z"}"#
+  return try! JSONDecoder().decode(Incident.self, from: Data(json.utf8))
+}
+check("trusted caller is recognised", call("Trusted caller · Mike, the grandson", "clear").isTrustedCaller, "")
+check("a taken message is not a trusted caller", !call("Dr. Lee's office · to confirm", "clear").isTrustedCaller, "")
+check("a scam call is never a trusted caller", !call("Trusted caller · fake", "high_risk").isTrustedCaller, "")
+
 // Screen Guard: sampling, alert cooldowns, and the hand-off through the App Group.
 let guardPolicy = ScreenGuardPolicy()
 let t0 = Date(timeIntervalSince1970: 1_000_000)

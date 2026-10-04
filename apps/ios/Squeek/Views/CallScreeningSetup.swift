@@ -4,36 +4,34 @@ import SqueekCore
 import SwiftUI
 import UIKit
 
-/// Squeek answering the calls the person misses: the number Squeek calls them on with what it
-/// found, their Squeek line, the carrier codes that forward unanswered calls to it, and a contact
-/// card so Squeek's calls ring through. Part of the Calls card in setup.
+/// The call gate. Squeek has its own number; a caller who says the family's secret word is put
+/// through to the person's phone, and anyone else leaves a message with Squeek, which then calls
+/// the person to say what it found. Part of the Calls card in setup.
 struct CallScreeningSetup: View {
   @EnvironmentObject private var model: AppModel
+  @Environment(\.dismiss) private var dismiss
   @State private var phone = ""
-  @State private var carrier = Carrier.gsm
-  @State private var copied: String?
   @State private var addingContact = false
   @State private var showSignIn = false
   @State private var working = false
 
-  enum Carrier: String, CaseIterable, Identifiable {
-    case gsm = "AT&T or T-Mobile"
-    case verizon = "Verizon"
-    var id: String { rawValue }
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       Divider()
-      Text("Squeek answers the calls you miss")
+      Text("Callers need your secret word")
         .font(.nunito(.headline))
         .foregroundStyle(Theme.ink)
       if model.isSignedIn || model.isDemo {
         yourNumber
         if let line = model.screeningLine {
-          forwarding(line)
+          secretWord
+          squeekNumber(line)
         } else {
-          Button("Get my Squeek line") {
+          Text("Squeek gets its own phone number for you. People you trust call it and say your secret word to be put through.")
+            .font(.nunito(.footnote))
+            .foregroundStyle(Theme.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+          Button("Get my Squeek number") {
             Task {
               working = true
               await model.claimScreeningLine()
@@ -44,7 +42,7 @@ struct CallScreeningSetup: View {
           .disabled(working)
         }
       } else {
-        Text("When a number you don't know calls and you don't pick up, Squeek answers, asks who it is, and calls you to say whether it looked like a scam. Sign in to turn it on.")
+        Text("Give people you trust a Squeek number and a secret word. They say the word and are put through to you; anyone else leaves a message, and Squeek calls you to say whether it looked like a scam. Sign in to turn it on.")
           .font(.nunito(.body))
           .foregroundStyle(Theme.ink)
           .fixedSize(horizontal: false, vertical: true)
@@ -74,7 +72,7 @@ struct CallScreeningSetup: View {
       }
       Text(
         model.profile?.alertPhone == nil
-          ? "Squeek calls this number to tell you who called and whether it looked like a scam."
+          ? "Squeek calls this number to tell you who left a message and whether it looked like a scam."
           : "Saved. Squeek calls \(PhoneNumbers.display(model.profile?.alertPhone ?? "")) to tell you what it found."
       )
       .font(.nunito(.footnote))
@@ -82,67 +80,49 @@ struct CallScreeningSetup: View {
     }
   }
 
+  /// The word is kept in My Person; the gate can't open without one.
   @ViewBuilder
-  private func forwarding(_ line: String) -> some View {
+  private var secretWord: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Your Squeek line").font(.nunito(.subheadline, .semibold)).foregroundStyle(Theme.ink)
-      Text(PhoneNumbers.display(line))
-        .font(.nunito(size: 28, weight: .black).monospacedDigit())
-        .foregroundStyle(Theme.accentInk)
-      Button("Add Squeek to Contacts", systemImage: "person.crop.circle.badge.plus") { addingContact = true }
-        .font(.nunito(.subheadline, .semibold))
-      Text("So Squeek's calls ring through and show its name.")
-        .font(.nunito(.footnote))
-        .foregroundStyle(Theme.secondaryInk)
-    }
-
-    VStack(alignment: .leading, spacing: 10) {
-      Text("Send missed calls to Squeek").font(.nunito(.subheadline, .semibold)).foregroundStyle(Theme.ink)
-      Picker("Carrier", selection: $carrier) {
-        ForEach(Carrier.allCases) { Text($0.rawValue).tag($0) }
-      }
-      .pickerStyle(.segmented)
-      ForEach(codes(for: line), id: \.code) { item in
-        HStack {
-          VStack(alignment: .leading, spacing: 2) {
-            Text(item.code).font(.system(.body, design: .monospaced).weight(.semibold)).foregroundStyle(Theme.ink)
-            Text(item.when).font(.nunito(.footnote)).foregroundStyle(Theme.secondaryInk)
-          }
-          Spacer()
-          Button(copied == item.code ? "Copied" : "Copy") {
-            UIPasteboard.general.string = item.code
-            withAnimation { copied = item.code }
-          }
-          .buttonStyle(.glass)
+      Text("Your secret word").font(.nunito(.subheadline, .semibold)).foregroundStyle(Theme.ink)
+      if model.hasSafeWord {
+        Label("Set. Squeek keeps only a scrambled copy.", systemImage: "checkmark.circle.fill")
+          .font(.nunito(.footnote))
+          .foregroundStyle(Theme.safe)
+      } else {
+        Text("Choose a word only your family would know. Without one, nobody can be put through.")
+          .font(.nunito(.footnote))
+          .foregroundStyle(Theme.secondaryInk)
+          .fixedSize(horizontal: false, vertical: true)
+        Button("Choose a secret word") {
+          model.selectedTab = .person
+          dismiss()
         }
-        .padding(12)
-        .background(Theme.ground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .accessibilityElement(children: .combine)
+        .secondaryAction()
       }
-      Text(
-        "Open the Phone app, paste each code into the keypad and press call. iPhones can't dial these codes for you. "
-          + "To undo it later, dial \(carrier == .gsm ? "##004#" : "*73")."
-      )
-      .font(.nunito(.footnote))
-      .foregroundStyle(Theme.secondaryInk)
-      .fixedSize(horizontal: false, vertical: true)
-      Toggle("I've set up forwarding", isOn: $model.forwardingOn)
-        .font(.nunito(.subheadline, .semibold))
-        .tint(Theme.accent)
     }
   }
 
-  private func codes(for line: String) -> [(code: String, when: String)] {
-    switch carrier {
-    case .gsm:
-      return [
-        ("**61*\(line)#", "When you don't answer"),
-        ("**67*\(line)#", "When you're busy or decline"),
-        ("**62*\(line)#", "When your phone is off"),
-      ]
-    case .verizon:
-      let digits = line.hasPrefix("+1") ? String(line.dropFirst(2)) : line
-      return [("*71\(digits)", "When you don't answer or you're busy")]
+  @ViewBuilder
+  private func squeekNumber(_ line: String) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Your Squeek number").font(.nunito(.subheadline, .semibold)).foregroundStyle(Theme.ink)
+      Text(PhoneNumbers.display(line))
+        .font(.nunito(size: 28, weight: .black).monospacedDigit())
+        .foregroundStyle(Theme.accentInk)
+      Text("Give this number to people you trust, and tell them the secret word in person. When they call it and say the word, Squeek puts them through to you. Anyone else leaves a message.")
+        .font(.nunito(.footnote))
+        .foregroundStyle(Theme.secondaryInk)
+        .fixedSize(horizontal: false, vertical: true)
+      ShareLink(item: "You can reach me through Squeek on \(PhoneNumbers.display(line)). Call it and say our secret word, and it puts you through.") {
+        Label("Send the number", systemImage: "square.and.arrow.up")
+      }
+      .secondaryAction()
+      Button("Add Squeek to Contacts", systemImage: "person.crop.circle.badge.plus") { addingContact = true }
+        .font(.nunito(.subheadline, .semibold))
+      Text("So Squeek's calls to you ring through and show its name.")
+        .font(.nunito(.footnote))
+        .foregroundStyle(Theme.secondaryInk)
     }
   }
 }

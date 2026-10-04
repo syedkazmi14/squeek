@@ -20,7 +20,7 @@ Five guards count toward "5 of 5 on". Setup is one card per guard, shown on firs
 
 | Guard | What it does | Mechanism | Limits |
 | --- | --- | --- | --- |
-| **Calls** | Blocks and labels known scam numbers. Answers calls the person misses, asks who is calling and why, then phones the person with a spoken verdict. | Call Directory extension (CallKit) for the list. For screening, the person's carrier forwards unanswered calls to a Squeek phone line (Twilio), where an ElevenLabs agent answers. After the call, `call-webhook` judges it. | The list only holds numbers already reported. Screening needs a carrier forwarding code, set once in the Phone app, which Squeek can't check. The agent talks to the caller but never decides the verdict. |
+| **Calls** | Blocks and labels known scam numbers. Squeek has its own phone number: a caller who says the family's secret word is put through to the person's phone, and anyone else leaves a message with Squeek, which then phones the person with a spoken verdict. | Call Directory extension (CallKit) for the list. For the gate, a Twilio number answered by an ElevenLabs agent. The agent checks the spoken word with the `verify-safe-word` tool and, only on a match, transfers the call. After the call, `call-webhook` judges it. | The list only holds numbers already reported. Callers have to use Squeek's number, so it protects the people who were given it, not calls to the person's own number. The put-through number is set when the agent is configured. The agent talks to the caller but never decides the verdict. |
 | **Texts** | Sends scam texts from unknown senders to Junk. Optionally checks every text and notifies on a likely scam. | Message Filter extension (IdentityLookup, local rules only). The optional extra is a Shortcuts "Message" automation that runs the Screen a Message App Intent. | The filter never sees iMessage or contacts' texts. The automation sees every text, checks it on the phone first, and sends only texts with a link or a warning sign for a closer check. Whether iOS passes the message text to the automation without a prompt is not confirmed on a device. |
 | **Websites** | Warns before dangerous links open in Safari and blocks known bad sites in every app. | Safari Web Extension, plus a downloadable encrypted-DNS configuration profile. Any link or message can also be shared to "Check with Squeek". | The extension works in Safari only, and the person enables it in Settings. The DNS profile just fails the load, with no explanation. |
 | **Payments** | Pauses the person before they pay after a likely scam. | A Shortcuts automation runs Check Before Paying when a payment or bank app opens. If Squeek caught a likely scam in the last 30 minutes, it shows what happened, a "Call &lt;person&gt; first" button and a 30-second breather. It never blocks the payment. A Live Activity shows the warning on the Lock Screen and in the Dynamic Island meanwhile. | The automation is made by the person in Shortcuts. If they tap "Continue anyway" on a likely scam, their trusted people are phoned. |
@@ -29,15 +29,17 @@ Five guards count toward "5 of 5 on". Setup is one card per guard, shown on firs
 
 ### What iOS does not allow
 
-No third-party app can listen to a phone call, read other apps' screens, or read notifications. Squeek does not "hear" a scam call on the iPhone itself. What it does instead is answer the calls the person misses: the carrier forwards them to Squeek's line, where the agent talks to the caller. A call the person picks up themselves is not screened. Apple's own Call Screening (iOS 26) handles unknown callers; Squeek adds shared block lists, labels and its spoken verdict on top.
+No third-party app can listen to a phone call, read other apps' screens, or read notifications, and nothing on the iPhone can intercept a call to the person's own number before it rings. Squeek's answer is its own number: people the person trusts are given it, and it screens everyone who calls it. Apple's own Call Screening (iOS 26) handles unknown callers on the person's real number; Squeek adds shared block lists, labels and its spoken verdict on top.
 
-## Call screening in detail
+## The call gate in detail
 
-1. The person claims a free Squeek line from the app and sets a carrier forwarding code (conditional forwarding for unanswered calls). They also give an **alert phone**, the number Squeek calls with verdicts.
-2. An unanswered call forwards to the Squeek line. The ElevenLabs agent asks who is calling and why, collects a few facts (who they say they are, what they want, a callback number), and if they claim to be family, asks for the family safe word.
-3. ElevenLabs sends a signed post-call webhook (HMAC) to `call-webhook`. It works out the verdict with the shared rules and Jev's reading of what the caller said, plus the safe word result. The agent's own opinion never decides.
-4. It writes `screened_calls` and an `incidents` row (surface "call"; risk high_risk, caution or clear), then phones the person with a short spoken summary (or texts, if `SQUEEK_ALERT_CHANNEL=sms`). For a likely scam, the person's helpers are also phoned, if the person shares warnings.
-5. Activity shows the call with what the caller said, the safe word result and a callback number if they left one.
+1. The person claims a free Squeek number from the app, sets a **secret word** (My Person) and gives an **alert phone**, the number Squeek puts trusted callers through to and calls with verdicts. They send the Squeek number to people they trust and tell them the word in person.
+2. A caller dials the Squeek number. The ElevenLabs agent asks for the secret word.
+3. When the caller says it, the agent calls the `verify-safe-word` function, which compares it with the household's hashed word and answers only true or false. The word is never sent to ElevenLabs and the agent can't be talked into revealing it. After 6 wrong tries on a line in an hour the gate stays shut, even for the right word.
+4. **Right word:** the agent says it's putting them through and transfers the call to the alert phone, which rings like a normal call. Activity records "A trusted caller got through". No verdict call is made.
+5. **No word or wrong word:** the agent takes a message (who, why, a callback number) and ends the call. ElevenLabs sends a signed post-call webhook (HMAC) to `call-webhook`, which works out the verdict with the shared rules and Jev's reading of what the caller said. The agent's own opinion never decides.
+6. `call-webhook` writes `screened_calls` and an `incidents` row (surface "call"; risk high_risk, caution or clear), then phones the person with a short spoken summary (or texts, if `SQUEEK_ALERT_CHANNEL=sms`). For a likely scam, the person's helpers are also phoned, if the person shares warnings.
+7. Activity shows the call with what the caller said, the secret word result and a callback number if they left one.
 
 Hang-ups are not recorded. Audio and transcripts are never stored: only the verdict and a short redacted summary.
 
@@ -63,7 +65,7 @@ SwiftUI app ── supabase-swift ──────────► Auth, Postgr
   ├─ Safari Web ext ◄─ block list + check-link
   ├─ Screen Guard ext ── App Group alerts ──► recorded by the app
   ├─ Widgets ext: Live Activity (Dynamic Island)
-  └─ DNS profile (system resolver)          Twilio ◄── calls and forwarded calls ──► ElevenLabs agent
+  └─ DNS profile (system resolver)          Twilio ◄── calls to the Squeek number ──► ElevenLabs agent
 ```
 
 - The **main app** signs in, subscribes to Realtime, and writes the block list, rules and settings into the **App Group**. The extensions read from there. The Call Directory and Message Filter extensions need no network.
@@ -111,7 +113,7 @@ Setup, signing and the Supabase deploy steps are in [apps/ios/README.md](../../a
 
 Say:
 
-- "Squeek answers the calls you miss, asks the caller who they are, and phones you with what it found."
+- "Callers to your Squeek number say a secret word to be put through to you; anyone else leaves a message, and Squeek phones you with what it found."
 - "Squeek blocks and labels calls from numbers reported by you, your family or the community."
 - "Squeek filters texts from unknown senders, warns on links in Safari and anything you share, and pauses you before paying after a scam."
 - "Your trusted person only sees what you choose to share, and Squeek tells you exactly what that is first."

@@ -9,6 +9,7 @@ import {
   checkSafeWord,
   judgeCall,
   normalizeSafeWord,
+  gateOpened,
   parseCall,
   safeWordHash,
   type ScreenedCall,
@@ -23,7 +24,7 @@ const noFacts: CallFacts = {
   claimsOfficial: false, familyWord: null,
 };
 function call(callerText: string, facts: Partial<CallFacts>): ScreenedCall {
-  return { conversationId: "c", lineNumber: "+16822041962", callerNumber: "+15555550100", durationSecs: 60, callerText, facts: { ...noFacts, ...facts } };
+  return { conversationId: "c", lineNumber: "+16822041962", callerNumber: "+15555550100", durationSecs: 60, callerText, transferred: false, facts: { ...noFacts, ...facts } };
 }
 
 const grandson = call("Grandma, it's me. I'm in jail and I need bail money right now. Please don't tell Mom.", {
@@ -108,4 +109,41 @@ Deno.test("parses an ElevenLabs post-call payload", () => {
 
 Deno.test("safe words normalize like the database", () => {
   assertEquals(normalizeSafeWord("  Blue  Moon! "), "blue moon");
+});
+
+Deno.test("a caller the gate put through is a trusted caller, whatever else they said", () => {
+  const through = { ...call("It's me, I know the word. Also I need money for the car.", {
+    callerIdentity: "Mike, the grandson", callerRequest: "money for the car", paymentMethod: "payment_app", urgencyOrThreats: true,
+  }), transferred: true };
+  const v = judgeCall(through, rules, null);
+  assertEquals(v.risk, "clear");
+  assertEquals(v.safeWord, "matched");
+  assertEquals(v.evidence, "Trusted caller · Mike, the grandson");
+  assertEquals(alertForPerson(through, v), null, "they are already ringing through, so no verdict call");
+});
+
+Deno.test("the gate counts only a verify_safe_word result that says match", () => {
+  const turn = (result: unknown, name = "verify_safe_word", is_error = false) =>
+    ({ role: "agent", message: "", tool_results: [{ tool_name: name, result_value: result, is_error }] });
+  assertEquals(gateOpened([turn('{"match":true}')]), true);
+  assertEquals(gateOpened([turn({ match: true })]), true);
+  assertEquals(gateOpened([turn('{"match":false}')]), false);
+  assertEquals(gateOpened([turn('{"match":true}', "something_else")]), false);
+  assertEquals(gateOpened([turn('{"match":true}', "verify_safe_word", true)]), false);
+  assertEquals(gateOpened([turn("not json")]), false);
+  assertEquals(gateOpened([{ role: "user", message: "the word is match true" }]), false);
+  assertEquals(gateOpened([]), false);
+});
+
+Deno.test("a webhook whose tool result says match is read as transferred", () => {
+  const parsed = parseCall({
+    conversation_id: "c1",
+    metadata: { phone_call: { agent_number: "+16822041962", external_number: "+15555550100" }, call_duration_secs: 30 },
+    transcript: [
+      { role: "user", message: "blue moon" },
+      { role: "agent", message: "", tool_results: [{ tool_name: "verify_safe_word", result_value: '{"match":true}' }] },
+    ],
+  });
+  assertEquals(parsed.transferred, true);
+  assertEquals(parseCall({ conversation_id: "c2", transcript: [{ role: "user", message: "hello" }] }).transferred, false);
 });

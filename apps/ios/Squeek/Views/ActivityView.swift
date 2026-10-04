@@ -159,7 +159,7 @@ struct IncidentWords {
       switch incident.level {
       case .danger: return who + "Squeek answered a scam call"
       case .caution: return who + "Squeek answered a call that seemed off"
-      default: return who + "Squeek took a message"
+      default: return who + (incident.isTrustedCaller ? "A trusted caller got through" : "Squeek took a message")
       }
     }
     switch incident.level {
@@ -269,7 +269,7 @@ struct IncidentRow: View {
 
   private var title: String {
     if incident.userAction == "reported" { return "You reported a scam" }
-    if incident.isScreenedCall && incident.level == .clear { return "Squeek took a message" }
+    if incident.isScreenedCall && incident.level == .clear { return incident.isTrustedCaller ? "A trusted caller got through" : "Squeek took a message" }
     return Labels.level(incident.level)
   }
 
@@ -307,7 +307,7 @@ struct IncidentDetailView: View {
               .frame(width: 34, height: 34)
               .background(status.tint, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
           }
-          Text(current.isScreenedCall ? (current.level == .clear ? "Squeek took a message" : "Call Squeek answered") : Labels.surface(current.surface))
+          Text(current.isScreenedCall ? (current.level == .clear ? (current.isTrustedCaller ? "A trusted caller got through" : "Squeek took a message") : "Call Squeek answered") : Labels.surface(current.surface))
             .font(.display(.title))
             .foregroundStyle(Theme.ink)
           HStack(spacing: 8) {

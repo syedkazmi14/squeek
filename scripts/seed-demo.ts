@@ -86,6 +86,8 @@ const incidents: Seed[] = [
     evidence: "This is the IRS. A warrant for your arrest will be issued today. Pay with Google Play gift cards…", minutes: 2 },
   { key: "d5", user: syed, platform: "ios", surface: "call", risk: "clear", categories: [], rules: [],
     evidence: "Dr. Lee's office · to confirm Tuesday's appointment", kind: "phone", value: "+15555550142", minutes: 60 * 3 },
+  { key: "d7", user: syed, platform: "ios", surface: "call", risk: "clear", categories: [], rules: ["call_safe_word"],
+    evidence: "Trusted caller · Aisha, my daughter", kind: "phone", value: "+15555550112", minutes: 60 * 6 },
   { key: "d6", user: syed, platform: "ios", surface: "browser", risk: "high_risk", categories: ["link"], rules: ["link_dangerous"],
     evidence: "secure-bank-login.example", kind: "domain", value: "secure-bank-login.example", minutes: 60 * 4 },
   { key: "d4", user: syed, platform: "ios", surface: "link", risk: "caution", categories: ["link"], rules: ["brand_mismatch"],

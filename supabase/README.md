@@ -60,13 +60,15 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
 
    Free projects can't edit email templates without your own SMTP provider, so the default emails contain a sign-in **link**. Tapping it on the iPhone opens Squeek and signs in. To get 6-digit codes instead, add custom SMTP (Authentication › Emails), then add `{{ .Token }}` to the Magic Link and Confirm signup templates. The apps accept either.
 6. **Authentication › Providers › Apple** (optional): enable it, and add your iOS bundle id under Client IDs.
-7. **Call screening** (optional). Calls the person doesn't answer are forwarded by their carrier to a Squeek line on Twilio, where an ElevenLabs agent asks who's calling and why; `call-webhook` then decides the verdict and calls the person to tell them.
+7. **Call gate** (optional). Squeek has its own number on Twilio, answered by an ElevenLabs agent. A caller who says the family's secret word is put through to the person's phone; anyone else leaves a message, and `call-webhook` decides the verdict and calls the person to tell them.
    1. Buy a Twilio number with Voice, and import it into ElevenLabs (Agents › Phone Numbers › Import › Twilio). Put `ELEVENLABS_API_KEY` (with Agents write access), `ELEVENLABS_PHONE_NUMBER_ID`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_PHONE_NUMBER` in `supabase/functions/.env`.
    2. Create the agent and its post-call webhook. This saves the agent id, webhook id and signing secret to the same file, and is safe to rerun after editing the prompt:
 
       ```bash
-      deno run --allow-read --allow-write --allow-net scripts/setup-call-screener.ts
+      deno run --allow-read --allow-write --allow-net scripts/setup-call-screener.ts --transfer=+15555550100
       ```
+
+      `--transfer` is the person's real phone, where callers who say the word are put through (ElevenLabs takes a fixed number, so run it again to change it). The script also creates the `verify_safe_word` tool with its shared secret (`SQUEEK_TOOL_SECRET`). Apply `supabase/migrations/20261006000000_safe_word_attempts.sql` and deploy `verify-safe-word` too.
 
    3. Push the secrets, then add the line in the SQL editor so `claim_screening_line()` can hand it out:
 
@@ -116,6 +118,7 @@ All functions take POST JSON with the signed-in user's token (supabase-js and su
 - `pair-device`: `{ action: "create" }` from the PC returns `{ code, qr, pollSecret }`. The iPhone sends `{ action: "claim", code }`. The PC then polls `{ action: "poll", pollSecret }` until it gets `{ status: "ready", tokenHash }`, and calls `supabase.auth.verifyOtp({ token_hash, type: "email" })`.
 
 - `demo-sign-in`: `{ email }` returns `{ email, tokenHash }` for `verifyOTP`, creating the account the first time. No password, so it only answers for the domains in the `SQUEEK_DEMO_SIGN_IN_DOMAINS` secret (for example `squeek.example`), and is off when that's unset. `*` allows every email, so anyone could sign in as anyone; use that only on a throwaway project.
+- `verify-safe-word`: called by the ElevenLabs agent during a call, with the shared secret in `x-squeek-tool-secret`, not by the apps. It checks what the caller said against the household's hashed secret word and answers `{ match }` only. It records wrong tries per line and stays shut after 6 in an hour, and also if it can't count them.
 - `call-webhook`: called by ElevenLabs, not by the apps. It checks the `elevenlabs-signature` HMAC, ignores Squeek's own alert calls and repeats of the same conversation, then writes a `screened_calls` row and, unless it was a hang-up, an `incidents` row with `surface: "call"`. Risk `clear` means Squeek took a message from a genuine caller. Callers who say they're family are asked for the household's safe word (`set_safe_word`), and only its hash is stored.
 
 The Windows app should use the same RPCs as the iPhone: `my_block_list`, `my_household_members` and `household_devices`. It should also subscribe to Realtime on `incidents`, `blocked_numbers` and `blocked_domains`.

@@ -70,7 +70,7 @@ serve("call-webhook", async (req) => {
 
   // Callers claiming to be family are asked for the safe word; compare it with the household's.
   let safeWord = null;
-  if (call.facts.claimsFamily) {
+  if (call.facts.claimsFamily && !call.transferred) {
     const { data: households } = householdIds.length
       ? await db.from("households").select("id, safe_word_hash").in("id", householdIds).not("safe_word_hash", "is", null)
       : { data: [] };
@@ -80,7 +80,7 @@ serve("call-webhook", async (req) => {
     );
   }
 
-  const jev = call.callerText.trim() ? await assessWithJev(redact(call.callerText, rules), "phone call") : null;
+  const jev = call.callerText.trim() && !call.transferred ? await assessWithJev(redact(call.callerText, rules), "phone call") : null;
   if (jev) await addTokens(userId, jev.tokens);
   const verdict = judgeCall(call, rules, safeWord, jev?.signals ?? []);
   const keep = profile?.history_sync ?? false;

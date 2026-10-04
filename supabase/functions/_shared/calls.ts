@@ -60,7 +60,7 @@ export const DATA_FIELDS = {
   family_word: {
     type: "string",
     description:
-      "Exactly what the caller said when asked for the family safe word. Empty if they weren't asked or gave no answer.",
+      "Exactly what the caller said when asked for the secret word. Empty if they weren't asked or gave no answer.",
   },
 } as const;
 
@@ -86,11 +86,33 @@ export interface ScreenedCall {
   durationSecs: number | null;
   /** Everything the caller said, joined. */
   callerText: string;
+  /** The caller said the secret word, verify_safe_word agreed, and the agent put them through. */
+  transferred: boolean;
   facts: CallFacts;
 }
 
 // deno-lint-ignore no-explicit-any
 type Json = any;
+
+/** True if the agent's verify_safe_word tool answered "match" during the call. */
+export function gateOpened(transcript: Json[]): boolean {
+  for (const turn of transcript) {
+    const results: Json[] = Array.isArray(turn?.tool_results) ? turn.tool_results : [];
+    for (const r of results) {
+      if (r?.tool_name !== "verify_safe_word" || r?.is_error) continue;
+      let value = r?.result_value;
+      if (typeof value === "string") {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          value = null;
+        }
+      }
+      if (value?.match === true) return true;
+    }
+  }
+  return false;
+}
 
 /** Reads the `data` of a post_call_transcription webhook. Unknown or missing fields become null. */
 export function parseCall(data: Json): ScreenedCall {
@@ -115,6 +137,7 @@ export function parseCall(data: Json): ScreenedCall {
       .map((t) => t.message.trim())
       .filter(Boolean)
       .join("\n"),
+    transferred: gateOpened(transcript),
     facts: {
       callerIdentity: text("caller_identity"),
       callerRequest: text("caller_request"),
@@ -204,6 +227,23 @@ export function judgeCall(
   const evidence = [claims, wants].filter(Boolean).join(" · ").slice(0, 280) || null;
   const familySafeWord = f.claimsFamily ? safeWord : null;
 
+  // Someone who said the secret word was put through to the person's phone. That's a trusted caller,
+  // not something to judge: nothing they said to the agent counts against them.
+  if (call.transferred) {
+    const who = ["Trusted caller", claims].filter(Boolean).join(" · ").slice(0, 280);
+    return {
+      risk: "clear",
+      categories: [],
+      ruleIds: ["call_safe_word"],
+      reasons: [{ id: "call_safe_word", label: "Knew your secret word", source: "rule" }],
+      claims,
+      wants,
+      callback,
+      safeWord: "matched",
+      evidence: who,
+    };
+  }
+
   // A hang-up or a recording that said nothing.
   if (!call.callerText.trim() && !claims && !wants) {
     return { risk: "unknown", categories: [], ruleIds: [], reasons: [], claims, wants, callback, safeWord: familySafeWord, evidence };
@@ -272,6 +312,8 @@ export function displayPhone(e164: string | null): string {
 
 /** What Squeek says to the person, spoken on a call or sent as a text. Null: don't bother them. */
 export function alertForPerson(call: ScreenedCall, verdict: CallVerdict): string | null {
+  // They are already being rung through; a second call about it would only confuse.
+  if (call.transferred) return null;
   const from = displayPhone(call.callerNumber);
   const said = verdict.claims ? ` They said they were ${verdict.claims}.` : "";
   const top = verdict.reasons.find((r) => r.id !== "call_safe_word")?.label;

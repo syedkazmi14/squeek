@@ -39,11 +39,6 @@ final class AppModel: ObservableObject {
   @Published var webGuardOn = UserDefaults.standard.bool(forKey: AppModel.webGuardKey) {
     didSet { UserDefaults.standard.set(webGuardOn, forKey: Self.webGuardKey) }
   }
-  /// Call forwarding is set with a carrier code in the Phone app, which Squeek can't check.
-  @Published var forwardingOn = UserDefaults.standard.bool(forKey: AppModel.forwardingKey) {
-    didSet { UserDefaults.standard.set(forwardingOn, forKey: Self.forwardingKey) }
-  }
-
   /// The Shortcuts automation that runs Check Before Paying is made in the Shortcuts app.
   @Published var paymentsGuardOn = UserDefaults.standard.bool(forKey: AppModel.paymentsKey) {
     didSet { UserDefaults.standard.set(paymentsGuardOn, forKey: Self.paymentsKey) }
@@ -78,7 +73,6 @@ final class AppModel: ObservableObject {
   private static let alertsSinceKey = "squeek.alertsSince"
   private static let textsGuardKey = "squeek.setup.texts"
   private static let webGuardKey = "squeek.setup.web"
-  private static let forwardingKey = "squeek.setup.forwarding"
   private static let paymentsKey = "squeek.setup.payments"
   private static let lastVisitKey = "squeek.lastVisit"
 
@@ -110,9 +104,10 @@ final class AppModel: ObservableObject {
 
   func isOn(_ guard: SqueekGuard) -> Bool {
     switch `guard` {
-    // Blocking known scammers, plus Squeek answering the rest and calling the person to say what it found.
+    // Blocking known scammers, plus Squeek's number: callers who say the secret word are put through,
+    // everyone else leaves a message and Squeek calls the person to say what it found.
     case .calls:
-      return callBlockingStatus == .enabled && (forwardingOn || isDemo) && screeningLine != nil && profile?.alertPhone != nil
+      return callBlockingStatus == .enabled && screeningLine != nil && profile?.alertPhone != nil && hasSafeWord
     case .texts: return textsGuardOn
     case .web: return webGuardOn
     case .payments: return paymentsGuardOn
