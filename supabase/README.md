@@ -10,6 +10,7 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
 | `functions/check-link` | Checks a link: heuristics, block lists, redirect expansion, Safe Browsing |
 | `functions/report` | Reports a number or website and adds it to your (or your family's) block list |
 | `functions/pair-device` | QR pairing so the PC signs in without typing a password |
+| `functions/dns-profile` | Serves the iPhone configuration profile for Cloudflare's malware-blocking DNS |
 | `functions/_shared/detection` | Copy of `packages/detection`. Refresh it with `scripts/sync-detection.sh` |
 | `tests/rls_test.ts` | Runs the migration in an in-memory Postgres and checks the access rules |
 
@@ -49,7 +50,7 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
    supabase secrets set JEV_API_KEY=... GOOGLE_SAFE_BROWSING_KEY=...
    ```
 
-   Push alerts to helpers' iPhones also need `APNS_KEY_P8` (contents of the .p8 key), `APNS_KEY_ID`, `APNS_TEAM_ID` and `APNS_BUNDLE_ID`. Set `APNS_HOST=api.push.apple.com` for TestFlight builds; the default is the development sandbox. `CLICKEY_DAILY_ASSESSMENTS` and `CLICKEY_DAILY_LINK_CHECKS` change the per-user daily limits (defaults 300 and 1000).
+   `CLICKEY_DAILY_ASSESSMENTS` and `CLICKEY_DAILY_LINK_CHECKS` change the per-user daily limits (defaults 300 and 1000).
 
 5. Push the auth settings (the 6-digit code length, and the `clickey://login-callback` redirect the iPhone uses for emailed sign-in links):
 

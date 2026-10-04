@@ -3,14 +3,11 @@ import Foundation
 import UIKit
 import UserNotifications
 
-/// Local and remote notifications.
+/// Local notifications. Clickey doesn't use push (it needs a paid developer account); new warnings
+/// arrive over Realtime while the app runs and through Background App Refresh otherwise.
 enum Notifications {
   static func requestPermission() async -> Bool {
-    let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
-    if granted {
-      await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
-    }
-    return granted
+    (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
   }
 
   static func isAuthorized() async -> Bool {
@@ -33,7 +30,8 @@ enum BackgroundRefresh {
 
   static func schedule() {
     let request = BGAppRefreshTaskRequest(identifier: identifier)
-    request.earliestBeginDate = Date(timeIntervalSinceNow: 4 * 3600)
+    // iOS decides the actual timing; this asks for roughly every 15 minutes at most.
+    request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
     try? BGTaskScheduler.shared.submit(request)
   }
 }
@@ -53,19 +51,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     _ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
-    Task { @MainActor in
-      if await Notifications.isAuthorized() { application.registerForRemoteNotifications() }
-    }
     return true
-  }
-
-  func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    let token = deviceToken.map { String(format: "%02x", $0) }.joined()
-    Task { @MainActor in AppModel.shared.setAPNSToken(token) }
-  }
-
-  func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-    print("Push registration failed: \(error.localizedDescription)")
   }
 
   func userNotificationCenter(

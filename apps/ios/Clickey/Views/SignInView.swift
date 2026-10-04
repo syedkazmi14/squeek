@@ -1,49 +1,77 @@
-import AuthenticationServices
-import CryptoKit
+import Pow
 import SwiftUI
 
 struct WelcomeView: View {
   var continueWithoutAccount: () -> Void
   @State private var showSignIn = false
+  @State private var showEmblem = false
 
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: 28) {
-          HStack(spacing: 12) {
-            ClickeyEmblem(size: 40)
-            Text("Clickey").font(.system(.largeTitle, design: .serif).weight(.semibold))
+        VStack(alignment: .leading, spacing: 32) {
+          VStack(alignment: .leading, spacing: 18) {
+            ZStack {
+              if showEmblem {
+                ClickeyEmblem(size: 64)
+                  .transition(.movingParts.pop(Theme.ochre))
+              }
+            }
+            .frame(width: 64, height: 64)
+            Text("Clickey")
+              .font(.system(size: 46, weight: .semibold, design: .serif))
+              .foregroundStyle(Theme.ink)
+            Text("A calm second opinion on messages, links and calls.")
+              .font(.title2)
+              .foregroundStyle(Theme.secondaryInk)
+              .fixedSize(horizontal: false, vertical: true)
           }
-          .padding(.top, 32)
-          Text("Clickey helps you spot scams in messages, links and phone calls, and reads its warnings out loud.")
-            .font(.title2)
-            .foregroundStyle(Theme.ink)
-          Text("Sign in to keep your warnings and blocked numbers in step with Clickey on your computer and with family who help you.")
-            .font(.title3)
-            .foregroundStyle(Theme.secondaryInk)
+          .padding(.top, 40)
 
-          VStack(spacing: 16) {
-            Button("Sign in with email") { showSignIn = true }
-              .buttonStyle(PrimaryButtonStyle())
-            if ClickeyConfig.hasPaidAccount { AppleSignInButton() }
-            Button("Use without an account", action: continueWithoutAccount)
-              .buttonStyle(SecondaryButtonStyle())
+          VStack(alignment: .leading, spacing: 16) {
+            feature("text.magnifyingglass", "Spots scams in messages and links, and reads its warnings aloud")
+            feature("phone.down.fill", "Blocks and labels scam callers")
+            feature("person.2.fill", "Keeps your computer and family in step")
           }
+          .card(padding: 20)
+
           if !ClickeyConfig.isBackendConfigured {
-            Text("This build isn't connected to a Clickey server, so only on-phone checks are available. See apps/ios/README.md.")
+            Label("This build isn't connected to a Clickey server, so only on-phone checks work.", systemImage: "wifi.slash")
               .font(.callout)
               .foregroundStyle(Theme.ochre)
           }
         }
-        .padding(24)
+        .padding(.horizontal, Theme.pagePadding)
+        .padding(.bottom, 24)
       }
+      .scrollIndicators(.hidden)
       .screenBackground()
+      .safeAreaInset(edge: .bottom) {
+        VStack(spacing: 10) {
+          Button("Sign in with email") { showSignIn = true }
+            .primaryAction()
+          Button("Use without an account", action: continueWithoutAccount)
+            .secondaryAction()
+        }
+        .padding(.horizontal, Theme.pagePadding)
+        .padding(.bottom, 8)
+      }
       .sheet(isPresented: $showSignIn) { EmailSignInView() }
+      .onAppear {
+        withAnimation(.spring(duration: 0.6).delay(0.15)) { showEmblem = true }
+      }
+    }
+  }
+
+  private func feature(_ symbol: String, _ text: String) -> some View {
+    HStack(spacing: 14) {
+      IconBadge(symbol: symbol)
+      Text(text).font(.headline).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
     }
   }
 }
 
-/// Email sign-in with a 6-digit code (no password to remember).
+/// Email sign-in: an emailed link (or a code, if the email template shows one). No password.
 struct EmailSignInView: View {
   @EnvironmentObject private var model: AppModel
   @Environment(\.dismiss) private var dismiss
@@ -55,51 +83,84 @@ struct EmailSignInView: View {
 
   var body: some View {
     NavigationStack {
-      Form {
-        Section {
-          TextField("Email address", text: $email)
-            .textContentType(.emailAddress)
-            .keyboardType(.emailAddress)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
+      ScrollView {
+        VStack(alignment: .leading, spacing: 22) {
+          VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: codeSent ? "envelope.open.fill" : "envelope.fill")
+              .font(.system(size: 34, weight: .semibold))
+              .foregroundStyle(Theme.forest)
+              .contentTransition(.symbolEffect(.replace))
+            Text(codeSent ? "Check your email" : "Sign in")
+              .font(.display(.largeTitle))
+              .foregroundStyle(Theme.ink)
+            Text(
+              codeSent
+                ? "Open the email from Clickey on this iPhone and tap the sign-in link. Clickey will open and sign you in."
+                : "We'll email you a sign-in link. No password needed."
+            )
             .font(.title3)
-            .disabled(codeSent)
-        } footer: {
-          Text(codeSent ? "" : "We'll email you a sign-in link. No password needed.")
-        }
-        if codeSent {
-          Section {
-            Label("Open the email from Clickey on this iPhone and tap the sign-in link. Clickey will open and sign you in.", systemImage: "envelope.open")
+            .foregroundStyle(Theme.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+          }
+
+          VStack(alignment: .leading, spacing: 8) {
+            Text("Email address").font(.headline)
+            TextField("you@example.com", text: $email)
+              .textContentType(.emailAddress)
+              .keyboardType(.emailAddress)
+              .textInputAutocapitalization(.never)
+              .autocorrectionDisabled()
               .font(.title3)
+              .disabled(codeSent)
+              .padding(16)
+              .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
           }
-          Section {
-            TextField("Code from the email", text: $code)
-              .textContentType(.oneTimeCode)
-              .keyboardType(.numberPad)
-              .font(.title2.monospacedDigit())
-          } header: {
-            Text("If your email shows a code instead")
-          } footer: {
-            Button("Use a different email") {
-              codeSent = false
-              code = ""
+
+          if codeSent {
+            VStack(alignment: .leading, spacing: 8) {
+              Text("Or enter a code from the email").font(.headline)
+              TextField("Code", text: $code)
+                .textContentType(.oneTimeCode)
+                .keyboardType(.numberPad)
+                .font(.title2.monospacedDigit())
+                .padding(16)
+                .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
+              Button("Use a different email") {
+                withAnimation {
+                  codeSent = false
+                  code = ""
+                }
+              }
+              .font(.callout.weight(.semibold))
             }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+          }
+
+          if let message {
+            Label(message, systemImage: "exclamationmark.circle.fill")
+              .font(.callout)
+              .foregroundStyle(Theme.danger)
           }
         }
-        if let message {
-          Section { Text(message).foregroundStyle(Theme.danger) }
-        }
-        Section {
-          Button(codeSent ? "Sign in with code" : "Email me a sign-in link") { Task { await submit() } }
-            .buttonStyle(PrimaryButtonStyle())
-            .disabled(working || (codeSent ? code.count < 6 : !email.contains("@")))
-            .listRowInsets(EdgeInsets())
-        }
+        .padding(Theme.pagePadding)
       }
-      .navigationTitle("Sign in")
+      .screenBackground()
+      .safeAreaInset(edge: .bottom) {
+        Button {
+          Task { await submit() }
+        } label: {
+          if working { ProgressView() } else { Text(codeSent ? "Sign in with code" : "Email me a sign-in link") }
+        }
+        .primaryAction()
+        .disabled(working || (codeSent ? code.count < 6 : !email.contains("@")))
+        .padding(.horizontal, Theme.pagePadding)
+        .padding(.bottom, 8)
+      }
       .onChange(of: model.isSignedIn) { _, signedIn in if signedIn { dismiss() } }
       .toolbar {
-        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel", systemImage: "xmark") { dismiss() }
+        }
       }
     }
   }
@@ -115,58 +176,10 @@ struct EmailSignInView: View {
         dismiss()
       } else {
         try await model.sendCode(to: address)
-        codeSent = true
+        withAnimation(.spring) { codeSent = true }
       }
     } catch {
       message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
-  }
-}
-
-/// Sign in with Apple, exchanged for a Supabase session.
-struct AppleSignInButton: View {
-  @EnvironmentObject private var model: AppModel
-  @Environment(\.colorScheme) private var colorScheme
-  @State private var nonce = ""
-
-  var body: some View {
-    SignInWithAppleButton(.signIn) { request in
-      nonce = Self.randomNonce()
-      request.requestedScopes = [.email, .fullName]
-      request.nonce = Self.sha256(nonce)
-    } onCompletion: { result in
-      guard case .success(let auth) = result,
-        let credential = auth.credential as? ASAuthorizationAppleIDCredential,
-        let tokenData = credential.identityToken,
-        let token = String(data: tokenData, encoding: .utf8)
-      else {
-        if case .failure(let error) = result, (error as? ASAuthorizationError)?.code != .canceled {
-          model.report(error)
-        }
-        return
-      }
-      let rawNonce = nonce
-      Task {
-        do {
-          try await model.signInWithApple(idToken: token, nonce: rawNonce)
-          if let name = credential.fullName?.givenName { await model.setDisplayName(name) }
-        } catch {
-          model.report(error)
-        }
-      }
-    }
-    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-    .frame(height: 60)
-    .clipShape(RoundedRectangle(cornerRadius: Theme.corner))
-  }
-
-  private static func randomNonce() -> String {
-    let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-    var generator = SystemRandomNumberGenerator()
-    return String((0..<32).map { _ in charset.randomElement(using: &generator)! })
-  }
-
-  private static func sha256(_ input: String) -> String {
-    SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
   }
 }

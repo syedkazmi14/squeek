@@ -38,11 +38,3 @@ export function levelForVerdict(v: LinkVerdict): Level {
 export function riskForVerdict(v: LinkVerdict): Risk {
   return { malicious: "high_risk", suspicious: "caution", no_signal: "no_detected_signal", unknown: "unknown" }[v] as Risk;
 }
-
-/** Runs work after the response when the Edge Runtime supports it; otherwise waits for it. */
-export async function inBackground(work: Promise<unknown>) {
-  const runtime = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime;
-  const safe = work.catch((err) => console.error(JSON.stringify({ background_error: String(err).slice(0, 200) })));
-  if (runtime) runtime.waitUntil(safe);
-  else await safe;
-}

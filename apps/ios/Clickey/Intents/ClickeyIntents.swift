@@ -2,6 +2,7 @@ import AppIntents
 import ClickeyCore
 import Foundation
 import ImageIO
+import UniformTypeIdentifiers
 
 // Shortcuts actions. "Check a Screenshot" pairs with the built-in "Take Screenshot" action and
 // Back Tap for a one-press check. Results come back as spoken/displayed dialog.
@@ -10,7 +11,7 @@ struct CheckScreenshotIntent: AppIntent {
   static var title: LocalizedStringResource = "Check a Screenshot"
   static var description = IntentDescription("Reads the words in a screenshot on your iPhone and checks them for scam warning signs.")
 
-  @Parameter(title: "Screenshot", supportedTypeIdentifiers: ["public.image"])
+  @Parameter(title: "Screenshot", supportedContentTypes: [.image])
   var screenshot: IntentFile
 
   func perform() async throws -> some IntentResult & ProvidesDialog {

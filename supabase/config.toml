@@ -15,3 +15,7 @@ otp_expiry = 3600
 # checks its own short-lived secrets instead of a user JWT.
 [functions.pair-device]
 verify_jwt = false
+
+# Safari downloads the DNS configuration profile without a sign-in token.
+[functions.dns-profile]
+verify_jwt = false

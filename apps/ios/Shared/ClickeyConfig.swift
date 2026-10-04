@@ -20,8 +20,11 @@ enum ClickeyConfig {
   /// Bundle id of the containing app, also used for extension identifiers.
   static var appBundleId: String { value("ClickeyAppBundleId") }
 
-  /// Push, Sign in with Apple and protective DNS need a paid Apple Developer Program account.
-  static var hasPaidAccount: Bool { value("ClickeyAccount").lowercased() == "paid" }
+  /// Configuration profile that turns on Cloudflare's malware-blocking encrypted DNS for the
+  /// whole phone (served by supabase/functions/dns-profile). Opened in Safari to install.
+  static var dnsProfileURL: URL? {
+    supabaseURL?.appendingPathComponent("functions/v1/dns-profile")
+  }
 
   static var isBackendConfigured: Bool { supabaseURL != nil && !supabaseAnonKey.isEmpty }
 

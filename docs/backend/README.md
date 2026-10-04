@@ -8,7 +8,7 @@ One Supabase project provides everything the hackathon needs:
 
 | Need | Supabase piece |
 | --- | --- |
-| Accounts on PC and iPhone | Auth: email one-time code (both), Sign in with Apple (iPhone) |
+| Accounts on PC and iPhone | Auth: emailed sign-in link or one-time code (both) |
 | Shared data | Postgres with row-level security (RLS) |
 | Live sync between devices | Realtime subscriptions on table changes |
 | Keeping the Jev and Safe Browsing keys off devices | Edge Functions (TypeScript/Deno) with secrets |
@@ -74,7 +74,7 @@ Views:
 | `check-link` | iPhone app, Share and Safari extensions, PC when a real destination is exposed | Normalizes the URL, runs heuristics (punycode, lookalikes, IP host, shorteners), expands redirects with SSRF guards, queries Safe Browsing, checks `blocked_domains`, caches in `link_verdicts` |
 | `report` | Both apps | Records a phone or domain report, and adds it to the reporter's own block list right away |
 | `pair-device` | iPhone (stretch) | Claims a pairing code and issues a one-time sign-in token for the PC |
-| `notify-helpers` | Database trigger on a high-risk incident (stretch) | Sends an APNs push to helpers' iPhones |
+| `dns-profile` | iPhone setup guide (Safari) | Serves a configuration profile for Cloudflare's malware-blocking DNS |
 
 Shared code: Supabase's CLI can deploy functions that import from outside `supabase/` with the `--use-api` flag. If that doesn't work in practice, copy `packages/detection` into `supabase/functions/_shared` with a build script. [Supabase changelog](https://supabase.com/changelog/33613-deploy-edge-functions-from-cli-without-needing-docker-import-files-outside-of-supabase-directory)
 
@@ -101,7 +101,7 @@ supabase/
   migrations/0001_init.sql        tables, views, RLS
   seed.sql                        test accounts, team-owned test numbers, demo domains
   functions/
-    assess-text/  check-link/  report/  pair-device/  notify-helpers/
+    assess-text/  check-link/  report/  pair-device/  dns-profile/
     _shared/                      (fallback copy of packages/detection if needed)
   tests/                          RLS checks
 ```

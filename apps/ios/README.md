@@ -11,10 +11,10 @@ A development build of Clickey for iPhone (not set up for the App Store). The de
 | Block and label scam callers | `CallDirectoryExtension/` | Settings › Apps › Phone › Call Blocking & Identification |
 | Move scam texts from unknown senders to Junk | `MessageFilterExtension/` | Settings › Apps › Messages › Unknown & Spam |
 | Warn before dangerous links open in Safari | `SafariExtension/` | Settings › Apps › Safari › Extensions |
-| Block known malicious websites in every app (encrypted DNS) | `Clickey/Services/ProtectiveDNS.swift` | Settings › General › VPN & Device Management › DNS |
-| Sign in (emailed link or code, or Apple), sync with the PC app | `Clickey/AppModel.swift` | A Supabase project |
+| Block known malicious websites in every app (encrypted DNS) | A configuration profile served by `supabase/functions/dns-profile`, installed from the setup guide | Settings › Profile Downloaded › Install |
+| Sign in (emailed link or code), sync with the PC app | `Clickey/AppModel.swift` | A Supabase project |
 | Family group: shared block lists, opt-in warning sharing, invite codes | `Clickey/Views/FamilyView.swift` | Signed in |
-| Live warnings from your PC or family, with notifications | Realtime in `AppModel.swift`; push in `supabase/functions/_shared/push.ts` | Notifications allowed; APNs secrets for push when the app is closed |
+| Live warnings from your PC or family, with notifications | Realtime while the app is open; Background App Refresh when it's closed (`AppModel.backgroundRefresh`) | Notifications allowed |
 | Connect the PC by scanning its QR code | `Clickey/Views/PairComputerView.swift` | Signed in; physical iPhone camera |
 | Shortcuts actions: Check a Message / Link / Screenshot | `Clickey/Intents/ClickeyIntents.swift` | Optional Back Tap setup (see the in-app guide) |
 
@@ -42,16 +42,26 @@ Shared logic lives in the `ClickeyCore` Swift package: rules, redaction, link an
    ```
 
 5. **Signing:** select each of the five targets › Signing & Capabilities and make sure your team is selected. If Xcode reports a missing App Group or capability, click its fix button so Xcode registers it with your account.
-6. **Run on a physical iPhone.** Call blocking, SMS filtering, the QR scanner and protective DNS can't be tested in the Simulator. The rest of the app runs there.
+6. **Run on a physical iPhone.** Call blocking, SMS filtering, the QR scanner and the DNS profile can't be tested in the Simulator. The rest of the app runs there.
 7. In the app, open **Set up protections** on the Home screen and follow each card.
 
 Skip the Supabase values to run on-device only: checks use local rules, the block list is stored on the phone, and there's no sync.
 
 ### Free Apple accounts
 
-Set `CLICKEY_ACCOUNT = Free` (the default) for a free Personal Team. The app then signs without Push Notifications, Sign in with Apple and Network Extension (protective DNS), and hides those features. Set it to `Paid` with a paid Apple Developer Program team to turn them back on. The two entitlement sets are `Clickey/Clickey-Free.entitlements` and `Clickey/Clickey-Paid.entitlements`.
+Everything works on a free Personal Team. The app uses only App Groups and Keychain Sharing, the two capabilities free teams can sign. Instead of the paid-only ones:
+- **Sign in:** email link or code (no Sign in with Apple).
+- **Website blocking:** a downloadable DNS configuration profile (no Network Extension).
+- **Family alerts when Clickey is closed:** Background App Refresh (no push notifications).
 
-Email sign-in, call blocking, SMS filtering, the Share sheet and Safari warnings all work on a free team. Free-team builds expire after 7 days, and the iPhone must be connected to the Mac the first time so Xcode can register it.
+Free-team installs expire after 7 days, and the iPhone must be connected to the Mac the first time so Xcode can register it.
+
+### Reviewing screens without an account
+
+Debug builds accept launch arguments (Xcode › Product › Scheme › Edit Scheme › Arguments) that fill the app with sample data for screenshots. Release builds don't include them.
+- `-ClickeyDemo`: sample warnings, block list and family group.
+- `-ClickeyTab warnings`: open a tab (`warnings`, `blocked`, `family` or `settings`).
+- `-ClickeyDemoCheck`: open a sample scam check on launch.
 
 ## Demo script
 

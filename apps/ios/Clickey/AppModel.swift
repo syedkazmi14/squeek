@@ -3,10 +3,19 @@ import Foundation
 import Supabase
 import SwiftUI
 
+enum AppTab: Hashable {
+  case home, warnings, blocked, family, settings
+}
+
 /// App state: account, synced data, and pushing block lists and settings to the extensions.
 @MainActor
 final class AppModel: ObservableObject {
   static let shared = AppModel()
+
+  @Published var selectedTab: AppTab = .home
+  @Published private(set) var notificationsOn = false
+  /// DEBUG-only sample data for reviewing screens without an account (launch with -ClickeyDemo).
+  @Published var isDemo = false
 
   @Published private(set) var isSignedIn = false
   @Published private(set) var email: String?
@@ -18,7 +27,6 @@ final class AppModel: ObservableObject {
   @Published private(set) var helperDevices: [HelperDevice] = []
   @Published private(set) var myDevices: [Device] = []
   @Published private(set) var callBlockingStatus: CallDirectorySync.Status = .unknown
-  @Published private(set) var protectiveDNSEnabled = false
   @Published private(set) var isRefreshing = false
   @Published var errorMessage: String?
 
@@ -32,9 +40,10 @@ final class AppModel: ObservableObject {
   private var realtimeTasks: [Task<Void, Never>] = []
   private var subscribedUserId: String?
   private var lastPublishedBlockList: Data?
-  private var apnsToken: String?
 
   private static let localEntriesKey = "clickey.localBlockEntries"
+  private static let alertedIncidentsKey = "clickey.alertedIncidentIds"
+  private static let alertsSinceKey = "clickey.alertsSince"
 
   private init() {
     store = SharedStore(appGroup: ClickeyConfig.appGroup)
@@ -48,7 +57,21 @@ final class AppModel: ObservableObject {
 
   // MARK: - Derived state
 
-  var userId: String? { Backend.shared.userId }
+  var userId: String? {
+    #if DEBUG
+      if isDemo { return DemoData.userId }
+    #endif
+    return Backend.shared.userId
+  }
+
+  /// Whether account screens (warnings, family) have data to show.
+  var showsAccountData: Bool { isSignedIn || isDemo }
+
+  /// Protections the app can see the state of: call blocking, sync and alerts.
+  var protectionsOn: Int {
+    [callBlockingStatus == .enabled, showsAccountData, notificationsOn].filter { $0 }.count
+  }
+  let protectionsTotal = 3
 
   var deviceId: String {
     if let id = localSettings.deviceId { return id }
@@ -91,6 +114,12 @@ final class AppModel: ObservableObject {
   // MARK: - Lifecycle
 
   func start() {
+    #if DEBUG
+      if ProcessInfo.processInfo.arguments.contains("-ClickeyDemo") {
+        DemoData.load(into: self)
+        return
+      }
+    #endif
     publishToExtensions()
     Task { await refreshProtectionStatus() }
     guard authTask == nil, let client else { return }
@@ -115,6 +144,9 @@ final class AppModel: ObservableObject {
     isSignedIn = true
     guard subscribedUserId != uid else { return }
     subscribedUserId = uid
+    if UserDefaults.standard.object(forKey: Self.alertsSinceKey) == nil {
+      UserDefaults.standard.set(Date(), forKey: Self.alertsSinceKey)
+    }
     await registerDevice()
     await refreshAll()
     await subscribeRealtime(userId: uid)
@@ -140,6 +172,7 @@ final class AppModel: ObservableObject {
   }
 
   func refreshAll() async {
+    guard !isDemo else { return }
     guard let client, isSignedIn, let uid = userId else {
       publishToExtensions()
       return
@@ -161,9 +194,36 @@ final class AppModel: ObservableObject {
     publishToExtensions()
   }
 
+  /// Background App Refresh (free for any developer account) stands in for push notifications:
+  /// iOS wakes the app every so often, and new warnings from the PC or family become local alerts.
   func backgroundRefresh() async {
     await refreshAll()
+    incidents.filter(isNewSinceAlertsStarted).reversed().forEach(alertIfNeeded)
     BackgroundRefresh.schedule()
+  }
+
+  private func isNewSinceAlertsStarted(_ incident: Incident) -> Bool {
+    guard let since = UserDefaults.standard.object(forKey: Self.alertsSinceKey) as? Date,
+      let created = incident.date
+    else { return false }
+    return created > since
+  }
+
+  /// Shows one local notification per warning from another device or a family member.
+  private func alertIfNeeded(_ incident: Incident) {
+    guard incident.level == .danger, incident.deviceId != localSettings.deviceId else { return }
+    var alerted = UserDefaults.standard.stringArray(forKey: Self.alertedIncidentsKey) ?? []
+    guard !alerted.contains(incident.id) else { return }
+    if incident.userId != userId {
+      let who = memberName(incident.userId) ?? "Someone you help"
+      Notifications.post(title: "Clickey warning", body: "\(who) got something that looks like a scam.")
+    } else if incident.platform == "windows" {
+      Notifications.post(title: "Clickey on your PC", body: "Your computer warned you about a likely scam.")
+    } else {
+      return
+    }
+    alerted.append(incident.id)
+    UserDefaults.standard.set(Array(alerted.suffix(200)), forKey: Self.alertedIncidentsKey)
   }
 
   // MARK: - Realtime
@@ -221,13 +281,7 @@ final class AppModel: ObservableObject {
     guard !incidents.contains(where: { $0.id == incident.id }) else { return }
     incidents.insert(incident, at: 0)
     // Alert about warnings from the person's other devices or from family members they help.
-    guard incident.level == .danger, incident.deviceId != localSettings.deviceId else { return }
-    if incident.userId != userId {
-      let who = memberName(incident.userId) ?? "Someone you help"
-      Notifications.post(title: "Clickey warning", body: "\(who) got something that looks like a scam.")
-    } else if incident.platform == "windows" {
-      Notifications.post(title: "Clickey on your PC", body: "Your computer warned you about a likely scam.")
-    }
+    alertIfNeeded(incident)
   }
 
   private func received(update: UpdateAction) {
@@ -289,18 +343,23 @@ final class AppModel: ObservableObject {
 
   func refreshProtectionStatus() async {
     callBlockingStatus = await CallDirectorySync.status()
-    protectiveDNSEnabled = await ProtectiveDNS.isEnabled()
+    notificationsOn = await Notifications.isAuthorized()
   }
 
-  func setProtectiveDNS(_ enabled: Bool) async {
-    do {
-      if enabled { try await ProtectiveDNS.install() } else { try await ProtectiveDNS.remove() }
-    } catch {
-      report(error)
+  #if DEBUG
+    func applyDemo(
+      incidents: [Incident], entries: [BlockEntry], members: [HouseholdMember], devices: [HelperDevice], profile: Profile
+    ) {
+      isDemo = true
+      email = "syed@example.com"
+      self.incidents = incidents
+      serverEntries = entries
+      self.members = members
+      helperDevices = devices
+      self.profile = profile
+      callBlockingStatus = .enabled
     }
-    await refreshProtectionStatus()
-    await registerDevice()
-  }
+  #endif
 
   // MARK: - Account
 
@@ -329,12 +388,6 @@ final class AppModel: ObservableObject {
     _ = try await client.auth.verifyOTP(email: email, token: code, type: .email)
   }
 
-  func signInWithApple(idToken: String, nonce: String) async throws {
-    guard let client else { throw BackendError.notConfigured }
-    _ = try await client.auth.signInWithIdToken(
-      credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce))
-  }
-
   func signOut() async {
     do { try await client?.auth.signOut() } catch { report(error) }
     didSignOut()
@@ -349,20 +402,12 @@ final class AppModel: ObservableObject {
     } catch { report(error) }
   }
 
-  func setAPNSToken(_ token: String) {
-    apnsToken = token
-    Task { await registerDevice() }
-  }
-
   private func registerDevice() async {
     guard let client, let uid = userId else { return }
-    let status = [
-      callBlockingStatus == .enabled ? "calls on" : "calls off",
-      protectiveDNSEnabled ? "dns on" : "dns off",
-    ].joined(separator: ", ")
+    let status = callBlockingStatus == .enabled ? "call blocking on" : "call blocking off"
     let row = DeviceUpsert(
       id: deviceId, userId: uid, name: DeviceInfo.name, appVersion: ClickeyConfig.appVersion,
-      monitoringStatus: status, apnsToken: apnsToken)
+      monitoringStatus: status)
     do {
       try await client.from("devices").upsert(row).execute()
     } catch { report(error) }

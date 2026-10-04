@@ -22,7 +22,7 @@ public final class LocalChecker: @unchecked Sendable {
     let local = engine.assessLocally(redactedText: redacted)
     var score = local.score
     var categories = Set(local.categories)
-    var reasons = local.matches.map { Reason(id: $0.id, label: $0.label, excerpt: $0.excerpt, source: "rule") }
+    var reasons = local.matches.map { Reason(id: $0.id, label: $0.label, excerpt: $0.excerpt, match: $0.match, source: "rule") }
 
     var linkSummaries: [LinkSummary] = []
     var hasMaliciousLink = false

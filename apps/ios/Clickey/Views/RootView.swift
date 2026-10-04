@@ -6,10 +6,10 @@ struct RootView: View {
 
   var body: some View {
     Group {
-      if model.isSignedIn || localOnly {
+      if model.showsAccountData || localOnly {
         MainTabs()
       } else {
-        WelcomeView(continueWithoutAccount: { localOnly = true })
+        WelcomeView(continueWithoutAccount: { withAnimation { localOnly = true } })
       }
     }
     .tint(Theme.forest)
@@ -26,18 +26,30 @@ struct RootView: View {
 }
 
 struct MainTabs: View {
+  @EnvironmentObject private var model: AppModel
+
+  private var unreviewed: Int {
+    model.incidents.filter { $0.level == .danger && $0.userAction == nil }.count
+  }
+
   var body: some View {
-    TabView {
-      NavigationStack { HomeView() }
-        .tabItem { Label("Home", systemImage: "house") }
-      NavigationStack { HistoryView() }
-        .tabItem { Label("Warnings", systemImage: "exclamationmark.bubble") }
-      NavigationStack { BlockedView() }
-        .tabItem { Label("Blocked", systemImage: "hand.raised") }
-      NavigationStack { FamilyView() }
-        .tabItem { Label("Family", systemImage: "person.2") }
-      NavigationStack { SettingsView() }
-        .tabItem { Label("Settings", systemImage: "gearshape") }
+    TabView(selection: $model.selectedTab) {
+      Tab("Home", systemImage: "house.fill", value: AppTab.home) {
+        NavigationStack { HomeView() }
+      }
+      Tab("Warnings", systemImage: "exclamationmark.triangle.fill", value: AppTab.warnings) {
+        NavigationStack { HistoryView() }
+      }
+      .badge(unreviewed)
+      Tab("Blocked", systemImage: "hand.raised.fill", value: AppTab.blocked) {
+        NavigationStack { BlockedView() }
+      }
+      Tab("Family", systemImage: "person.2.fill", value: AppTab.family) {
+        NavigationStack { FamilyView() }
+      }
+      Tab("Settings", systemImage: "gearshape.fill", value: AppTab.settings) {
+        NavigationStack { SettingsView() }
+      }
     }
   }
 }
@@ -52,9 +64,7 @@ extension View {
       self
     }
   }
-}
 
-extension View {
   /// Home draws its own header, so it hides the empty navigation bar.
   @ViewBuilder
   func hiddenNavigationBar() -> some View {
@@ -66,15 +76,12 @@ extension View {
   }
 }
 
-/// Page background used by every screen.
-struct ScreenBackground: ViewModifier {
-  func body(content: Content) -> some View {
-    content
-      .scrollContentBackground(.hidden)
-      .background(Theme.ivory.ignoresSafeArea())
+/// Gives custom tiles and rows a gentle press response.
+struct PressableStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.97 : 1)
+      .opacity(configuration.isPressed ? 0.9 : 1)
+      .animation(.spring(duration: 0.25), value: configuration.isPressed)
   }
-}
-
-extension View {
-  func screenBackground() -> some View { modifier(ScreenBackground()) }
 }

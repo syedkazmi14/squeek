@@ -15,35 +15,59 @@ struct BlockedView: View {
           Text("Websites").tag("domain")
         }
         .pickerStyle(.segmented)
+        .controlSize(.large)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
       }
-      if kind == "phone" { callSettings }
+
+      if kind == "phone" { callBlockingSection }
+
       Section {
         if entries.isEmpty {
-          Text(kind == "phone" ? "No blocked numbers yet." : "No blocked websites yet.")
-            .foregroundStyle(Theme.secondaryInk)
+          ContentUnavailableView(
+            kind == "phone" ? "No blocked numbers" : "No blocked websites",
+            systemImage: kind == "phone" ? "phone.badge.checkmark" : "globe",
+            description: Text("Tap + to add one."))
+            .listRowBackground(Color.clear)
         }
         ForEach(entries) { entry in
-          VStack(alignment: .leading, spacing: 4) {
-            Text(kind == "phone" ? PhoneNumbers.display(entry.value) : entry.value)
-              .font(.title3.weight(.medium))
-            HStack {
-              Text(Labels.source(entry.source))
-              if let label = entry.label { Text("· \(label)") }
+          HStack(spacing: 14) {
+            IconBadge(
+              symbol: kind == "phone" ? "phone.down.fill" : "globe",
+              tint: Theme.danger, soft: Theme.dangerSoft, size: 38)
+            VStack(alignment: .leading, spacing: 2) {
+              Text(kind == "phone" ? PhoneNumbers.display(entry.value) : entry.value)
+                .font(.headline)
+                .foregroundStyle(Theme.ink)
+              if let label = entry.label {
+                Text(label).font(.subheadline).foregroundStyle(Theme.secondaryInk)
+              }
             }
-            .font(.callout)
-            .foregroundStyle(Theme.secondaryInk)
+            Spacer()
+            Text(Labels.source(entry.source))
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(entry.source == "user" || entry.source == "household" ? Theme.forest : Theme.ochre)
+              .padding(.horizontal, 10)
+              .padding(.vertical, 5)
+              .background(
+                entry.source == "user" || entry.source == "household" ? Theme.forestSoft : Theme.ochreSoft,
+                in: Capsule())
           }
           .padding(.vertical, 4)
+          .listRowBackground(Theme.card)
           .deleteDisabled(!model.canRemove(entry))
+          .accessibilityElement(children: .combine)
         }
         .onDelete { offsets in
           let targets = offsets.map { entries[$0] }
           Task { for entry in targets { await model.removeBlock(entry) } }
         }
+      } header: {
+        Text(kind == "phone" ? "Numbers" : "Websites")
       } footer: {
         Text(
           kind == "phone"
-            ? "Calls from your and your family's numbers are blocked. Numbers reported by others show as \"Clickey: reported scam\" when they call."
+            ? "Calls from numbers you or your family add are blocked. Numbers reported by others show “Clickey: reported scam” when they call."
             : "Clickey warns before these websites open in Safari, and flags them in messages you check.")
       }
     }
@@ -51,11 +75,7 @@ struct BlockedView: View {
     .navigationTitle("Blocked")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
-        Button {
-          adding = true
-        } label: {
-          Label("Add", systemImage: "plus")
-        }
+        Button("Add", systemImage: "plus") { adding = true }
       }
     }
     .refreshable { await model.refreshAll() }
@@ -63,16 +83,26 @@ struct BlockedView: View {
   }
 
   @ViewBuilder
-  private var callSettings: some View {
+  private var callBlockingSection: some View {
     Section {
-      HStack {
-        Text("Call blocking")
-        Spacer()
-        Text(model.callBlockingStatus == .enabled ? "On" : "Off")
-          .foregroundStyle(model.callBlockingStatus == .enabled ? Theme.forest : Theme.danger)
+      HStack(spacing: 14) {
+        IconBadge(
+          symbol: model.callBlockingStatus == .enabled ? "checkmark.shield.fill" : "shield.slash.fill",
+          tint: model.callBlockingStatus == .enabled ? Theme.forest : Theme.ochre,
+          soft: model.callBlockingStatus == .enabled ? Theme.forestSoft : Theme.ochreSoft)
+        VStack(alignment: .leading, spacing: 2) {
+          Text(model.callBlockingStatus == .enabled ? "Call blocking is on" : "Call blocking is off")
+            .font(.headline)
+          Text(model.callBlockingStatus == .enabled ? "Scam callers can't reach you." : "Turn it on in Settings to block calls.")
+            .font(.subheadline)
+            .foregroundStyle(Theme.secondaryInk)
+        }
       }
+      .listRowBackground(Theme.card)
       if model.callBlockingStatus != .enabled {
         Button("Turn on in Settings") { CallDirectorySync.openSettings() }
+          .font(.headline)
+          .listRowBackground(Theme.card)
       }
       if let profile = model.profile {
         Toggle(
@@ -80,6 +110,8 @@ struct BlockedView: View {
           isOn: Binding(
             get: { profile.blockReportedNumbers },
             set: { on in Task { await model.setBlockReportedNumbers(on) } }))
+          .tint(Theme.forest)
+          .listRowBackground(Theme.card)
       }
     }
   }
@@ -105,25 +137,30 @@ struct AddBlockView: View {
             Text("Website").tag("domain")
           }
           .pickerStyle(.segmented)
-          TextField(kind == "phone" ? "Phone number" : "Website, like example.com", text: $value)
+          .listRowBackground(Color.clear)
+          .listRowInsets(EdgeInsets())
+        }
+        Section {
+          TextField(kind == "phone" ? "Phone number" : "example.com", text: $value)
             .font(.title3)
             .keyboardType(kind == "phone" ? .phonePad : .URL)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-          TextField("Note (optional), like \"Fake bank call\"", text: $label)
+          TextField("Note (optional), like “Fake bank call”", text: $label)
         } footer: {
           if kind == "phone" {
             Text("Tip: in the Phone app's Recents, tap ⓘ next to the call, then press and hold the number to copy it.")
           }
         }
+        .listRowBackground(Theme.card)
         Section {
           if model.isSignedIn {
             if model.household != nil {
-              Toggle("Share with my family group", isOn: $shareWithFamily)
+              Toggle("Share with my family group", isOn: $shareWithFamily).tint(Theme.forest)
             }
-            Toggle("Report it to help protect others", isOn: $reportToOthers)
+            Toggle("Report it to help protect others", isOn: $reportToOthers).tint(Theme.forest)
           } else {
-            Text("Saved on this iPhone only. Sign in to share it with your computer and family.")
+            Label("Saved on this iPhone only. Sign in to share it with your computer and family.", systemImage: "iphone")
               .foregroundStyle(Theme.secondaryInk)
           }
         } footer: {
@@ -131,25 +168,30 @@ struct AddBlockView: View {
             Text("Reports are anonymous. A number or website is labeled for everyone once several people report it.")
           }
         }
-        Section {
-          Button(kind == "phone" ? "Block this number" : "Block this website") {
-            Task {
-              working = true
-              let ok = await model.addBlock(
-                kind: kind, rawValue: value, label: label, shareWithFamily: shareWithFamily, report: reportToOthers)
-              working = false
-              if ok { dismiss() }
-            }
-          }
-          .buttonStyle(PrimaryButtonStyle())
-          .disabled(value.trimmingCharacters(in: .whitespaces).isEmpty || working)
-          .listRowInsets(EdgeInsets())
-        }
+        .listRowBackground(Theme.card)
       }
+      .screenBackground()
       .navigationTitle(kind == "phone" ? "Block a number" : "Block a website")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+        ToolbarItem(placement: .cancellationAction) { Button("Cancel", systemImage: "xmark") { dismiss() } }
+      }
+      .safeAreaInset(edge: .bottom) {
+        Button {
+          Task {
+            working = true
+            let ok = await model.addBlock(
+              kind: kind, rawValue: value, label: label, shareWithFamily: shareWithFamily, report: reportToOthers)
+            working = false
+            if ok { dismiss() }
+          }
+        } label: {
+          if working { ProgressView() } else { Text(kind == "phone" ? "Block this number" : "Block this website") }
+        }
+        .primaryAction()
+        .disabled(value.trimmingCharacters(in: .whitespaces).isEmpty || working)
+        .padding(.horizontal, Theme.pagePadding)
+        .padding(.bottom, 8)
       }
     }
   }

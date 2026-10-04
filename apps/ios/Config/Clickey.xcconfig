@@ -4,10 +4,6 @@
 // Your Apple Developer Team ID (Xcode › Settings › Accounts). Required to sign extensions.
 CLICKEY_TEAM_ID =
 
-// "Free" (Personal Team) or "Paid" (Apple Developer Program). Paid adds push notifications,
-// Sign in with Apple and the protective-DNS setting, which free teams can't sign.
-CLICKEY_ACCOUNT = Free
-
 // Bundle ids must be unique across all developers, so change the prefix to something you own.
 CLICKEY_BUNDLE_ID = dev.squeek.clickey
 CLICKEY_APP_GROUP = group.$(CLICKEY_BUNDLE_ID)

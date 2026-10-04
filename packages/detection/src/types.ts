@@ -22,6 +22,8 @@ export interface SignalRule {
 export interface MessageTemplate {
   headline: string;
   speech: string;
+  /** One short line shown under the headline. */
+  detail?: string;
 }
 
 export interface RuleSet {
@@ -49,6 +51,8 @@ export interface Reason {
   id: string;
   label: string;
   excerpt?: string;
+  /** The exact text that matched, so apps can highlight it in the original message. */
+  match?: string;
   source: ReasonSource;
 }
 
@@ -58,6 +62,7 @@ export interface SignalMatch {
   weight: number;
   label: string;
   excerpt: string;
+  match: string;
 }
 
 export interface LocalAssessment {

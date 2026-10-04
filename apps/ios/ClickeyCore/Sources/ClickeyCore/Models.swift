@@ -105,12 +105,15 @@ public struct Reason: Codable, Sendable, Hashable {
   public let id: String
   public let label: String
   public let excerpt: String?
+  /// The exact matched text, used to highlight the phrase in the original message.
+  public let match: String?
   public let source: String  // "rule" | "ai" | "link" | "blocklist"
 
-  public init(id: String, label: String, excerpt: String? = nil, source: String) {
+  public init(id: String, label: String, excerpt: String? = nil, match: String? = nil, source: String) {
     self.id = id
     self.label = label
     self.excerpt = excerpt
+    self.match = match
     self.source = source
   }
 }
@@ -386,19 +389,15 @@ public struct DeviceUpsert: Encodable, Sendable {
   public let name: String
   public let appVersion: String
   public let monitoringStatus: String
-  public let apnsToken: String?
   public let lastSeenAt: String
 
-  public init(
-    id: String, userId: String, name: String, appVersion: String, monitoringStatus: String, apnsToken: String?
-  ) {
+  public init(id: String, userId: String, name: String, appVersion: String, monitoringStatus: String) {
     self.id = id
     self.userId = userId
     self.platform = "ios"
     self.name = name
     self.appVersion = appVersion
     self.monitoringStatus = monitoringStatus
-    self.apnsToken = apnsToken
     self.lastSeenAt = Timestamps.format(Date())
   }
 
@@ -408,7 +407,6 @@ public struct DeviceUpsert: Encodable, Sendable {
     case platform, name
     case appVersion = "app_version"
     case monitoringStatus = "monitoring_status"
-    case apnsToken = "apns_token"
     case lastSeenAt = "last_seen_at"
   }
 }

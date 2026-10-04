@@ -36,6 +36,7 @@ export function findSignals(redactedText: string, rules: RuleSet): SignalMatch[]
           weight: signal.weight,
           label: signal.label,
           excerpt: excerptAround(redactedText, m.index, m.index + m[0].length, rules.policy.excerptRadius),
+          match: m[0],
         });
         break;
       }

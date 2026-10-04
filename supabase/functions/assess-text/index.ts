@@ -26,8 +26,7 @@ import {
 import { json, optionalUuid, readJson, requireString, serve } from "../_shared/http.ts";
 import { assessWithJev } from "../_shared/jev.ts";
 import { checkLink } from "../_shared/linkcheck.ts";
-import { notifyHelpers } from "../_shared/push.ts";
-import { type CheckResult, inBackground, levelForRisk, type LinkSummary } from "../_shared/results.ts";
+import { type CheckResult, levelForRisk, type LinkSummary } from "../_shared/results.ts";
 
 // Must match LocalChecker.suspiciousLinkWeight in apps/ios/ClickeyCore.
 const SUSPICIOUS_LINK_WEIGHT = 2;
@@ -48,7 +47,7 @@ serve("assess-text", async (req) => {
   let score = local.score;
   const categories = new Set(local.categories);
   const ruleIds = local.matches.map((m) => m.id);
-  const reasons: Reason[] = local.matches.map((m) => ({ id: m.id, label: m.label, excerpt: m.excerpt, source: "rule" }));
+  const reasons: Reason[] = local.matches.map((m) => ({ id: m.id, label: m.label, excerpt: m.excerpt, match: m.match, source: "rule" }));
 
   const [blocked, flags] = await Promise.all([blockedDomainsFor(caller), profileFlags(caller)]);
 
@@ -106,10 +105,6 @@ serve("assess-text", async (req) => {
       indicatorKind: dangerousDomain ? "domain" : undefined,
       indicatorValue: dangerousDomain,
     });
-    if (risk === "high_risk" && flags.share_incidents_with_helpers) {
-      const who = flags.display_name ?? "Someone you help";
-      await inBackground(notifyHelpers(caller.user.id, "Clickey warning", `${who} received a message that looks like a scam.`, incidentId));
-    }
   }
 
   const result: CheckResult = {

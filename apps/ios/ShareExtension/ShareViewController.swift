@@ -33,6 +33,8 @@ final class ShareModel: ObservableObject {
   }
 
   @Published var state: State = .working("Checking…")
+  /// The text that was checked, so the result can highlight the risky phrases in it.
+  @Published var checkedText: String?
 
   func run(items: [NSExtensionItem]) async {
     let providers = items.flatMap { $0.attachments ?? [] }
@@ -49,6 +51,7 @@ final class ShareModel: ObservableObject {
           return
         }
         state = .working("Checking…")
+        checkedText = text
         state = .done(await CheckService.shared.checkText(text, surface: .screenshot))
         return
       }
@@ -75,6 +78,7 @@ final class ShareModel: ObservableObject {
     if let text = sharedText, !trimmed.isEmpty, trimmed != sharedURL?.absoluteString {
       // A message, with any shared URL included so its link is checked too.
       let combined = sharedURL.map { "\(text)\n\($0.absoluteString)" } ?? text
+      checkedText = combined
       state = .done(await CheckService.shared.checkText(combined, surface: .share))
     } else if let url = sharedURL {
       state = .done(await CheckService.shared.checkLink(url.absoluteString, surface: .share))
@@ -97,31 +101,33 @@ struct ShareRootView: View {
   var done: () -> Void
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          switch model.state {
-          case .working(let message):
-            ProgressView(message).font(.title3).frame(maxWidth: .infinity, minHeight: 200)
-          case .failed(let message):
-            Text(message).font(.title3)
-          case .done(let result):
-            ResultView(result: result) {
-              Button("Done", action: done).buttonStyle(PrimaryButtonStyle())
-            }
-            if !Backend.shared.isSignedIn {
-              Text("Open Clickey and sign in for the full check, including AI and Google Safe Browsing.")
-                .font(.callout).foregroundStyle(Theme.secondaryInk)
-            }
+    Group {
+      switch model.state {
+      case .working(let message):
+        VStack(spacing: 16) {
+          ClickeyEmblem(size: 44)
+          ProgressView(message).font(.title3)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.ground.ignoresSafeArea())
+      case .failed(let message):
+        VStack(spacing: 18) {
+          Image(systemName: "questionmark.circle.fill").font(.system(size: 44)).foregroundStyle(Theme.secondaryInk)
+          Text(message).font(.title3).multilineTextAlignment(.center)
+          Button("Close", action: done).primaryAction()
+        }
+        .padding(Theme.pagePadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.ground.ignoresSafeArea())
+      case .done(let result):
+        ResultView(result: result, original: result.kind == "link" ? nil : model.checkedText, onClose: done) {
+          Button("Done", action: done).primaryAction()
+          if !Backend.shared.isSignedIn {
+            Text("Open Clickey and sign in for the full check, including AI and Google Safe Browsing.")
+              .font(.footnote)
+              .foregroundStyle(Theme.secondaryInk)
           }
         }
-        .padding(20)
-      }
-      .background(Theme.ivory.ignoresSafeArea())
-      .navigationTitle("Clickey")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) { Button("Close", action: done) }
       }
     }
     .tint(Theme.forest)

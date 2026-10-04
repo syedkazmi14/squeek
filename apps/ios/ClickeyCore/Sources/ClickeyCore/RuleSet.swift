@@ -35,6 +35,13 @@ public struct RuleSet: Decodable, Sendable {
   public struct MessageTemplate: Decodable, Sendable {
     public let headline: String
     public let speech: String
+    public let detail: String?
+
+    public init(headline: String, speech: String, detail: String?) {
+      self.headline = headline
+      self.speech = speech
+      self.detail = detail
+    }
   }
 
   public let version: String

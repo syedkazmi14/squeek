@@ -16,6 +16,8 @@ public struct SignalMatch: Sendable, Equatable {
   public let weight: Int
   public let label: String
   public let excerpt: String
+  /// The exact text that matched, for highlighting in the original message.
+  public let match: String
 }
 
 public struct LocalAssessment: Sendable {
@@ -58,7 +60,8 @@ public final class DetectionEngine: @unchecked Sendable {
           matches.append(
             SignalMatch(
               id: signal.id, category: signal.category, weight: signal.weight, label: signal.label,
-              excerpt: Self.excerpt(ns, range: m.range, radius: rules.policy.excerptRadius)))
+              excerpt: Self.excerpt(ns, range: m.range, radius: rules.policy.excerptRadius),
+              match: ns.substring(with: m.range)))
           break
         }
       }
@@ -85,9 +88,12 @@ public final class DetectionEngine: @unchecked Sendable {
   }
 
   /// Headline and spoken sentence built only from the approved templates and reason labels.
+  /// The short line shown under the headline for a result key such as "high_risk" or "link_suspicious".
+  public func detail(for key: String) -> String? { rules.messages[key]?.detail }
+
   public func message(for key: String, reasonLabels: [String]) -> (headline: String, speech: String) {
     let template = rules.messages[key] ?? rules.messages["unknown"]
-      ?? RuleSet.MessageTemplate(headline: "", speech: "")
+      ?? RuleSet.MessageTemplate(headline: "", speech: "", detail: nil)
     if reasonLabels.isEmpty || key == "no_detected_signal" || key == "link_no_signal" {
       return (template.headline, template.speech)
     }

@@ -23,7 +23,7 @@ Goal: a working hackathon demo. It doesn't need to be perfect, but every claim m
 | Scam calls, live lookup (stretch) | Live Caller ID Lookup extension (iOS 18+) | Yes | Label from a server lookup | Needs a private-information-retrieval server (Apple has an example service) and registration in the CloudKit Console; forum reports call it flaky. Not for the hackathon unless everything else is done |
 | Scam SMS | Message Filter extension (IdentityLookup) | Yes | Message goes to Junk | Unknown senders only; never iMessage or contacts. Use local rules only (server deferral needs your own domain) |
 | Dangerous links in Safari | Safari Web Extension (content script that checks the page and marks risky links; native handler) | Yes, once enabled in Settings | Warning page before a flagged link opens; known-bad domains blocked | Safari only; user must enable it in Settings. Approved for iOS only; the desktop "no browser extension" rule still applies on Windows |
-| Dangerous links in every app | Protective DNS via `NEDNSSettingsManager` (DNS over HTTPS) | Yes | Known malicious sites fail to load | No Clickey explanation, just a failed load. Uses a public filtering resolver, not our own list |
+| Dangerous links in every app | Protective DNS via a downloadable configuration profile (DNS over HTTPS; `NEDNSSettingsManager` needs a paid account) | Yes | Known malicious sites fail to load | No Clickey explanation, just a failed load. Uses a public filtering resolver, not our own list |
 | Link from Messages, Mail or WhatsApp | Share extension: share link to "Check with Clickey" | No, one tap | Verdict sheet with reasons, spoken aloud | User has to think to check |
 | Suspicious message or email | Share extension (text) or screenshot check (Vision OCR) | No, one tap | Warning, evidence, speech; synced to the account | Same |
 | One-press check | App Intent for Shortcuts, Action button or Back Tap: "Check my screen" | No, one press | Same as above | Needs one-time Shortcut setup |
@@ -51,7 +51,7 @@ SwiftUI app ── supabase-swift ──────────────► 
 
 ## Sync between PC and iPhone (what the demo shows)
 
-1. The user signs in on the iPhone with an email one-time code (or Sign in with Apple). The PC shows a QR code; the phone scans it to pair, so no one types a password on the PC.
+1. The user signs in on the iPhone with an emailed link or one-time code. The PC shows a QR code; the phone scans it to pair, so no one types a password on the PC.
 2. The PC flags a scam email. An `incidents` row appears on the iPhone within seconds through Realtime, with category, risk and short redacted evidence. No raw email is stored.
 3. On the iPhone, the user reports a scam caller's number. It's added to `blocked_numbers`; the PC shows it in its history; family helpers in the same household get it on their phones too.
 4. Settings (voice, text size, mute) and allow-lists follow the account to both devices.
@@ -93,12 +93,12 @@ Build in this order and stop wherever time runs out. Each step works as its own 
 | 5 | Protective DNS toggle | Cheap system-wide link blocking | Small |
 | 6 | Message Filter extension (local rules only) | Automatic SMS protection | Small–medium |
 | 7 | Safari Web Extension | Automatic link warnings in Safari | Medium |
-| 8 | QR pairing, App Intent, push alerts to family helpers | Polish | Stretch |
+| 8 | QR pairing, App Intent, background-refresh alerts to family helpers | Polish | Stretch |
 | — | Live Caller ID Lookup, server-deferred SMS filtering | Real-time lookups | Post-hackathon |
 
 ## Practical requirements
 
-- **Paid Apple Developer Program membership** is strongly recommended. Network Extension (DNS settings), App Groups across several extensions, and TestFlight for judges are, as far as we know, limited or unavailable on free accounts; confirm this when setting up signing.
+- **A free Apple account is enough.** The build avoids the paid-only capabilities (push, Sign in with Apple, Network Extension); see `apps/ios/README.md`.
 - **A physical iPhone.** The Call Directory and Message Filter extensions can't be meaningfully tested in the Simulator. Use a second team phone to place test calls and send SMS. Never use real scam numbers; seed the blocklist with team-owned numbers, labeled as test data.
 - **Enable steps the user must do once:** Settings → Phone → Call Blocking & Identification → Clickey; Settings → Messages → Unknown & Spam → Clickey; Settings → Safari → Extensions → Clickey; approve the DNS profile. Onboarding should walk through each, with large text and one step per screen.
 - **Seed data:** the FTC publishes reported Do Not Call complaint data; consider a small seed of reported numbers, after checking its terms. Label community and seed data as "reported", not "confirmed scam".

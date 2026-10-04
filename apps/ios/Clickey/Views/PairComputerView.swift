@@ -13,39 +13,59 @@ struct PairComputerView: View {
   @State private var working = false
 
   var body: some View {
-    Form {
-      if paired {
-        Section {
-          Label("Your computer is connected. It will finish signing in by itself.", systemImage: "checkmark.circle.fill")
+    ScrollView {
+      VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 10) {
+          Image(systemName: paired ? "checkmark.circle.fill" : "desktopcomputer")
+            .font(.system(size: 44, weight: .medium))
             .foregroundStyle(Theme.forest)
-            .font(.title3)
+            .contentTransition(.symbolEffect(.replace))
+          Text(paired ? "Computer connected" : "Connect your computer")
+            .font(.display(.title))
+            .foregroundStyle(Theme.ink)
+          Text(
+            paired
+              ? "It finishes signing in by itself. Warnings now sync between your iPhone and computer."
+              : "On your computer, open Clickey and choose Connect to iPhone. A code appears on the screen."
+          )
+          .font(.title3)
+          .foregroundStyle(Theme.secondaryInk)
+          .fixedSize(horizontal: false, vertical: true)
         }
-      } else {
-        Section {
-          Text("On your computer, open Clickey and choose Connect to iPhone. A code appears on the screen.")
-            .font(.title3)
+
+        if !paired {
           if QRScanner.isAvailable {
             Button {
               scanning = true
             } label: {
               Label("Scan the code", systemImage: "qrcode.viewfinder")
             }
-            .buttonStyle(PrimaryButtonStyle())
-            .listRowInsets(EdgeInsets())
+            .primaryAction()
           }
-        }
-        Section("Or type the code") {
-          TextField("8-character code", text: $code)
-            .textInputAutocapitalization(.characters)
-            .autocorrectionDisabled()
-            .font(.title2.monospaced())
-          Button("Connect") { Task { await claim(code) } }
+          VStack(alignment: .leading, spacing: 12) {
+            Text("Or type the code").font(.headline)
+            TextField("8-character code", text: $code)
+              .textInputAutocapitalization(.characters)
+              .autocorrectionDisabled()
+              .font(.title2.monospaced())
+              .padding(14)
+              .background(Theme.ground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Button {
+              Task { await claim(code) }
+            } label: {
+              if working { ProgressView() } else { Text("Connect") }
+            }
+            .secondaryAction()
             .disabled(code.filter { $0.isLetter || $0.isNumber }.count < 8 || working)
+          }
+          .card(padding: 20)
         }
       }
+      .padding(Theme.pagePadding)
     }
     .screenBackground()
     .navigationTitle("Connect a computer")
+    .navigationBarTitleDisplayMode(.inline)
     .sheet(isPresented: $scanning) {
       QRScanner { value in
         scanning = false
@@ -58,7 +78,8 @@ struct PairComputerView: View {
   private func claim(_ value: String) async {
     working = true
     defer { working = false }
-    paired = await model.pairComputer(code: value)
+    let ok = await model.pairComputer(code: value)
+    withAnimation(.spring) { paired = ok }
   }
 }
 
