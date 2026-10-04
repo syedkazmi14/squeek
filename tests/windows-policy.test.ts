@@ -9,5 +9,5 @@ test('native policy excludes editable/protected ancestors and invalid regions', 
   const dll = fileURLToPath(new URL('../artifacts/observer-policy-tests/Observer.Policy.Tests.dll', import.meta.url));
   const result = spawnSync(existsSync(local) ? local : 'dotnet', [dll], { windowsHide: true, timeout: 4000, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /PASS 12 native policy assertions/);
+  assert.match(result.stdout, /PASS 15 native policy assertions/);
 });

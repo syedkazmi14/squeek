@@ -120,3 +120,19 @@ test('restarting monitoring invalidates the earlier pending read', async () => {
     assert.deepEqual(fixture.observations, [observation]); assert.equal(fixture.closed(), 1);
   } finally { fixture.monitor.stop(); }
 });
+
+test('a transient empty or failed read keeps the scope and retries on the next tick', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  for (const code of ['no_visible_text', 'read_failed']) {
+    const fixture = setup([foreground, health('watching'), health(code, 'unsupported'),
+      foreground, health('unchanged'), observation, foreground]);
+    const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+    try {
+      await fixture.monitor.start('chrome');
+      assert.equal(fixture.closed(), 0); assert.equal(fixture.statuses.at(-1)?.code, 'watching');
+      t.mock.timers.tick(2000); await flush();
+      assert.deepEqual(fixture.commands.slice(3).map(value => value.kind), ['foreground', 'changes', 'observe', 'foreground']);
+      assert.deepEqual(fixture.observations, [observation]); assert.equal(fixture.created(), 1);
+    } finally { fixture.monitor.stop(); }
+  }
+});

@@ -4,6 +4,9 @@ public enum TextAccess { NoPattern, ReadOnly, Editable, Unknown }
 
 public static class ObservationPolicy
 {
+    // Browsers expose a read-only ValuePattern (the URL) on every web document and link.
+    // Only a writable value marks an input whose contents must never be read.
+    public static bool WritableValue(bool hasValuePattern, bool isReadOnly) => hasValuePattern && !isReadOnly;
     public static bool MayTraverse(bool password, bool offscreen, bool editable, bool valuePattern, TextAccess textAccess) =>
         !password && !offscreen && !editable && !valuePattern &&
         textAccess is TextAccess.NoPattern or TextAccess.ReadOnly;

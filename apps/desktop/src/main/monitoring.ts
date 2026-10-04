@@ -22,6 +22,9 @@ export interface MonitoringOptions {
   pollIntervalMs?: number;
 }
 type Session = ReturnType<MonitoringOptions["createSession"]>;
+// Browsers build their accessibility tree lazily and live pages drop nodes mid-read;
+// these keep the watched scope and retry on the next tick instead of tearing down.
+const TRANSIENT_READ = ["no_visible_text", "read_failed"];
 function sameRegion(a: Rect, b: Rect): boolean {
   return (
     a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
@@ -37,6 +40,7 @@ export class Monitoring {
   private session: Session | undefined;
   private scope: Foreground | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private retryRead = false;
 
   constructor(options: MonitoringOptions) {
     this.options = options;
@@ -69,6 +73,7 @@ export class Monitoring {
     const session = this.session;
     this.session = undefined;
     this.scope = undefined;
+    this.retryRead = false;
     session?.observer.close();
   }
 
@@ -160,11 +165,19 @@ export class Monitoring {
           );
           return;
         }
-        shouldRead = changes.code === "changed";
+        shouldRead = changes.code === "changed" || this.retryRead;
       }
       if (!shouldRead || !this.current(epoch, session)) return;
+      this.retryRead = false;
       const observation = await request("observe", foreground);
       if (!this.current(epoch, session)) return;
+      if (
+        observation.kind === "health" &&
+        TRANSIENT_READ.includes(observation.code)
+      ) {
+        this.retryRead = true;
+        return;
+      }
       if (observation.kind !== "observation") {
         this.reject(
           observation.kind === "health"

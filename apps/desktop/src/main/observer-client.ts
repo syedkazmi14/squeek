@@ -214,5 +214,7 @@ export function createObserverClient(executablePath?: string): {
     windowsHide: true,
     env: observerEnvironment(),
   });
-  return { observer: new ObserverClient(child, sessionId), sessionId };
+  // A first read of a large page makes the browser build its accessibility tree, which can take
+  // a couple of seconds; a request that times out tears the whole session down.
+  return { observer: new ObserverClient(child, sessionId, 5000), sessionId };
 }
