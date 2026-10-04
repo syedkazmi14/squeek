@@ -8,6 +8,8 @@ struct MyPersonView: View {
   @EnvironmentObject private var model: AppModel
   @State private var showSignIn = false
   @State private var joinCode = ""
+  @State private var safeWord = ""
+  @State private var safeWordSaved = false
   @State private var invite: (code: String, role: String)?
   @State private var inviteRole = "helper"
   @State private var confirmLeave = false
@@ -32,6 +34,7 @@ struct MyPersonView: View {
               membersCard(household.name)
               inviteCard
               sharingCard
+              safeWordCard
               if !model.helperDevices.isEmpty { theirDevicesCard }
               devicesCard
               Button("Leave this group", role: .destructive) { confirmLeave = true }
@@ -142,6 +145,49 @@ struct MyPersonView: View {
       }
       .card(padding: 20)
     }
+  }
+
+  /// The word Squeek's phone agent asks callers who say they're family (grandparent scams).
+  private var safeWordCard: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      SectionHeader(title: "Family safe word") {
+        Text(model.hasSafeWord ? "Set" : "Not set")
+          .font(.nunito(.caption, .bold))
+          .foregroundStyle(model.hasSafeWord ? Theme.safe : Theme.ochre)
+          .padding(.horizontal, 10)
+          .padding(.vertical, 4)
+          .background(model.hasSafeWord ? Theme.safeSoft : Theme.ochreSoft, in: Capsule())
+      }
+      Text("When someone calls saying they're family, Squeek asks them for this word. Pick something only your family would know, and share it in person, not by text.")
+        .font(.nunito(.subheadline))
+        .foregroundStyle(Theme.secondaryInk)
+        .fixedSize(horizontal: false, vertical: true)
+      HStack {
+        SecureField(model.hasSafeWord ? "Change the word" : "Choose a word", text: $safeWord)
+          .padding(12)
+          .background(Theme.ground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        Button("Save") {
+          Task {
+            if await model.setSafeWord(safeWord) {
+              safeWord = ""
+              withAnimation { safeWordSaved = true }
+            }
+          }
+        }
+        .buttonStyle(.glass)
+        .disabled(safeWord.trimmingCharacters(in: .whitespaces).isEmpty)
+      }
+      if safeWordSaved {
+        Label("Saved. Squeek keeps only a scrambled copy, so nobody can read it back.", systemImage: "checkmark.circle.fill")
+          .font(.nunito(.footnote))
+          .foregroundStyle(Theme.accentInk)
+      }
+      if model.hasSafeWord {
+        Button("Remove the safe word", role: .destructive) { Task { _ = await model.setSafeWord("") } }
+          .font(.nunito(.subheadline, .semibold))
+      }
+    }
+    .card(padding: 20)
   }
 
   private var theirDevicesCard: some View {

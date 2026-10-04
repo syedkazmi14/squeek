@@ -211,6 +211,8 @@ public struct Profile: Codable, Sendable, Equatable {
   public var historySync: Bool
   public var shareIncidentsWithHelpers: Bool
   public var blockReportedNumbers: Bool
+  /// Where Squeek calls the person to say what it found on a screened call (E.164).
+  public var alertPhone: String?
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -221,6 +223,7 @@ public struct Profile: Codable, Sendable, Equatable {
     case historySync = "history_sync"
     case shareIncidentsWithHelpers = "share_incidents_with_helpers"
     case blockReportedNumbers = "block_reported_numbers"
+    case alertPhone = "alert_phone"
   }
 }
 
@@ -233,6 +236,7 @@ public struct ProfileUpdate: Encodable, Sendable {
   public let historySync: Bool
   public let shareIncidentsWithHelpers: Bool
   public let blockReportedNumbers: Bool
+  public let alertPhone: String?
 
   public init(_ p: Profile) {
     displayName = p.displayName
@@ -242,6 +246,7 @@ public struct ProfileUpdate: Encodable, Sendable {
     historySync = p.historySync
     shareIncidentsWithHelpers = p.shareIncidentsWithHelpers
     blockReportedNumbers = p.blockReportedNumbers
+    alertPhone = p.alertPhone
   }
 
   enum CodingKeys: String, CodingKey {
@@ -252,6 +257,20 @@ public struct ProfileUpdate: Encodable, Sendable {
     case historySync = "history_sync"
     case shareIncidentsWithHelpers = "share_incidents_with_helpers"
     case blockReportedNumbers = "block_reported_numbers"
+    case alertPhone = "alert_phone"
+  }
+
+  // Written out so a removed number is sent as null rather than left out.
+  public func encode(to encoder: Encoder) throws {
+    var c = encoder.container(keyedBy: CodingKeys.self)
+    try c.encode(displayName, forKey: .displayName)
+    try c.encode(voiceRate, forKey: .voiceRate)
+    try c.encode(textScale, forKey: .textScale)
+    try c.encode(muted, forKey: .muted)
+    try c.encode(historySync, forKey: .historySync)
+    try c.encode(shareIncidentsWithHelpers, forKey: .shareIncidentsWithHelpers)
+    try c.encode(blockReportedNumbers, forKey: .blockReportedNumbers)
+    try c.encode(alertPhone, forKey: .alertPhone)
   }
 }
 
@@ -283,8 +302,43 @@ public struct Incident: Codable, Sendable, Identifiable, Equatable {
     case createdAt = "created_at"
   }
 
-  public var level: Level { Level(risk: Risk(rawValue: risk) ?? .unknown) }
+  /// "clear" is a genuine caller Squeek took a message from.
+  public var level: Level { risk == "clear" ? .clear : Level(risk: Risk(rawValue: risk) ?? .unknown) }
   public var date: Date? { Timestamps.parse(createdAt) }
+  /// Written by Squeek's call screener on the server rather than by one of the person's devices.
+  public var isScreenedCall: Bool { surface == "call" && deviceId == nil }
+}
+
+/// A call Squeek's phone agent answered (supabase/functions/call-webhook). No audio or transcript:
+/// just who the caller said they were, what they wanted, and the verdict.
+public struct ScreenedCall: Codable, Sendable, Identifiable, Equatable {
+  public let id: String
+  public let userId: String
+  public let callerE164: String?
+  public let durationSecs: Int?
+  public let risk: String
+  public let categories: [String]
+  public let callerClaims: String?
+  public let callerWants: String?
+  public let callbackE164: String?
+  /// "matched", "wrong", "not_given" or "not_set"; nil unless the caller said they were family.
+  public let safeWord: String?
+  public let incidentId: String?
+  public let createdAt: String
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case userId = "user_id"
+    case callerE164 = "caller_e164"
+    case durationSecs = "duration_secs"
+    case risk, categories
+    case callerClaims = "caller_claims"
+    case callerWants = "caller_wants"
+    case callbackE164 = "callback_e164"
+    case safeWord = "safe_word"
+    case incidentId = "incident_id"
+    case createdAt = "created_at"
+  }
 }
 
 public struct BlockEntry: Codable, Sendable, Identifiable, Hashable {

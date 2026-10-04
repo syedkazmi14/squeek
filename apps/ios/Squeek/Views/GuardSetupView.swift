@@ -32,8 +32,8 @@ struct GuardSetupView: View {
         .card(padding: 20)
 
         card(.calls, lines: [
-          "Open Settings › Apps › Phone › Call Blocking & Identification, and turn on Squeek.",
-          "Allow notifications, so Squeek can tell you what it found.",
+          "Block known scam callers: open Settings › Apps › Phone › Call Blocking & Identification, and turn on Squeek.",
+          "Allow notifications, so Squeek can also tell you on screen.",
         ]) {
           if model.callBlockingStatus != .enabled {
             Button("Open call settings") { CallDirectorySync.openSettings() }.primaryAction()
@@ -47,6 +47,7 @@ struct GuardSetupView: View {
             }
             .secondaryAction()
           }
+          CallScreeningSetup()
         }
 
         card(.texts, manual: $model.textsGuardOn, lines: [

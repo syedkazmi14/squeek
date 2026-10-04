@@ -28,7 +28,7 @@ enum SqueekGuard: String, CaseIterable, Identifiable {
   /// What the guard does while it's on.
   var onSummary: String {
     switch self {
-    case .calls: return "Scam callers are blocked or labeled"
+    case .calls: return "Squeek answers unknown callers for you"
     case .texts: return "Scam texts go to Junk"
     case .web: return "Dangerous sites are blocked or flagged"
     case .person: return "Someone you trust can help you check"
@@ -38,7 +38,7 @@ enum SqueekGuard: String, CaseIterable, Identifiable {
   /// The next step while it's off.
   var offSummary: String {
     switch self {
-    case .calls: return "Turn on call blocking and alerts"
+    case .calls: return "Let Squeek answer calls you miss"
     case .texts: return "Turn on text filtering"
     case .web: return "Turn on Safari warnings"
     case .person: return "Choose someone you trust"

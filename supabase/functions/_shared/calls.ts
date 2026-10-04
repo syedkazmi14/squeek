@@ -16,11 +16,12 @@ export const DATA_FIELDS = {
   caller_identity: {
     type: "string",
     description:
-      "Who the caller said they are, in a few words, e.g. \"Mike, says he's the grandson\" or \"Chase fraud department\". Empty if they never said.",
+      "Who the caller said they are, as a short noun phrase, e.g. \"Mike, the grandson\" or \"Chase's fraud department\". Empty if they never said.",
   },
   caller_request: {
     type: "string",
-    description: "What the caller wanted, in one short sentence, e.g. \"wants gift cards to pay bail\". Empty if unclear.",
+    description:
+      "What the caller wanted, in a few words that fit after \"They wanted\", e.g. \"gift cards to pay bail\" or \"to confirm Tuesday's appointment\". Empty if unclear.",
   },
   callback_number: {
     type: "string",
@@ -282,8 +283,8 @@ export function alertForPerson(call: ScreenedCall, verdict: CallVerdict): string
       return `Squeek here. I answered a call from ${from}.${said} Some things about it seemed off${top ? `: ${top.toLowerCase()}` : ""}. ` +
         "Check with someone you trust before you do anything they asked.";
     case "clear": {
-      const w = verdict.wants?.replace(/\.$/, "");
-      const wanted = !w ? "" : /^wants? to /i.test(w) ? ` They want to ${w.replace(/^wants? to /i, "")}.` : ` It was about: ${w}.`;
+      const w = verdict.wants?.replace(/^(they )?wants?\s+/i, "").replace(/\.$/, "");
+      const wanted = w ? ` They wanted ${w}.` : "";
       const back = verdict.callback ? ` They asked you to call back on ${displayPhone(verdict.callback)}.` : "";
       return `Squeek here. I took a message from ${from}.${said}${wanted}${back} Only call back if you know who they are.`;
     }

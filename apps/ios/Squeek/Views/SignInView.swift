@@ -71,11 +71,15 @@ struct WelcomeView: View {
   }
 }
 
-/// Email sign-in: an emailed link (or a code, if the email template shows one). No password.
+/// Sign-in. By default the demo form: an email and any password (it isn't checked), for accounts
+/// on the demo domains the server allows (supabase/functions/demo-sign-in). The emailed link or
+/// code is still there for real accounts.
 struct EmailSignInView: View {
   @EnvironmentObject private var model: AppModel
   @Environment(\.dismiss) private var dismiss
+  @State private var usingLink = false
   @State private var email = ""
+  @State private var password = ""
   @State private var code = ""
   @State private var codeSent = false
   @State private var working = false
@@ -86,45 +90,40 @@ struct EmailSignInView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 22) {
           VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: codeSent ? "envelope.open.fill" : "envelope.fill")
+            Image(systemName: codeSent ? "envelope.open.fill" : usingLink ? "envelope.fill" : "person.crop.circle.fill")
               .font(.system(size: 34, weight: .semibold))
               .foregroundStyle(Theme.accentInk)
               .contentTransition(.symbolEffect(.replace))
             Text(codeSent ? "Check your email" : "Sign in")
               .font(.display(.largeTitle))
               .foregroundStyle(Theme.ink)
-            Text(
-              codeSent
-                ? "Open the email from Squeek on this iPhone and tap the sign-in link. Squeek will open and sign you in."
-                : "We'll email you a sign-in link. No password needed."
-            )
-            .font(.nunito(.title3))
-            .foregroundStyle(Theme.secondaryInk)
-            .fixedSize(horizontal: false, vertical: true)
+            Text(subtitle)
+              .font(.nunito(.title3))
+              .foregroundStyle(Theme.secondaryInk)
+              .fixedSize(horizontal: false, vertical: true)
           }
 
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Email address").font(.nunito(.headline))
-            TextField("you@example.com", text: $email)
+          field("Email address") {
+            TextField("you@squeek.example", text: $email)
               .textContentType(.emailAddress)
               .keyboardType(.emailAddress)
               .textInputAutocapitalization(.never)
               .autocorrectionDisabled()
-              .font(.nunito(.title3))
               .disabled(codeSent)
-              .padding(16)
-              .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
           }
 
-          if codeSent {
+          if !usingLink {
+            field("Password") {
+              SecureField("Anything works", text: $password)
+            }
+          } else if codeSent {
             VStack(alignment: .leading, spacing: 8) {
-              Text("Or enter a code from the email").font(.nunito(.headline))
-              TextField("Code", text: $code)
-                .textContentType(.oneTimeCode)
-                .keyboardType(.numberPad)
-                .font(.nunito(.title2).monospacedDigit())
-                .padding(16)
-                .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
+              field("Or enter a code from the email") {
+                TextField("Code", text: $code)
+                  .textContentType(.oneTimeCode)
+                  .keyboardType(.numberPad)
+                  .monospacedDigit()
+              }
               Button("Use a different email") {
                 withAnimation {
                   codeSent = false
@@ -141,6 +140,15 @@ struct EmailSignInView: View {
               .font(.nunito(.callout))
               .foregroundStyle(Theme.danger)
           }
+
+          Button(usingLink ? "Sign in with a password instead" : "Email me a sign-in link instead") {
+            withAnimation {
+              usingLink.toggle()
+              codeSent = false
+              message = nil
+            }
+          }
+          .font(.nunito(.callout, .semibold))
         }
         .padding(Theme.pagePadding)
       }
@@ -149,7 +157,7 @@ struct EmailSignInView: View {
         Button {
           Task { await submit() }
         } label: {
-          if working { ProgressView() } else { Text(codeSent ? "Sign in with code" : "Email me a sign-in link") }
+          if working { ProgressView() } else { Text(buttonTitle) }
         }
         .primaryAction()
         .disabled(working || (codeSent ? code.count < 6 : !email.contains("@")))
@@ -165,13 +173,37 @@ struct EmailSignInView: View {
     }
   }
 
+  private var subtitle: String {
+    if codeSent { return "Open the email from Squeek on this iPhone and tap the sign-in link. Squeek will open and sign you in." }
+    if usingLink { return "We'll email you a sign-in link. No password needed." }
+    return "Demo accounts: type any email on the demo domain and any password. A new email makes a new account."
+  }
+
+  private var buttonTitle: String {
+    if !usingLink { return "Sign in" }
+    return codeSent ? "Sign in with code" : "Email me a sign-in link"
+  }
+
+  private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.nunito(.headline))
+      content()
+        .font(.nunito(.title3))
+        .padding(16)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
+    }
+  }
+
   private func submit() async {
     working = true
     message = nil
     defer { working = false }
     let address = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     do {
-      if codeSent {
+      if !usingLink {
+        try await model.demoSignIn(email: address)
+        dismiss()
+      } else if codeSent {
         try await model.verify(email: address, code: code.trimmingCharacters(in: .whitespaces))
         dismiss()
       } else {

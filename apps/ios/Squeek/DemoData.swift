@@ -14,6 +14,22 @@
       return args[i + 1]
     }
 
+    /// What the caller told Squeek, for the two demo call warnings.
+    static var screenedCalls: [ScreenedCall] {
+      let json = """
+        [
+          {"id":"s0","user_id":"\(userId)","caller_e164":"+15555550188","duration_secs":74,"risk":"high_risk",
+           "categories":["impersonation","payment","pressure","secrecy"],"caller_claims":"Mike, the grandson",
+           "caller_wants":"gift cards to pay bail, and for nobody to know","callback_e164":null,"safe_word":"wrong",
+           "incident_id":"d0","created_at":"\(Timestamps.format(Date()))"},
+          {"id":"s5","user_id":"\(userId)","caller_e164":"+15555550142","duration_secs":41,"risk":"clear","categories":[],
+           "caller_claims":"Dr. Lee's office","caller_wants":"to confirm Tuesday's appointment",
+           "callback_e164":"+15555550142","safe_word":null,"incident_id":"d5","created_at":"\(Timestamps.format(Date()))"}
+        ]
+        """
+      return (try? JSONDecoder().decode([ScreenedCall].self, from: Data(json.utf8))) ?? []
+    }
+
     @MainActor static func load(into model: AppModel) {
       let decoder = JSONDecoder()
       let now = Date()
@@ -21,6 +37,13 @@
 
       let incidents = """
         [
+          {"id":"d0","user_id":"\(userId)","device_id":null,"platform":"ios","surface":"call","risk":"high_risk",
+           "categories":["impersonation","payment","pressure","secrecy"],"rule_ids":["call_family_no_safe_word","call_gift_card"],
+           "evidence_redacted":"Mike, the grandson · gift cards to pay bail",
+           "indicator_kind":"phone","indicator_value":"+15555550188","user_action":null,"created_at":"\(stamp(1))"},
+          {"id":"d5","user_id":"\(userId)","device_id":null,"platform":"ios","surface":"call","risk":"clear",
+           "categories":[],"rule_ids":[],"evidence_redacted":"Dr. Lee's office · to confirm Tuesday's appointment",
+           "indicator_kind":"phone","indicator_value":"+15555550142","user_action":null,"created_at":"\(stamp(60 * 3))"},
           {"id":"d1","user_id":"\(userId)","device_id":"pc","platform":"windows","surface":"email","risk":"high_risk",
            "categories":["impersonation","payment"],"rule_ids":["gift_card"],
            "evidence_redacted":"This is the IRS. A warrant for your arrest will be issued today. Pay with Google Play gift cards…",
@@ -53,7 +76,7 @@
         """
       let profile = """
         {"id":"\(userId)","display_name":"Syed","voice_rate":0.45,"text_scale":1.0,"muted":false,
-         "history_sync":true,"share_incidents_with_helpers":true,"block_reported_numbers":false}
+         "history_sync":true,"share_incidents_with_helpers":true,"block_reported_numbers":false,"alert_phone":"+15555550111"}
         """
       switch argument("-SqueekTab") {
       case "activity": model.selectedTab = .activity

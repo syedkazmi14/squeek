@@ -71,10 +71,14 @@ struct HomeSummary {
 
   /// "flagged 2 suspicious calls and caught 1 scam text", or nil when nothing happened.
   private static func countSentence(_ incidents: [Incident]) -> String? {
-    var calls = 0, texts = 0, sites = 0, computer = 0, other = 0
+    var answered = 0, calls = 0, texts = 0, sites = 0, computer = 0, other = 0
     for incident in incidents {
       if incident.platform == "windows" {
         computer += 1
+        continue
+      }
+      if incident.isScreenedCall {
+        answered += 1
         continue
       }
       switch incident.surface {
@@ -85,6 +89,7 @@ struct HomeSummary {
       }
     }
     let phrases = [
+      answered > 0 ? "answered \(plural(answered, "call")) for you" : nil,
       calls > 0 ? "flagged \(plural(calls, "suspicious call"))" : nil,
       texts > 0 ? "caught \(plural(texts, "scam text"))" : nil,
       sites > 0 ? "flagged \(plural(sites, "risky website"))" : nil,
@@ -111,7 +116,7 @@ struct HomeSummary {
   private static func lead(for incident: Incident) -> String {
     if incident.platform == "windows" { return "Your computer spotted something that looks like a scam." }
     switch incident.surface {
-    case "call": return "A call came in that looked like a scam."
+    case "call": return incident.isScreenedCall ? "I answered a call that looked like a scam." : "A call came in that looked like a scam."
     case "sms": return "A text came in that looked like a scam."
     case "link", "browser": return "I stopped a website that looked dangerous."
     default: return "Something you got looks like a scam."

@@ -168,11 +168,13 @@ struct IncidentRow: View {
 
   private var title: String {
     if incident.userAction == "reported" { return "You reported a scam" }
+    if incident.isScreenedCall && incident.level == .clear { return "Squeek took a message" }
     return Labels.level(incident.level)
   }
 
   private var subtitle: String {
     var parts = [Labels.surface(incident.surface), "on your \(Labels.platform(incident.platform))"]
+    if incident.isScreenedCall { parts = ["Call Squeek answered"] }
     if incident.userId != model.userId {
       parts = [model.memberName(incident.userId) ?? "Family member", Labels.surface(incident.surface).lowercased()]
     }
@@ -187,6 +189,7 @@ struct IncidentRow: View {
 struct IncidentDetailView: View {
   @EnvironmentObject private var model: AppModel
   let incident: Incident
+  @State private var call: ScreenedCall?
 
   var body: some View {
     let current = model.incidents.first { $0.id == incident.id } ?? incident
@@ -203,11 +206,15 @@ struct IncidentDetailView: View {
               .frame(width: 34, height: 34)
               .background(status.tint, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
           }
-          Text(Labels.surface(current.surface))
+          Text(current.isScreenedCall ? (current.level == .clear ? "Squeek took a message" : "Call Squeek answered") : Labels.surface(current.surface))
             .font(.display(.title))
             .foregroundStyle(Theme.ink)
           HStack(spacing: 8) {
-            Label(Labels.platform(current.platform), systemImage: Labels.platformSymbol(current.platform))
+            if current.isScreenedCall, let number = current.indicatorValue {
+              Label(PhoneNumbers.display(number), systemImage: "phone.fill")
+            } else {
+              Label(Labels.platform(current.platform), systemImage: Labels.platformSymbol(current.platform))
+            }
             if let date = current.date {
               Text("·")
               Text(date.formatted(date: .abbreviated, time: .shortened))
@@ -236,7 +243,9 @@ struct IncidentDetailView: View {
           }
         }
 
-        if let evidence = current.evidenceRedacted {
+        if let call {
+          CallDetails(call: call)
+        } else if let evidence = current.evidenceRedacted {
           VStack(alignment: .leading, spacing: 8) {
             Text("“\(evidence)”").font(.nunito(.title3)).foregroundStyle(Theme.ink)
             Text("Private details like phone numbers and codes are removed before anything is saved.")
@@ -255,7 +264,8 @@ struct IncidentDetailView: View {
       .padding(Theme.pagePadding)
     }
     .screenBackground()
-    .navigationTitle("Warning")
+    .navigationTitle(incident.isScreenedCall ? "Call" : "Warning")
+    .task { if incident.isScreenedCall { call = await model.screenedCall(forIncident: incident.id) } }
     .navigationBarTitleDisplayMode(.inline)
     .safeAreaInset(edge: .bottom) {
       if current.userId == model.userId {
@@ -282,5 +292,50 @@ struct IncidentDetailView: View {
       }
       .secondaryAction()
     }
+  }
+}
+
+/// What a caller told Squeek's phone agent. Only these notes are kept, never the recording.
+private struct CallDetails: View {
+  let call: ScreenedCall
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      SectionHeader("What they told Squeek")
+      if let claims = call.callerClaims { row("Said they were", claims) }
+      if let wants = call.callerWants { row("Wanted", wants) }
+      if let callback = call.callbackE164 {
+        row("Call back on", PhoneNumbers.display(callback))
+        if call.risk == "clear", let url = URL(string: "tel:\(callback)") {
+          Link(destination: url) { Label("Call them back", systemImage: "phone.fill") }
+            .font(.nunito(.headline))
+        }
+      }
+      if let safeWord = safeWordLine { row("Family safe word", safeWord) }
+      if let seconds = call.durationSecs, seconds > 0 {
+        Text("Squeek spoke with them for \(Duration.seconds(seconds).formatted(.units(allowed: [.minutes, .seconds], width: .wide))). The call itself isn't kept.")
+          .font(.nunito(.footnote))
+          .foregroundStyle(Theme.secondaryInk)
+      }
+    }
+    .card()
+  }
+
+  private var safeWordLine: String? {
+    switch call.safeWord {
+    case "matched": return "Knew it"
+    case "wrong": return "Gave the wrong word"
+    case "not_given": return "Didn't know it"
+    case "not_set": return "Not set yet. Add one in My Person so Squeek can check next time."
+    default: return nil
+    }
+  }
+
+  private func row(_ title: String, _ value: String) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(title).font(.nunito(.subheadline, .semibold)).foregroundStyle(Theme.secondaryInk)
+      Text(value).font(.nunito(.title3)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+    }
+    .accessibilityElement(children: .combine)
   }
 }

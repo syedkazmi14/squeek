@@ -115,6 +115,7 @@ All functions take POST JSON with the signed-in user's token (supabase-js and su
 - `report`: `{ kind: "phone" | "domain", value, label?, householdId?, deviceId? }`.
 - `pair-device`: `{ action: "create" }` from the PC returns `{ code, qr, pollSecret }`. The iPhone sends `{ action: "claim", code }`. The PC then polls `{ action: "poll", pollSecret }` until it gets `{ status: "ready", tokenHash }`, and calls `supabase.auth.verifyOtp({ token_hash, type: "email" })`.
 
+- `demo-sign-in`: `{ email }` returns `{ email, tokenHash }` for `verifyOTP`, creating the account the first time. No password, so it only answers for the domains in the `SQUEEK_DEMO_SIGN_IN_DOMAINS` secret (for example `squeek.example`), and is off when that's unset. `*` allows every email, so anyone could sign in as anyone; use that only on a throwaway project.
 - `call-webhook`: called by ElevenLabs, not by the apps. It checks the `elevenlabs-signature` HMAC, ignores Squeek's own alert calls and repeats of the same conversation, then writes a `screened_calls` row and, unless it was a hang-up, an `incidents` row with `surface: "call"`. Risk `clear` means Squeek took a message from a genuine caller. Callers who say they're family are asked for the household's safe word (`set_safe_word`), and only its hash is stored.
 
 The Windows app should use the same RPCs as the iPhone: `my_block_list`, `my_household_members` and `household_devices`. It should also subscribe to Realtime on `incidents`, `blocked_numbers` and `blocked_domains`.

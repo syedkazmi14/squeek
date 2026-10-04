@@ -39,6 +39,14 @@ final class AppModel: ObservableObject {
   @Published var webGuardOn = UserDefaults.standard.bool(forKey: AppModel.webGuardKey) {
     didSet { UserDefaults.standard.set(webGuardOn, forKey: Self.webGuardKey) }
   }
+  /// Call forwarding is set with a carrier code in the Phone app, which Squeek can't check.
+  @Published var forwardingOn = UserDefaults.standard.bool(forKey: AppModel.forwardingKey) {
+    didSet { UserDefaults.standard.set(forwardingOn, forKey: Self.forwardingKey) }
+  }
+
+  /// This person's Squeek phone line, where unanswered calls are forwarded. Nil until claimed.
+  @Published private(set) var screeningLine: String?
+  @Published private(set) var hasSafeWord = false
 
   /// Settings used when signed out; mirrored into the App Group for the extensions.
   @Published private(set) var localSettings: SharedSettings
@@ -56,6 +64,7 @@ final class AppModel: ObservableObject {
   private static let alertsSinceKey = "squeek.alertsSince"
   private static let textsGuardKey = "squeek.setup.texts"
   private static let webGuardKey = "squeek.setup.web"
+  private static let forwardingKey = "squeek.setup.forwarding"
   private static let lastVisitKey = "squeek.lastVisit"
 
   /// Home's summary covers what happened after this: the end of the person's last visit to the app.
@@ -86,8 +95,9 @@ final class AppModel: ObservableObject {
 
   func isOn(_ guard: SqueekGuard) -> Bool {
     switch `guard` {
-    // Call verdicts reach the person as notifications, so calls need both.
-    case .calls: return callBlockingStatus == .enabled && notificationsOn
+    // Blocking known scammers, plus Squeek answering the rest and calling the person to say what it found.
+    case .calls:
+      return callBlockingStatus == .enabled && (forwardingOn || isDemo) && screeningLine != nil && profile?.alertPhone != nil
     case .texts: return textsGuardOn
     case .web: return webGuardOn
     case .person: return members.count > 1
@@ -207,6 +217,8 @@ final class AppModel: ObservableObject {
     members = []
     helperDevices = []
     myDevices = []
+    screeningLine = nil
+    hasSafeWord = false
     subscribedUserId = nil
     Task { await unsubscribeRealtime() }
     if wasSignedIn {
@@ -233,6 +245,9 @@ final class AppModel: ObservableObject {
       helperDevices = try await client.rpc("household_devices").execute().value
       myDevices = try await client.from("devices").select("id, user_id, platform, name, app_version, monitoring_status, last_seen_at")
         .order("last_seen_at", ascending: false).execute().value
+      let lines: [ScreeningLineRow] = try await client.from("screening_lines").select("e164").execute().value
+      screeningLine = lines.first?.e164
+      hasSafeWord = await fetchHasSafeWord()
     } catch {
       report(error)
     }
@@ -254,12 +269,21 @@ final class AppModel: ObservableObject {
     return created > since
   }
 
-  /// Shows one local notification per warning from another device or a family member.
+  /// Shows one local notification per warning from another device, a family member, or Squeek's call screener.
   private func alertIfNeeded(_ incident: Incident) {
-    guard incident.level == .danger, incident.deviceId != localSettings.deviceId else { return }
     var alerted = UserDefaults.standard.stringArray(forKey: Self.alertedIncidentsKey) ?? []
     guard !alerted.contains(incident.id) else { return }
-    if incident.userId != userId {
+    if incident.isScreenedCall && incident.userId == userId {
+      // Squeek also phones the person; this covers the app being open.
+      switch incident.level {
+      case .danger: Notifications.post(title: "Squeek answered a scam call", body: incident.evidenceRedacted ?? "Open Squeek to see what they wanted.")
+      case .caution: Notifications.post(title: "Squeek answered a call", body: "Some things about it seemed off. Open Squeek to see why.")
+      case .clear: Notifications.post(title: "Squeek took a message", body: incident.evidenceRedacted ?? "Open Squeek to see who called.")
+      case .unknown: return
+      }
+    } else if incident.level != .danger || incident.deviceId == localSettings.deviceId {
+      return
+    } else if incident.userId != userId {
       let who = memberName(incident.userId) ?? "Someone you help"
       Notifications.post(title: "Squeek warning", body: "\(who) got something that looks like a scam.")
     } else if incident.platform == "windows" {
@@ -357,7 +381,13 @@ final class AppModel: ObservableObject {
     do {
       members = try await client.rpc("my_household_members").execute().value
       helperDevices = try await client.rpc("household_devices").execute().value
+      hasSafeWord = await fetchHasSafeWord()
     } catch { report(error) }
+  }
+
+  private func fetchHasSafeWord() async -> Bool {
+    guard let client, let household else { return false }
+    return (try? await client.rpc("household_has_safe_word", params: ["p_household_id": household.id]).execute().value) ?? false
   }
 
   // MARK: - Extensions
@@ -405,6 +435,8 @@ final class AppModel: ObservableObject {
       self.profile = profile
       callBlockingStatus = .enabled
       notificationsOn = true
+      screeningLine = "+16822041962"
+      hasSafeWord = true
     }
   #endif
 
@@ -429,6 +461,13 @@ final class AppModel: ObservableObject {
         report(error)
       }
     }
+  }
+
+  /// Signs in to a demo account by email alone; see Backend.demoSignIn.
+  func demoSignIn(email: String) async throws {
+    guard let client else { throw BackendError.notConfigured }
+    let tokenHash = try await Backend.shared.demoSignIn(email: email)
+    _ = try await client.auth.verifyOTP(tokenHash: tokenHash, type: .email)
   }
 
   func verify(email: String, code: String) async throws {
@@ -627,6 +666,55 @@ final class AppModel: ObservableObject {
     await updateProfile { $0.displayName = name.isEmpty ? nil : String(name.prefix(80)) }
   }
 
+  // MARK: - Call screening
+
+  /// Gets this person's Squeek line from the server, giving them a free one the first time.
+  func claimScreeningLine() async {
+    guard let client, isSignedIn, !isDemo else { return }
+    do {
+      screeningLine = try await client.rpc("claim_screening_line").execute().value
+    } catch { report(error) }
+  }
+
+  /// Saves the number Squeek calls with verdicts. Empty removes it.
+  func setAlertPhone(_ raw: String) async -> Bool {
+    let trimmed = raw.trimmingCharacters(in: .whitespaces)
+    guard trimmed.isEmpty || PhoneNumbers.normalizeE164(trimmed) != nil else {
+      errorMessage = "That doesn't look like a phone number."
+      return false
+    }
+    await updateProfile { $0.alertPhone = trimmed.isEmpty ? nil : PhoneNumbers.normalizeE164(trimmed) }
+    return true
+  }
+
+  /// What the caller told Squeek's phone agent, for a call warning in Activity.
+  func screenedCall(forIncident incidentId: String) async -> ScreenedCall? {
+    #if DEBUG
+      if isDemo { return DemoData.screenedCalls.first { $0.incidentId == incidentId } }
+    #endif
+    guard let client, isSignedIn else { return nil }
+    let rows: [ScreenedCall]? = try? await client.from("screened_calls").select().eq("incident_id", value: incidentId)
+      .limit(1).execute().value
+    return rows?.first
+  }
+
+  /// Sets the word Squeek asks callers who say they're family. Empty removes it.
+  func setSafeWord(_ word: String) async -> Bool {
+    guard let client, let household else { return false }
+    if isDemo {
+      hasSafeWord = !word.isEmpty
+      return true
+    }
+    do {
+      try await client.rpc("set_safe_word", params: ["p_household_id": household.id, "p_word": word]).execute()
+      hasSafeWord = await fetchHasSafeWord()
+      return true
+    } catch {
+      report(error)
+      return false
+    }
+  }
+
   // MARK: - Pairing
 
   func pairComputer(code: String) async -> Bool {
@@ -645,4 +733,8 @@ final class AppModel: ObservableObject {
     if error is CancellationError { return }
     errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
   }
+}
+
+private struct ScreeningLineRow: Decodable {
+  let e164: String
 }

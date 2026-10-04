@@ -9,6 +9,9 @@ A development build of Squeek for iPhone (not set up for the App Store). The des
 | Home: the four guards (calls, texts, websites, your person) and what's still off | `Squeek/Views/HomeView.swift`, `Squeek/Views/GuardSetupView.swift` | Setup opens on first launch |
 | "Check with Squeek" in the Share sheet (text, links, images): the manual fallback | `ShareExtension/` | Turn on in the Share sheet's app row once |
 | Block and label scam callers | `CallDirectoryExtension/` | Settings › Apps › Phone › Call Blocking & Identification |
+| Squeek answers calls you miss and calls you back with the verdict (forwarded to a Twilio line, answered by an ElevenLabs agent, judged by `supabase/functions/call-webhook`) | `Squeek/Views/CallScreeningSetup.swift`, details in `ActivityView.swift` | Signed in; a carrier forwarding code; see `supabase/README.md` › Call screening |
+| Family safe word that callers claiming to be family are asked for | `Squeek/Views/MyPersonView.swift` | In a group |
+| Demo sign-in: any `@squeek.example` email and any password | `Squeek/Views/SignInView.swift`, `supabase/functions/demo-sign-in` | `SQUEEK_DEMO_SIGN_IN_DOMAINS` secret |
 | Move scam texts from unknown senders to Junk | `MessageFilterExtension/` | Settings › Apps › Messages › Unknown & Spam |
 | Warn before dangerous links open in Safari | `SafariExtension/` | Settings › Apps › Safari › Extensions |
 | Block known malicious websites in every app (encrypted DNS) | A configuration profile served by `supabase/functions/dns-profile`, installed from setup | Settings › Profile Downloaded › Install |

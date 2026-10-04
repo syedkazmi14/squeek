@@ -27,7 +27,7 @@ function call(callerText: string, facts: Partial<CallFacts>): ScreenedCall {
 }
 
 const grandson = call("Grandma, it's me. I'm in jail and I need bail money right now. Please don't tell Mom.", {
-  callerIdentity: "says he's the grandson", callerRequest: "wants gift cards to pay bail", paymentMethod: "gift_card",
+  callerIdentity: "Mike, the grandson", callerRequest: "gift cards to pay bail", paymentMethod: "gift_card",
   urgencyOrThreats: true, askedForSecrecy: true, claimsFamily: true, familyWord: "pizza",
 });
 
@@ -38,7 +38,7 @@ Deno.test("grandparent scam with the wrong safe word is a likely scam", async ()
   assertEquals(v.risk, "high_risk");
   assert(v.ruleIds.includes("call_family_no_safe_word"));
   assertEquals(v.safeWord, "wrong");
-  assertEquals(v.evidence, "says he's the grandson · wants gift cards to pay bail");
+  assertEquals(v.evidence, "Mike, the grandson · gift cards to pay bail");
   const alert = alertForPerson(grandson, v)!;
   assert(alert.includes("looked like a scam") && alert.includes("(555) 555-0100"), alert);
   assert(alertForHelper("Syed", v)!.startsWith("Squeek here. Syed just got a call"));
@@ -55,14 +55,14 @@ Deno.test("knowing the safe word lowers a likely scam to be careful", async () =
 
 Deno.test("a genuine office calling back is a message, not a warning", () => {
   const office = call("Hi, this is Dr. Lee's office calling to confirm the appointment on Tuesday at three.", {
-    callerIdentity: "Dr. Lee's office", callerRequest: "wants to confirm Tuesday's appointment", callbackNumber: "555 555 0142",
+    callerIdentity: "Dr. Lee's office", callerRequest: "to confirm Tuesday's appointment", callbackNumber: "555 555 0142",
     claimsOfficial: true,
   });
   const v = judgeCall(office, rules, null);
   assertEquals(v.risk, "clear");
   assertEquals(v.callback, "+15555550142");
   const alert = alertForPerson(office, v)!;
-  assert(alert.includes("I took a message") && alert.includes("confirm Tuesday's appointment") && alert.includes("(555) 555-0142"), alert);
+  assert(alert.includes("I took a message") && alert.includes("They wanted to confirm Tuesday's appointment.") && alert.includes("(555) 555-0142"), alert);
 });
 
 Deno.test("a hang-up is unknown and nobody is bothered", () => {

@@ -97,6 +97,22 @@ final class Backend: @unchecked Sendable {
       "report", ReportRequest(kind: kind, value: value, label: label, householdId: householdId, deviceId: deviceId))
   }
 
+  /// Demo sign-in (supabase/functions/demo-sign-in): an email on an allowed demo domain is enough.
+  /// Returns a one-time token for `auth.verifyOTP`. Works signed out, so it skips `requireClient`.
+  func demoSignIn(email: String) async throws -> String {
+    guard let client else { throw BackendError.notConfigured }
+    struct Request: Encodable { let email: String }
+    struct Response: Decodable { let tokenHash: String }
+    do {
+      let response: Response = try await client.functions.invoke(
+        "demo-sign-in", options: FunctionInvokeOptions(body: Request(email: email)))
+      return response.tokenHash
+    } catch let FunctionsError.httpError(code, data) {
+      let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"]
+      throw BackendError.server(message ?? "The server couldn't finish (\(code)).")
+    }
+  }
+
   func claimPairing(code: String) async throws {
     let _: PairClaimResponse = try await invoke("pair-device", PairClaimRequest(code: code))
   }
