@@ -19,7 +19,7 @@ apps/demo              controlled email/message/payment scenarios
 apps/ios               SwiftUI app + Call Directory, Message Filter, Share, Safari, Intents extensions
 supabase/              migrations, RLS, seed, Edge Functions (assess-text, check-link, report, ...)
 packages/contracts     shared schemas
-packages/detection     redaction, rules (JSON, also read by Swift), Jev questions, policy
+packages/rules     redaction, rules (JSON, also read by Swift), Jev questions, policy
 packages/providers     TypeSafe transport
 packages/ui-tokens     shared colors, type, copy
 tests/fixtures         synthetic scam / legitimate / adversarial examples

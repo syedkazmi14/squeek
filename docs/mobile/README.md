@@ -70,7 +70,7 @@ SwiftUI app ── supabase-swift ──────────► Auth, Postgr
 - **Auth sharing:** the Supabase session lives in a Keychain access group shared with the Share and Safari extensions, so they can call Edge Functions.
 - **No push on a free account.** A locked phone is reached by Twilio phone calls. While the app runs, Realtime and local notifications cover the rest, and Background App Refresh covers the gaps.
 - **Message checks** run on the phone first, then go to `assess-text` (the same rules as the desktop, plus Jev), redacted on the device before sending. **Link checks** go to `check-link` (heuristics, redirect expansion with SSRF limits, Google Safe Browsing). A likely scam the phone finds by itself is recorded too, so it reaches Activity and the payment pause.
-- **Shared code:** the `SqueekCore` Swift package holds rules, redaction, link analysis, phone numbers, models and the App Group store. It reads the same `packages/detection/rules/rules.json` as the server, checked against `tests/fixtures/golden.json` on both sides.
+- **Shared code:** the `SqueekCore` Swift package holds rules, redaction, link analysis, phone numbers, models and the App Group store. It reads the same `packages/rules/rules/rules.json` as the server, checked against `tests/fixtures/golden.json` on both sides.
 
 ## Sync between the PC and iPhone
 

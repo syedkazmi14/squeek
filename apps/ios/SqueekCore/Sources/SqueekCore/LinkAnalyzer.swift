@@ -1,6 +1,6 @@
 import Foundation
 
-// Swift mirror of packages/detection/src/links.ts (offline heuristics only).
+// Swift mirror of packages/rules/src/links.ts (offline heuristics only).
 
 public enum LinkVerdict: String, Codable, Sendable {
   case malicious, suspicious

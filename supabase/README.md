@@ -11,7 +11,7 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
 | `functions/report` | Reports a number or website and adds it to your (or your family's) block list |
 | `functions/pair-device` | QR pairing so the PC signs in without typing a password |
 | `functions/dns-profile` | Serves the iPhone configuration profile for Cloudflare's malware-blocking DNS |
-| `functions/_shared/detection` | Copy of `packages/detection`. Refresh it with `scripts/sync-detection.sh` |
+| `functions/_shared/detection` | Copy of `packages/rules`. Refresh it with `scripts/sync-detection.sh` |
 | `tests/rls_test.ts` | Runs the migration in an in-memory Postgres and checks the access rules |
 
 ## Deploy
@@ -83,7 +83,7 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
 ## Test locally
 
 ```bash
-deno test --allow-read packages/detection/test
+deno test --allow-read packages/rules/test
 ```
 
 ```bash

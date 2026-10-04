@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Copies the shared detection code and rules into the Edge Functions bundle.
 # Supabase deploys can't reliably import files outside supabase/, so the copy is committed.
-# Run after editing packages/detection. `--check` fails if the copy is out of date (for CI).
+# Run after editing packages/rules. `--check` fails if the copy is out of date (for CI).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-src="$root/packages/detection"
+src="$root/packages/rules"
 dest="$root/supabase/functions/_shared/detection"
 
 if [[ "${1:-}" == "--check" ]]; then

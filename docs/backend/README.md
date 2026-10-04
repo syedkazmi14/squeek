@@ -14,7 +14,7 @@ One Supabase project provides everything the hackathon needs:
 | Keeping the Jev and Safe Browsing keys off devices | Edge Functions (TypeScript/Deno) with secrets |
 | Client libraries | `supabase-js` in Electron, `supabase-swift` on iOS |
 
-This replaces the desktop spec's "local developer key" for the prototype: both apps call Edge Functions for assessments. Firebase would also work. Supabase was chosen for SQL, RLS and TypeScript functions that can reuse `packages/detection`.
+This replaces the desktop spec's "local developer key" for the prototype: both apps call Edge Functions for assessments. Firebase would also work. Supabase was chosen for SQL, RLS and TypeScript functions that can reuse `packages/rules`.
 
 ## Accounts and devices
 
@@ -70,13 +70,13 @@ Views:
 
 | Function | Called by | Does |
 | --- | --- | --- |
-| `assess-text` | PC observer, iPhone Share extension and app | Validates and size-limits redacted text, runs `packages/detection` rules plus Jev, applies policy, returns assessment and evidence spans. Writes an `incidents` row if the risk is caution or high and history sync is on. Counts usage |
+| `assess-text` | PC observer, iPhone Share extension and app | Validates and size-limits redacted text, runs `packages/rules` rules plus Jev, applies policy, returns assessment and evidence spans. Writes an `incidents` row if the risk is caution or high and history sync is on. Counts usage |
 | `check-link` | iPhone app, Share and Safari extensions, PC when a real destination is exposed | Normalizes the URL, runs heuristics (punycode, lookalikes, IP host, shorteners), expands redirects with SSRF guards, queries Safe Browsing, checks `blocked_domains`, caches in `link_verdicts` |
 | `report` | Both apps | Records a phone or domain report, and adds it to the reporter's own block list right away |
 | `pair-device` | iPhone (stretch) | Claims a pairing code and issues a one-time sign-in token for the PC |
 | `dns-profile` | iPhone setup guide (Safari) | Serves a configuration profile for Cloudflare's malware-blocking DNS |
 
-Shared code: Supabase's CLI can deploy functions that import from outside `supabase/` with the `--use-api` flag. If that doesn't work in practice, copy `packages/detection` into `supabase/functions/_shared` with a build script. [Supabase changelog](https://supabase.com/changelog/33613-deploy-edge-functions-from-cli-without-needing-docker-import-files-outside-of-supabase-directory)
+Shared code: Supabase's CLI can deploy functions that import from outside `supabase/` with the `--use-api` flag. If that doesn't work in practice, copy `packages/rules` into `supabase/functions/_shared` with a build script. [Supabase changelog](https://supabase.com/changelog/33613-deploy-edge-functions-from-cli-without-needing-docker-import-files-outside-of-supabase-directory)
 
 Never log request bodies. Enforce per-user quotas from `usage_daily`, a maximum input size, and request deadlines.
 
@@ -102,7 +102,7 @@ supabase/
   seed.sql                        test accounts, team-owned test numbers, demo domains
   functions/
     assess-text/  check-link/  report/  pair-device/  dns-profile/
-    _shared/                      (fallback copy of packages/detection if needed)
+    _shared/                      (fallback copy of packages/rules if needed)
   tests/                          RLS checks
 ```
 

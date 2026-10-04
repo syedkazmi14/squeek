@@ -1,6 +1,6 @@
 import Foundation
 
-// Swift mirror of packages/detection/src/engine.ts. Keep behavior identical;
+// Swift mirror of packages/rules/src/engine.ts. Keep behavior identical;
 // tests/fixtures/golden.json is checked against both.
 
 public enum Risk: String, Codable, Sendable {

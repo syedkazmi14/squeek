@@ -1,6 +1,6 @@
 import Foundation
 
-/// Decoded form of packages/detection/rules/rules.json. The same file drives the TypeScript engine.
+/// Decoded form of packages/rules/rules/rules.json. The same file drives the TypeScript engine.
 public struct RuleSet: Decodable, Sendable {
   public struct RedactionRule: Decodable, Sendable {
     public let id: String

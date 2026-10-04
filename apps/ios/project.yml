@@ -54,7 +54,7 @@ targets:
       - LiveActivity
       - path: Fonts
         buildPhase: resources
-      - path: ../../packages/detection/rules/rules.json
+      - path: ../../packages/rules/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: Supabase
@@ -116,7 +116,7 @@ targets:
     platform: iOS
     sources:
       - ScreenGuardExtension
-      - path: ../../packages/detection/rules/rules.json
+      - path: ../../packages/rules/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: SqueekCore
@@ -164,7 +164,7 @@ targets:
     platform: iOS
     sources:
       - MessageFilterExtension
-      - path: ../../packages/detection/rules/rules.json
+      - path: ../../packages/rules/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: SqueekCore
@@ -191,7 +191,7 @@ targets:
       - Shared
       - path: Fonts
         buildPhase: resources
-      - path: ../../packages/detection/rules/rules.json
+      - path: ../../packages/rules/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: Supabase
@@ -233,7 +233,7 @@ targets:
         type: folder
         buildPhase: resources
       - Shared
-      - path: ../../packages/detection/rules/rules.json
+      - path: ../../packages/rules/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: Supabase

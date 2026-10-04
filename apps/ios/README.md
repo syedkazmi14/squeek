@@ -20,7 +20,7 @@ A development build of Squeek for iPhone (not set up for the App Store). The des
 | Live warnings from your PC or family, with notifications | Realtime while the app is open; Background App Refresh when it's closed (`AppModel.backgroundRefresh`) | Notifications allowed |
 | Connect the PC by scanning its QR code | `Squeek/Views/PairComputerView.swift` | Signed in; physical iPhone camera |
 
-Shared logic lives in the `SqueekCore` Swift package: rules, redaction, link analysis, phone numbers, models and the App Group store. The app and every extension use it, and it reads the same `packages/detection/rules/rules.json` as the server.
+Shared logic lives in the `SqueekCore` Swift package: rules, redaction, link analysis, phone numbers, models and the App Group store. The app and every extension use it, and it reads the same `packages/rules/rules/rules.json` as the server.
 
 ## Setup
 

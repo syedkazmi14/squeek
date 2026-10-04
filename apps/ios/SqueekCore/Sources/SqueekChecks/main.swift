@@ -2,7 +2,7 @@ import SqueekCore
 import Foundation
 
 // Runs tests/fixtures/golden.json against the Swift engine. The TypeScript engine runs the same file
-// (packages/detection/test/golden.test.ts). Usage: swift run SqueekChecks [repo-root]
+// (packages/rules/test/golden.test.ts). Usage: swift run SqueekChecks [repo-root]
 
 let repoRoot: URL = {
   if CommandLine.arguments.count > 1 { return URL(fileURLWithPath: CommandLine.arguments[1]) }
@@ -12,7 +12,7 @@ let repoRoot: URL = {
   return url
 }()
 
-let rules = try RuleSet.load(from: repoRoot.appendingPathComponent("packages/detection/rules/rules.json"))
+let rules = try RuleSet.load(from: repoRoot.appendingPathComponent("packages/rules/rules/rules.json"))
 let golden =
   try JSONSerialization.jsonObject(
     with: Data(contentsOf: repoRoot.appendingPathComponent("tests/fixtures/golden.json"))) as! [String: Any]

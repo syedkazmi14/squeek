@@ -1,6 +1,6 @@
 import Foundation
 
-// Swift mirror of packages/detection/src/phone.ts.
+// Swift mirror of packages/rules/src/phone.ts.
 public enum PhoneNumbers {
   /// Returns "+<digits>" or nil. Ten-digit numbers are treated as US/Canada (+1).
   public static func normalizeE164(_ input: String, defaultCountryCode: String = "1") -> String? {

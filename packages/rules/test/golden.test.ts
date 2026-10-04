@@ -1,4 +1,4 @@
-// Run with: deno test --allow-read packages/detection/test
+// Run with: deno test --allow-read packages/rules/test
 import { analyzeLink, assessLocally, normalizeE164, redact, type RuleSet } from "../src/index.ts";
 
 const rules: RuleSet = JSON.parse(await Deno.readTextFile(new URL("../rules/rules.json", import.meta.url)));
