@@ -1,0 +1,80 @@
+if (!apiKey) {
+    console.error('[/api/tts] ELEVEN_LABS_API_KEY is not set');
+    return res.status(500).json({ error: 'ELEVEN_LABS_API_KEY is not set on the server' });
+  }
+
+  let elevenRes;
+  
+  try {
+    elevenRes = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${resolvedVoiceId}/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey,
+          'Accept': 'audio/mpeg',
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_flash_v2_5',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.8,
+            use_speaker_boost: true,
+          },
+        }),
+      }
+    );
+  } catch (fetchErr) {
+    console.error('[/api/tts] Fetch failed:', fetchErr.message);
+    return res.status(500).json({ error: 'Failed to reach ElevenLabs' });
+  }
+
+  // Check status before touching body
+  if (!elevenRes.ok) {
+    try {
+      const errText = await elevenRes.text();
+      console.error('[/api/tts] ElevenLabs error:', elevenRes.status, errText);
+      return res.status(502).json({ error: 'TTS request failed', detail: errText });
+    } catch (readErr) {
+      console.error('[/api/tts] Could not read error body:', readErr.message);
+      return res.status(502).json({ error: 'TTS request failed' });
+    }
+  }
+
+  // Success path - stream the audio
+  try {
+    res.setHeader('Content-Type', 'audio/mpeg');
+
+    const reader = elevenRes.body.getReader();
+    
+    const pump = async () => {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            res.end();
+            return;
+          }
+          if (!res.write(value)) {
+            await new Promise(resolve => res.once('drain', resolve));
+          }
+        }
+      } catch (streamErr) {
+        console.error('[/api/tts] Stream pump error:', streamErr);
+        if (!res.headersSent) {
+          res.status(500).end();
+        }
+      }
+    };
+
+    await pump();
+    
+  } catch (err) {
+    console.error('[/api/tts] Stream setup error:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Stream failed' });
+    }
+  }
+});

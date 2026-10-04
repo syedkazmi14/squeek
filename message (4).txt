@@ -1,0 +1,107 @@
+Work on Squeek’s reliable browser reading and full autonomous warning flow.
+
+Repo: https://github.com/syedkazmi14/squeek
+Base branch: rishi-dev
+Starting checkpoint: 967a168
+
+First read AGENTS.md, README.md, docs/development/desktop.md,
+docs/development/demo-results.md, and the implementation plan.
+
+Other terminals may be working concurrently. Use a separate Git worktree
+and feature branch based on origin/rishi-dev. Do not switch branches in
+someone else’s checkout, discard changes, or edit unrelated files.
+
+The intended experience:
+- A Windows Electron app, with no browser extension.
+- A small click-through icon follows the cursor.
+- Squeek lives in the system tray with its sidebar initially hidden.
+- The user enables browser monitoring once.
+- Suspicious visible content automatically triggers the sidebar and a
+  spoken warning, without clicking Check.
+- Closing the sidebar leaves monitoring running.
+- Pause and Quit stop the relevant work.
+
+Current state:
+The companion, tray, monitoring framework, detector, scheduler, sidebar,
+and local speech exist. Manual checks work. Controlled WPF extraction
+passes, but Chrome extraction previously returned read_failed. Later
+Chrome tests skipped because Windows refused foreground activation.
+Real Chrome/Edge autonomous detection has not been demonstrated.
+A recent Electron check also failed because the companion reported
+isAlwaysOnTop() as false. Investigate that within the lifecycle work.
+
+PART 1: Reliable browser reading
+Investigate the native UI Automation reader and fix extraction from
+ordinary Chrome and Edge windows. Investigate browser process boundaries,
+accessibility-tree traversal, protected controls, and change events.
+
+Relevant files:
+- apps/windows-observer/ForegroundReader.cs
+- apps/windows-observer/ChangeWatch.cs
+- apps/windows-observer/ObservationPolicy.cs
+- apps/windows-observer/Program.cs
+- apps/windows-observer/Protocol.cs
+- apps/desktop/src/main/observer-client.ts
+- tests/chrome-extraction.mjs
+- tests/native-extraction.test.ts
+- tests/windows-observer.test.ts
+
+Preserve exact foreground window/process/start-time binding, bounded
+reads, and source checks before and after extraction. Exclude passwords,
+editable controls, background tabs, and unrelated windows. Do not weaken
+privacy checks just to make a test pass.
+
+If accessibility cannot provide useful coverage, establish why before
+adding a local OCR fallback. Any fallback must require explicit consent,
+stay within approved visible regions, avoid sensitive content, and report
+coverage gaps honestly. No continuous cloud video or full-desktop capture.
+
+PART 2: Complete the autonomous flow
+Connect and harden real observations through the existing scheduler and
+detector to automatic sidebar display and speech. Preserve existing
+redaction, request budgets, caching, cancellation, and cloud opt-in.
+
+Relevant files:
+- apps/desktop/src/main/monitoring.ts
+- apps/desktop/src/main/main.ts
+- apps/desktop/src/main/companion.ts
+- apps/desktop/src/renderer/renderer.ts
+- tests/monitoring.test.ts
+- tests/companion.test.ts
+- tests/electron-smoke.mjs
+
+Verify source switching, changing messages, repeated warnings, closing
+the sidebar, Pause, Quit, helper failure, and stale asynchronous results.
+Unavailable extraction must never be presented as a clean scan.
+
+Required acceptance test:
+Launch Squeek with its sidebar hidden. Enable monitoring once. Open a
+controlled synthetic scam page in the selected browser. Without using
+Manual check, Squeek must read the page, detect the scam, open its sidebar,
+and speak the warning. Then change to a benign page and verify that stale
+warnings and speech do not carry over.
+
+Run this on Chrome and Edge separately. Use owned synthetic test pages,
+not private email, banking sessions, or real payments. No extension,
+force-accessibility flag, or browser debug connection may be required by
+the shipped app. Browser automation is allowed for test fixtures only.
+
+Use focused regression tests, then run:
+npm.cmd run observer:build
+npm.cmd test
+npm.cmd run typecheck
+npm.cmd run test:chrome
+npm.cmd run test:desktop
+
+A skipped browser test is not a pass. Distinguish actual native browser
+extraction from mocked observations and manual text checks.
+
+Keep the existing design and wording. Do not redesign the app, expand
+scam categories, add microphone features, or work on installer signing.
+Never print or commit credentials. Jev remains optional; local detection
+must support the acceptance test without a cloud call.
+
+Update the development documentation with measured results, remaining
+limitations, and exact reproduction steps. Commit locally, then report
+the branch, commit, changed areas, and verification results. Do not push
+or merge until I explicitly ask.
