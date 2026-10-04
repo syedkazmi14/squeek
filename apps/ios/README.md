@@ -11,11 +11,10 @@ A development build of Squeek for iPhone (not set up for the App Store). The des
 | Block and label scam callers | `CallDirectoryExtension/` | Settings › Apps › Phone › Call Blocking & Identification |
 | Squeek answers calls you miss and calls you back with the verdict (forwarded to a Twilio line, answered by an ElevenLabs agent, judged by `supabase/functions/call-webhook`) | `Squeek/Views/CallScreeningSetup.swift`, details in `ActivityView.swift` | Signed in; a carrier forwarding code; see `supabase/README.md` › Call screening |
 | Family safe word that callers claiming to be family are asked for | `Squeek/Views/MyPersonView.swift` | In a group |
-| Demo sign-in: any `@squeek.example` email and any password | `Squeek/Views/SignInView.swift`, `supabase/functions/demo-sign-in` | `SQUEEK_DEMO_SIGN_IN_DOMAINS` secret |
 | Move scam texts from unknown senders to Junk | `MessageFilterExtension/` | Settings › Apps › Messages › Unknown & Spam |
 | Warn before dangerous links open in Safari | `SafariExtension/` | Settings › Apps › Safari › Extensions |
 | Block known malicious websites in every app (encrypted DNS) | A configuration profile served by `supabase/functions/dns-profile`, installed from setup | Settings › Profile Downloaded › Install |
-| Sign in (emailed link or code), sync with the PC app | `Squeek/AppModel.swift` | A Supabase project |
+| Sign in with just an email (test accounts, no password or verification), sync with the PC app | `Squeek/AppModel.swift`, `supabase/functions/demo-sign-in` | A Supabase project, with `SQUEEK_DEMO_SIGN_IN_DOMAINS=*` |
 | Trusted person (a family group underneath): shared block lists, opt-in warning sharing, invite codes | `Squeek/Views/MyPersonView.swift` | Signed in |
 | Live warnings from your PC or family, with notifications | Realtime while the app is open; Background App Refresh when it's closed (`AppModel.backgroundRefresh`) | Notifications allowed |
 | Connect the PC by scanning its QR code | `Squeek/Views/PairComputerView.swift` | Signed in; physical iPhone camera |

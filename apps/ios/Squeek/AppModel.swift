@@ -442,15 +442,10 @@ final class AppModel: ObservableObject {
 
   // MARK: - Account
 
-  /// The emailed sign-in link reopens the app here (allowed in supabase/config.toml).
+  /// Older emailed sign-in links reopen the app here (allowed in supabase/config.toml).
   static let signInRedirect = URL(string: "squeek://login-callback")!
 
-  func sendCode(to email: String) async throws {
-    guard let client else { throw BackendError.notConfigured }
-    try await client.auth.signInWithOTP(email: email, redirectTo: Self.signInRedirect, shouldCreateUser: true)
-  }
-
-  /// Finishes sign-in when the person taps the link in the email.
+  /// Finishes sign-in when the person taps an emailed sign-in link.
   func handleOpenURL(_ url: URL) {
     // squeek://live is the Dynamic Island tap: just open the app.
     guard let client, url.scheme == Self.signInRedirect.scheme, url.host != "live" else { return }
@@ -463,16 +458,12 @@ final class AppModel: ObservableObject {
     }
   }
 
-  /// Signs in to a demo account by email alone; see Backend.demoSignIn.
-  func demoSignIn(email: String) async throws {
+  /// Test sign-in: the email alone picks the account, creating it the first time. No password or
+  /// emailed code; see supabase/functions/demo-sign-in.
+  func signIn(email: String) async throws {
     guard let client else { throw BackendError.notConfigured }
     let tokenHash = try await Backend.shared.demoSignIn(email: email)
     _ = try await client.auth.verifyOTP(tokenHash: tokenHash, type: .email)
-  }
-
-  func verify(email: String, code: String) async throws {
-    guard let client else { throw BackendError.notConfigured }
-    _ = try await client.auth.verifyOTP(email: email, token: code, type: .email)
   }
 
   func signOut() async {

@@ -71,17 +71,12 @@ struct WelcomeView: View {
   }
 }
 
-/// Sign-in. By default the demo form: an email and any password (it isn't checked), for accounts
-/// on the demo domains the server allows (supabase/functions/demo-sign-in). The emailed link or
-/// code is still there for real accounts.
+/// Test sign-in: type an email and you're in. There's no password or emailed code; the email
+/// alone picks the account, and a new email makes a new one.
 struct EmailSignInView: View {
   @EnvironmentObject private var model: AppModel
   @Environment(\.dismiss) private var dismiss
-  @State private var usingLink = false
   @State private var email = ""
-  @State private var password = ""
-  @State private var code = ""
-  @State private var codeSent = false
   @State private var working = false
   @State private var message: String?
 
@@ -90,49 +85,30 @@ struct EmailSignInView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 22) {
           VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: codeSent ? "envelope.open.fill" : usingLink ? "envelope.fill" : "person.crop.circle.fill")
+            Image(systemName: "person.crop.circle.fill")
               .font(.system(size: 34, weight: .semibold))
               .foregroundStyle(Theme.accentInk)
-              .contentTransition(.symbolEffect(.replace))
-            Text(codeSent ? "Check your email" : "Sign in")
+            Text("Sign in")
               .font(.display(.largeTitle))
               .foregroundStyle(Theme.ink)
-            Text(subtitle)
+            Text("Type any email. A new one makes a new account, and the same one always opens the same account.")
               .font(.nunito(.title3))
               .foregroundStyle(Theme.secondaryInk)
               .fixedSize(horizontal: false, vertical: true)
           }
 
-          field("Email address") {
-            TextField("you@squeek.example", text: $email)
+          VStack(alignment: .leading, spacing: 8) {
+            Text("Email address").font(.nunito(.headline))
+            TextField("you@example.com", text: $email)
               .textContentType(.emailAddress)
               .keyboardType(.emailAddress)
               .textInputAutocapitalization(.never)
               .autocorrectionDisabled()
-              .disabled(codeSent)
-          }
-
-          if !usingLink {
-            field("Password") {
-              SecureField("Anything works", text: $password)
-            }
-          } else if codeSent {
-            VStack(alignment: .leading, spacing: 8) {
-              field("Or enter a code from the email") {
-                TextField("Code", text: $code)
-                  .textContentType(.oneTimeCode)
-                  .keyboardType(.numberPad)
-                  .monospacedDigit()
-              }
-              Button("Use a different email") {
-                withAnimation {
-                  codeSent = false
-                  code = ""
-                }
-              }
-              .font(.nunito(.callout, .semibold))
-            }
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+              .submitLabel(.go)
+              .onSubmit { Task { await submit() } }
+              .font(.nunito(.title3))
+              .padding(16)
+              .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
           }
 
           if let message {
@@ -140,15 +116,6 @@ struct EmailSignInView: View {
               .font(.nunito(.callout))
               .foregroundStyle(Theme.danger)
           }
-
-          Button(usingLink ? "Sign in with a password instead" : "Email me a sign-in link instead") {
-            withAnimation {
-              usingLink.toggle()
-              codeSent = false
-              message = nil
-            }
-          }
-          .font(.nunito(.callout, .semibold))
         }
         .padding(Theme.pagePadding)
       }
@@ -157,10 +124,10 @@ struct EmailSignInView: View {
         Button {
           Task { await submit() }
         } label: {
-          if working { ProgressView() } else { Text(buttonTitle) }
+          if working { ProgressView() } else { Text("Sign in") }
         }
         .primaryAction()
-        .disabled(working || (codeSent ? code.count < 6 : !email.contains("@")))
+        .disabled(working || !email.contains("@"))
         .padding(.horizontal, Theme.pagePadding)
         .padding(.bottom, 8)
       }
@@ -173,43 +140,14 @@ struct EmailSignInView: View {
     }
   }
 
-  private var subtitle: String {
-    if codeSent { return "Open the email from Squeek on this iPhone and tap the sign-in link. Squeek will open and sign you in." }
-    if usingLink { return "We'll email you a sign-in link. No password needed." }
-    return "Demo accounts: type any email on the demo domain and any password. A new email makes a new account."
-  }
-
-  private var buttonTitle: String {
-    if !usingLink { return "Sign in" }
-    return codeSent ? "Sign in with code" : "Email me a sign-in link"
-  }
-
-  private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(title).font(.nunito(.headline))
-      content()
-        .font(.nunito(.title3))
-        .padding(16)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.smallCorner, style: .continuous))
-    }
-  }
-
   private func submit() async {
+    guard !working, email.contains("@") else { return }
     working = true
     message = nil
     defer { working = false }
-    let address = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     do {
-      if !usingLink {
-        try await model.demoSignIn(email: address)
-        dismiss()
-      } else if codeSent {
-        try await model.verify(email: address, code: code.trimmingCharacters(in: .whitespaces))
-        dismiss()
-      } else {
-        try await model.sendCode(to: address)
-        withAnimation(.spring) { codeSent = true }
-      }
+      try await model.signIn(email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+      dismiss()
     } catch {
       message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }

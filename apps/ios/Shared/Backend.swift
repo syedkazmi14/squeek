@@ -97,7 +97,7 @@ final class Backend: @unchecked Sendable {
       "report", ReportRequest(kind: kind, value: value, label: label, householdId: householdId, deviceId: deviceId))
   }
 
-  /// Demo sign-in (supabase/functions/demo-sign-in): an email on an allowed demo domain is enough.
+  /// Test sign-in (supabase/functions/demo-sign-in): an email is enough.
   /// Returns a one-time token for `auth.verifyOTP`. Works signed out, so it skips `requireClient`.
   func demoSignIn(email: String) async throws -> String {
     guard let client else { throw BackendError.notConfigured }
