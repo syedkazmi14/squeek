@@ -3,7 +3,7 @@ import Foundation
 /// The four things Squeek looks after once they're switched on. Home lists them, and the setup
 /// screen has one card for each.
 enum SqueekGuard: String, CaseIterable, Identifiable {
-  case calls, texts, web, person
+  case calls, texts, web, payments, person
 
   var id: String { rawValue }
 
@@ -12,6 +12,7 @@ enum SqueekGuard: String, CaseIterable, Identifiable {
     case .calls: return "Calls"
     case .texts: return "Texts"
     case .web: return "Websites"
+    case .payments: return "Payments"
     case .person: return "Your person"
     }
   }
@@ -21,6 +22,7 @@ enum SqueekGuard: String, CaseIterable, Identifiable {
     case .calls: return "phone.fill"
     case .texts: return "message.fill"
     case .web: return "safari.fill"
+    case .payments: return "creditcard.fill"
     case .person: return "person.2.fill"
     }
   }
@@ -31,6 +33,7 @@ enum SqueekGuard: String, CaseIterable, Identifiable {
     case .calls: return "Squeek answers unknown callers for you"
     case .texts: return "Scam texts go to Junk"
     case .web: return "Dangerous sites are blocked or flagged"
+    case .payments: return "Squeek pauses you before paying after a scam"
     case .person: return "Someone you trust can help you check"
     }
   }
@@ -41,6 +44,7 @@ enum SqueekGuard: String, CaseIterable, Identifiable {
     case .calls: return "Let Squeek answer calls you miss"
     case .texts: return "Turn on text filtering"
     case .web: return "Turn on Safari warnings"
+    case .payments: return "Set up the pause before paying"
     case .person: return "Choose someone you trust"
     }
   }

@@ -44,6 +44,15 @@ final class AppModel: ObservableObject {
     didSet { UserDefaults.standard.set(forwardingOn, forKey: Self.forwardingKey) }
   }
 
+  /// The Shortcuts automation that runs Check Before Paying is made in the Shortcuts app.
+  @Published var paymentsGuardOn = UserDefaults.standard.bool(forKey: AppModel.paymentsKey) {
+    didSet { UserDefaults.standard.set(paymentsGuardOn, forKey: Self.paymentsKey) }
+  }
+  /// The likely scam behind a payment pause, while the pause screen is showing.
+  @Published var pause: PaymentPause?
+  /// Trusted people's phone numbers (their alert_phone), for "Call Aisha" on the pause screen.
+  @Published private(set) var helperPhones: [String: String] = [:]
+
   /// This person's Squeek phone line, where unanswered calls are forwarded. Nil until claimed.
   @Published private(set) var screeningLine: String?
   @Published private(set) var hasSafeWord = false
@@ -65,6 +74,7 @@ final class AppModel: ObservableObject {
   private static let textsGuardKey = "squeek.setup.texts"
   private static let webGuardKey = "squeek.setup.web"
   private static let forwardingKey = "squeek.setup.forwarding"
+  private static let paymentsKey = "squeek.setup.payments"
   private static let lastVisitKey = "squeek.lastVisit"
 
   /// Home's summary covers what happened after this: the end of the person's last visit to the app.
@@ -100,6 +110,7 @@ final class AppModel: ObservableObject {
       return callBlockingStatus == .enabled && (forwardingOn || isDemo) && screeningLine != nil && profile?.alertPhone != nil
     case .texts: return textsGuardOn
     case .web: return webGuardOn
+    case .payments: return paymentsGuardOn
     case .person: return members.count > 1
     }
   }
@@ -165,7 +176,7 @@ final class AppModel: ObservableObject {
   func homeSummary() -> HomeSummary {
     HomeSummary(
       name: profile?.displayName, incidents: incidents, myUserId: userId, since: summarySince,
-      guardsOff: protectionsTotal - protectionsOn, memberName: memberName)
+      guardsOff: protectionsTotal - protectionsOn, guardsTotal: protectionsTotal, memberName: memberName)
   }
 
   func start() {
@@ -248,10 +259,12 @@ final class AppModel: ObservableObject {
       let lines: [ScreeningLineRow] = try await client.from("screening_lines").select("e164").execute().value
       screeningLine = lines.first?.e164
       hasSafeWord = await fetchHasSafeWord()
+      await reloadHelperPhones()
     } catch {
       report(error)
     }
     publishToExtensions()
+    updateLiveActivity()
   }
 
   /// Background App Refresh (free for any developer account) stands in for push notifications:
@@ -351,6 +364,7 @@ final class AppModel: ObservableObject {
     incidents.insert(incident, at: 0)
     // Alert about warnings from the person's other devices or from family members they help.
     alertIfNeeded(incident)
+    updateLiveActivity()
   }
 
   private func received(update: UpdateAction) {
@@ -382,9 +396,21 @@ final class AppModel: ObservableObject {
       members = try await client.rpc("my_household_members").execute().value
       helperDevices = try await client.rpc("household_devices").execute().value
       hasSafeWord = await fetchHasSafeWord()
+      await reloadHelperPhones()
     } catch { report(error) }
   }
 
+  private func reloadHelperPhones() async {
+    guard let client else { return }
+    let helperIds = members.filter { $0.role == "helper" && !$0.isMe }.map(\.userId)
+    guard !helperIds.isEmpty else {
+      helperPhones = [:]
+      return
+    }
+    let rows: [HelperPhoneRow]? = try? await client.from("profiles").select("id, alert_phone").in("id", values: helperIds)
+      .execute().value
+    helperPhones = Dictionary((rows ?? []).compactMap { r in r.alertPhone.map { (r.id, $0) } }, uniquingKeysWith: { a, _ in a })
+  }
   private func fetchHasSafeWord() async -> Bool {
     guard let client, let household else { return false }
     return (try? await client.rpc("household_has_safe_word", params: ["p_household_id": household.id]).execute().value) ?? false
@@ -437,6 +463,7 @@ final class AppModel: ObservableObject {
       notificationsOn = true
       screeningLine = "+16822041962"
       hasSafeWord = true
+      helperPhones = [DemoData.helperId: "+15555550112"]
     }
   #endif
 
@@ -447,6 +474,11 @@ final class AppModel: ObservableObject {
 
   /// Finishes sign-in when the person taps an emailed sign-in link.
   func handleOpenURL(_ url: URL) {
+    // squeek://pause opens the payment pause, if there's a recent risk to pause for.
+    if url.scheme == Self.signInRedirect.scheme, url.host == "pause" {
+      if let risk = recentRisk() { pause = PaymentPause(incident: risk) }
+      return
+    }
     // squeek://live is the Dynamic Island tap: just open the app.
     guard let client, url.scheme == Self.signInRedirect.scheme, url.host != "live" else { return }
     Task {
@@ -706,6 +738,48 @@ final class AppModel: ObservableObject {
     }
   }
 
+  // MARK: - Payment pause
+
+  /// Scammers push people to pay while they're still rattled, so a likely scam stays "recent" this long.
+  static let riskWindow: TimeInterval = 30 * 60
+
+  /// The latest likely scam aimed at this person in the risk window, unless they already chose to
+  /// go ahead and pay after seeing the pause for it.
+  func recentRisk(now: Date = Date()) -> Incident? {
+    incidents.first {
+      $0.userId == userId && $0.level == .danger && $0.userAction != "opened_anyway"
+        && ($0.date ?? .distantPast) > now.addingTimeInterval(-Self.riskWindow)
+    }
+  }
+
+  /// For Check Before Paying when iOS starts the app in the background just to run it: fetches the
+  /// last half hour of warnings without waiting for the full sign-in refresh.
+  func loadRecentIncidentsIfNeeded() async {
+    guard !isDemo, incidents.isEmpty, let client, client.auth.currentSession != nil else { return }
+    let since = Timestamps.format(Date().addingTimeInterval(-Self.riskWindow))
+    let recent: [Incident]? = try? await client.from("incidents").select().gte("created_at", value: since)
+      .order("created_at", ascending: false).limit(20).execute().value
+    for incident in (recent ?? []).reversed() where !incidents.contains(where: { $0.id == incident.id }) {
+      incidents.insert(incident, at: 0)
+    }
+  }
+
+  /// The trusted person to call from the pause screen: the first helper with a phone number.
+  var trustedPerson: (name: String, phone: String)? {
+    for member in members where member.role == "helper" && !member.isMe {
+      if let phone = helperPhones[member.userId] { return (member.displayName ?? "your trusted person", phone) }
+    }
+    return nil
+  }
+
+  /// Shows the Lock Screen and Dynamic Island warning while a likely scam is recent.
+  func updateLiveActivity() {
+    let risk = recentRisk()
+    LiveActivityController.startOrUpdate(
+      protectionsOn: protectionsOn, protectionsTotal: protectionsTotal,
+      warning: risk.map { PaymentPause(incident: $0).liveActivityText }, warningDate: risk?.date)
+  }
+
   // MARK: - Pairing
 
   func pairComputer(code: String) async -> Bool {
@@ -728,4 +802,14 @@ final class AppModel: ObservableObject {
 
 private struct ScreeningLineRow: Decodable {
   let e164: String
+}
+
+private struct HelperPhoneRow: Decodable {
+  let id: String
+  let alertPhone: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case alertPhone = "alert_phone"
+  }
 }

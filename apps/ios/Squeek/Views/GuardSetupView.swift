@@ -11,6 +11,7 @@ struct GuardSetupView: View {
   var focus: SqueekGuard?
   var isOnboarding = false
   @State private var expanded: SqueekGuard?
+  @State private var practice: PaymentPause?
 
   var body: some View {
     let done = model.protectionsOn
@@ -68,6 +69,19 @@ struct GuardSetupView: View {
           }
         }
 
+        card(.payments, manual: $model.paymentsGuardOn, lines: [
+          "Open the Shortcuts app, tap Automation, then the + button, and choose App.",
+          "Choose the apps you pay with: Zelle, Venmo, Cash App, PayPal, your bank. Pick Is Opened and Run Immediately, then tap Next.",
+          "Search for Squeek, choose Check Before Paying, and tap Done.",
+          "Now if you open one of those apps soon after Squeek catches a likely scam, Squeek asks you to pause first. Otherwise nothing happens.",
+        ]) {
+          if let url = URL(string: "shortcuts://") {
+            Button("Open Shortcuts") { openURL(url) }.secondaryAction()
+          }
+          Button("Try the pause") { practice = model.recentRisk().map { PaymentPause(incident: $0, isPractice: true) } ?? .practice }
+            .secondaryAction()
+        }
+
         card(.person, lines: [
           "Pick a family member or friend you trust.",
           "When something looks like a scam, they can help you check, and you can ask them with one tap.",
@@ -91,6 +105,7 @@ struct GuardSetupView: View {
       }
     }
     .task { await model.refreshProtectionStatus() }
+    .fullScreenCover(item: $practice) { pause in PaymentPauseView(pause: pause) }
     .onAppear { if expanded == nil { expanded = focus ?? SqueekGuard.allCases.first { !model.isOn($0) } } }
   }
 

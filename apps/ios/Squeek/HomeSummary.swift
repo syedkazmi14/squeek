@@ -20,7 +20,7 @@ struct HomeSummary {
   var spoken: String { "\(greeting) \(message)" }
 
   init(
-    name: String?, incidents: [Incident], myUserId: String?, since: Date, guardsOff: Int,
+    name: String?, incidents: [Incident], myUserId: String?, since: Date, guardsOff: Int, guardsTotal: Int,
     memberName: (String) -> String?, now: Date = Date()
   ) {
     let hour = Calendar.current.component(.hour, from: now)
@@ -51,13 +51,13 @@ struct HomeSummary {
       parts.append("Since you were last here, I \(counts).\(guardsOff == 0 ? " Everything else looked fine." : "")")
     } else {
       parts.append(
-        guardsOff > 3 ? "Nothing to report yet." : "Nothing suspicious since you were last here. I'm still keeping watch.")
+        guardsOff == guardsTotal ? "Nothing to report yet." : "Nothing suspicious since you were last here. I'm still keeping watch.")
     }
     if let family { parts.append(family) }
     if guardsOff > 0 {
-      let which = ["One of my guards is", "Two of my guards are", "Three of my guards are"]
+      let which = ["One of my guards is", "Two of my guards are", "Three of my guards are", "Four of my guards are"]
       parts.append(
-        guardsOff <= which.count
+        guardsOff < guardsTotal && guardsOff <= which.count
           ? "\(which[guardsOff - 1]) off, so I can't watch everything yet."
           : "My guards are all off, so I can't watch for scams yet.")
       action = .finishSetup

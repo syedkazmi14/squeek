@@ -22,7 +22,7 @@ struct SqueekApp: App {
         Task {
           await model.refreshAll()
           await model.refreshProtectionStatus()
-          LiveActivityController.startOrUpdate(protectionsOn: model.protectionsOn, protectionsTotal: model.protectionsTotal)
+          model.updateLiveActivity()
         }
       case .background:
         model.appWentToBackground()

@@ -10,6 +10,7 @@ A development build of Squeek for iPhone (not set up for the App Store). The des
 | "Check with Squeek" in the Share sheet (text, links, images): the manual fallback | `ShareExtension/` | Turn on in the Share sheet's app row once |
 | Block and label scam callers | `CallDirectoryExtension/` | Settings › Apps › Phone › Call Blocking & Identification |
 | Squeek answers calls you miss and calls you back with the verdict (forwarded to a Twilio line, answered by an ElevenLabs agent, judged by `supabase/functions/call-webhook`) | `Squeek/Views/CallScreeningSetup.swift`, details in `ActivityView.swift` | Signed in; a carrier forwarding code; see `supabase/README.md` › Call screening |
+| Payment pause: a Shortcuts automation runs Check Before Paying when a payment or bank app opens; within 30 minutes of a likely scam, Squeek shows what happened, a call-your-person button and a 30-second breather. The Live Activity shows the warning meanwhile | `Squeek/Intents/PaymentIntents.swift`, `Squeek/Views/PaymentPauseView.swift`, `SqueekWidgets/` | A personal automation in Shortcuts (steps in setup) |
 | Family safe word that callers claiming to be family are asked for | `Squeek/Views/MyPersonView.swift` | In a group |
 | Move scam texts from unknown senders to Junk | `MessageFilterExtension/` | Settings › Apps › Messages › Unknown & Spam |
 | Warn before dangerous links open in Safari | `SafariExtension/` | Settings › Apps › Safari › Extensions |

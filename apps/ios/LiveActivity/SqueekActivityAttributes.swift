@@ -7,5 +7,8 @@ struct SqueekActivityAttributes: ActivityAttributes {
   struct ContentState: Codable, Hashable {
     var protectionsOn: Int
     var protectionsTotal: Int
+    /// While a likely scam is recent: "Pause before you pay anyone", and when it happened.
+    var warning: String? = nil
+    var warningDate: Date? = nil
   }
 }

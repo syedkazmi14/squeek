@@ -14,6 +14,8 @@ struct RootView: View {
     }
     .tint(Theme.accentInk)
     .font(.nunito(.body))
+    // Above everything, so it shows even while sign-in is still restoring.
+    .fullScreenCover(item: $model.pause) { pause in PaymentPauseView(pause: pause) }
     .minimumDynamicTypeSize(model.minimumTypeSize)
     .alert(
       "Something went wrong",

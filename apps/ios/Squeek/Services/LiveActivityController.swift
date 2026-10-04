@@ -6,13 +6,17 @@ import Foundation
 /// in the foreground, so this is called when the app becomes active.
 @MainActor
 enum LiveActivityController {
-  static func startOrUpdate(protectionsOn: Int, protectionsTotal: Int) {
+  static func startOrUpdate(protectionsOn: Int, protectionsTotal: Int, warning: String? = nil, warningDate: Date? = nil) {
     guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-    let state = SqueekActivityAttributes.ContentState(protectionsOn: protectionsOn, protectionsTotal: protectionsTotal)
+    let state = SqueekActivityAttributes.ContentState(
+      protectionsOn: protectionsOn, protectionsTotal: protectionsTotal, warning: warning, warningDate: warningDate)
     let content = ActivityContent(state: state, staleDate: nil)
 
     if let running = Activity<SqueekActivityAttributes>.activities.first {
-      Task { await running.update(content) }
+      // A new warning lights up the Dynamic Island briefly, like an incoming call would.
+      let alert = warning != nil && running.content.state.warning == nil
+        ? AlertConfiguration(title: "Squeek", body: "\(warning ?? "")", sound: .default) : nil
+      Task { await running.update(content, alertConfiguration: alert) }
       return
     }
     do {
