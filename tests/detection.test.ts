@@ -24,6 +24,26 @@ test('redacts sensitive fields and bounds outgoing text',()=>{
  const output=redact(input); for(const secret of ['123456','a@b.com','210-555','4111','token=secret','abcdef','alpha beta']) assert.ok(!output.includes(secret));
  assert.ok(redact('x'.repeat(9000)).length<=8000);
 });
+test('a demand phrased as a currency amount carries the same weight as one phrased as money',async()=>{
+ for(const text of [
+  'Hello Grandma, I am in trouble and need $5,000 right away. Please send $5,000 to the account below and do not tell anyone.',
+  'URGENT: Your account has been compromised. You must pay $5000 immediately to avoid legal action. Contact our support agent now.',
+  'Dear customer, kindly transfer $5000.00 to IBAN GB29 NWBK to complete the transaction.',
+  'We accidentally refunded you $5,000. Please send it back right away via Zelle to our agent.',
+  'Please wire 5000 dollars to the routing number below.',
+ ]) {
+  const result=await assess(observation(text));
+  assert.ok(['caution','high_risk'].includes(result.state),`${text} -> ${result.state}`);
+  assert.ok(result.evidence.every(e=>observation(text).spans[e.spanIndex]?.text.includes(e.excerpt)),text);
+ }
+});
+test('amounts without a directed request stay quiet',async()=>{
+ for(const text of [
+  'Your order total is $45.99. Thank you for shopping with us.',
+  'We charged $45.99 to the card ending 1234 today.',
+  'Your balance of $5,000 is shown in the official app.',
+ ]) assert.equal((await assess(observation(text))).state,'no_detected_signal',text);
+});
 test('negated safety guidance and payment mentions do not become high risk',async()=>{
  for(const text of ['Never share your verification code.','Do not install AnyDesk.','IRS does not demand gift cards.','Do not pay immediately using gift cards.']) assert.equal((await assess(observation(text))).state,'no_detected_signal',text);
  assert.equal((await assess(observation('Never share your code. Send your verification code immediately.'))).state,'high_risk');

@@ -4,7 +4,7 @@ import type {
 } from "../../contracts/src/observation.ts";
 import type { JevProvider } from "../../providers/src/jev.ts";
 import { redact } from "./redact.ts";
-export const detectionPolicyVersion = "local-2";
+export const detectionPolicyVersion = "local-3";
 export interface Assessment {
   state: "no_detected_signal" | "caution" | "high_risk" | "unknown";
   source: SourceIdentity;
@@ -17,9 +17,20 @@ export interface Assessment {
 export function sourceId(source: SourceIdentity): string {
   return `${source.processId}:${source.windowHandle}:${source.processStartedAt}`;
 }
+// A sum of money, written numerically. Scam text often states the demand as a
+// figure and never uses a word from the `payment` vocabulary.
+const amount =
+  /(?:[$£€]\s?\d[\d,]*(?:\.\d{2})?|\b\d[\d,]*(?:\.\d{2})?\s?(?:dollars?|usd|euros?|pounds)\b)/
+    .source;
+// Where the money is asked to go. Alone this is neutral; with a request it is not.
+const destination =
+  /\b(?:zelle|venmo|cash app|western union|moneygram|paypal|iban|swift code|routing number|account number|wallet address|bitcoin address|bank details)\b/
+    .source;
 const rules: [string, RegExp][] = [
   ["impersonation", /\b(IRS|government|bank agent|police|support agent)\b/i],
   ["payment", /\b(gift cards?|crypto|wire transfer|bitcoin)\b/i],
+  ["amount", new RegExp(amount, "i")],
+  ["destination", new RegExp(destination, "i")],
   [
     "credential",
     /\b(send|share|give|provide)\b[^.!?\n]{0,40}\b(password(?!\s+reset\s+(?:instructions|guidance|link|procedure)\b)|verification code|one.time code|PIN|recovery phrase)\b/i,
@@ -32,7 +43,10 @@ const rules: [string, RegExp][] = [
   ["romance", /\b(I love you|my love|our love|sweetheart|romance)\b/i],
   [
     "money",
-    /\b(send|transfer|pay|buy)\b[^.!?\n]{0,40}\b(money|payment|funds|gift cards?|crypto|bitcoin|wire transfer)\b/i,
+    new RegExp(
+      `\\b(send|transfer|pay|buy|wire|remit|deposit)\\b[^.!?\\n]{0,40}(?:\\b(?:money|payment|funds|gift cards?|crypto|bitcoin|wire transfer)\\b|${amount}|${destination})`,
+      "i",
+    ),
   ],
 ];
 function negatedRequest(text: string, index: number): boolean {
@@ -75,8 +89,17 @@ export async function assess(
     has("remote_access") ||
     (has("impersonation") && has("payment") && has("money")) ||
     (has("pressure") && has("money") && has("payment")) ||
-    (has("romance") && has("money"));
-  const caution = has("money") && (has("pressure") || has("payment"));
+    (has("romance") && has("money")) ||
+    // A figure plus a directed request, with any second signal around it.
+    (has("amount") &&
+      has("money") &&
+      (has("pressure") ||
+        has("impersonation") ||
+        has("romance") ||
+        has("destination")));
+  const caution =
+    (has("money") && (has("pressure") || has("payment"))) ||
+    (has("money") && (has("amount") || has("destination")));
   let state: Assessment["state"] = high
     ? "high_risk"
     : caution
