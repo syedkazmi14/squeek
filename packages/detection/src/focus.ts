@@ -29,8 +29,13 @@ function rows(observation: Observation): Row[] {
   }
   // A list is at least three rows sharing a left edge; a lone two-column line
   // (a sidebar label and its count) is not a message preview.
-  return found.filter(row => found.filter(other => Math.abs(other.box.x - row.box.x) <= 10).length >= 3);
+  const list = found.filter(row => found.filter(other => Math.abs(other.box.x - row.box.x) <= 10).length >= 3);
+  // A message list dates its rows ("3:17 AM", "Oct 3"); a table in an article does not.
+  const dated = list.filter(row => row.spans.some(i => DATE.test(observation.spans[i]!.text.trim())));
+  return dated.length * 2 >= list.length ? list : [];
 }
+
+const DATE = /^(?:\d{1,2}:\d{2}\s?(?:[ap]\.?m\.?)?|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:,?\s+\d{4})?|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*|\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?|(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?(?:\s+\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?|\s+\d{1,2}:\d{2}\s?(?:[ap]m)?)?|yesterday|today)$/i;
 
 // Hovering a row's checkbox or the action icons that replace its date still counts.
 const LEFT_SLACK = 80, RIGHT_SLACK = 250, VERTICAL_SLACK = 30;

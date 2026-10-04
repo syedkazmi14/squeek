@@ -106,3 +106,15 @@ test('the hovered row is reported so Squeek can offer to open it', () => {
   assert.equal(onRow.row?.[0], 'Vultr Support');
   assert.equal(focusObservation(inbox(), { x: 1500, y: 700 }).row, undefined);
 });
+
+test('a table in an article is not mistaken for an inbox', () => {
+  const table = page([
+    span('Example', 234, 400, 150), span('Phishing Lure', 443, 400, 200), span('Key Warning Sign', 851, 400, 250),
+    span('Fake Netflix Login Page', 234, 490, 170), span('Account login or payment update', 443, 490, 200), span('URL is not owned by Netflix', 851, 490, 260),
+    span('Fake Booking.com Page', 234, 580, 170), span('Reservation confirmation request', 443, 580, 200), span('Requests payment through an unfamiliar website', 851, 580, 290),
+    span('Fake Google Page', 234, 670, 170), span('Security verification prompt', 443, 670, 200), span('Unusual instructions', 851, 670, 260),
+  ]);
+  const focused = focusObservation(table, { x: 300, y: 495 });
+  assert.equal(focused.key, 'page');
+  assert.equal(focused.row, undefined);
+});

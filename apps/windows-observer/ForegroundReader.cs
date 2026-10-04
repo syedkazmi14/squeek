@@ -135,10 +135,21 @@ public static class ForegroundReader
             try { seeds.Add(AutomationElement.FromHandle(page).GetUpdatedCache(cache)); }
             catch (ElementNotAvailableException) { }
         }
-        // Without page windows (a native app, or a browser that hosts content differently) look for on-screen
-        // Document elements, and failing that walk from the root.
         var seeded = new HashSet<string>();
         var started = new HashSet<string>();
+        // Edge and Chrome leave a background tab's page window "visible" after a tab switch,
+        // so its text would mix into the active tab's. Read only the page the tab strip selects.
+        if (seeds.Count > 1 && ActiveTabDocument(root) is { } active)
+        {
+            try
+            {
+                seeds = [active.GetUpdatedCache(cache)];
+                seeded.Add(string.Join(",", active.GetRuntimeId()));
+            }
+            catch (ElementNotAvailableException) { }
+        }
+        // Without page windows (a native app, or a browser that hosts content differently) look for on-screen
+        // Document elements, and failing that walk from the root.
         if (seeds.Count == 0)
         {
             using (cache.Activate())
@@ -208,6 +219,47 @@ public static class ForegroundReader
         if (!Matches(source)) return new("foreground_changed", []);
         if (spans.Count == 0) return new("no_visible_text", []);
         return new(null, spans);
+    }
+
+    /// <summary>
+    /// The web document of the selected tab, found by matching its title to the tab strip's
+    /// selected tab. Web content is not entered: tabs and documents sit near the top of the
+    /// browser's tree, while a page can hold thousands of elements.
+    /// </summary>
+    private static AutomationElement? ActiveTabDocument(AutomationElement root)
+    {
+        var walker = TreeWalker.ControlViewWalker;
+        var queue = new Queue<(AutomationElement Element, int Depth)>();
+        queue.Enqueue((root, 0));
+        var documents = new List<(AutomationElement Element, string Name)>();
+        string? selected = null;
+        var visited = 0;
+        var timer = Stopwatch.StartNew();
+        while (queue.Count > 0 && visited++ < 2000 && timer.ElapsedMilliseconds < 250)
+        {
+            var (element, depth) = queue.Dequeue();
+            try
+            {
+                var info = element.Current;
+                if (info.ControlType == ControlType.Document)
+                {
+                    if (!info.IsOffscreen) documents.Add((element, info.Name));
+                    continue;
+                }
+                if (selected is null && info.ControlType == ControlType.TabItem &&
+                    element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var pattern) &&
+                    ((SelectionItemPattern)pattern).Current.IsSelected)
+                    selected = info.Name;
+                if (depth >= 16) continue;
+                for (var child = walker.GetFirstChild(element); child is not null; child = walker.GetNextSibling(child))
+                    queue.Enqueue((child, depth + 1));
+            }
+            catch (ElementNotAvailableException) { }
+        }
+        if (string.IsNullOrWhiteSpace(selected)) return null;
+        var matches = documents.Where(d => !string.IsNullOrWhiteSpace(d.Name) && ObservationPolicy.TitleMatchesTab(d.Name, selected)).ToList();
+        // Two tabs with the same title cannot be told apart; read neither rather than guess.
+        return matches.Count == 1 ? matches[0].Element : null;
     }
 
     private static Region Union(Region a, Region b)

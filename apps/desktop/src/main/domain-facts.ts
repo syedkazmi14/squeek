@@ -38,7 +38,24 @@ export function createDomainFacts(fetchImpl: typeof fetch = fetch, now: () => nu
     return servers;
   }
 
-  async function age(domain: string): Promise<SenderCheck | undefined> {
+  const registeredAt = new Map<string, Promise<number | undefined>>();
+  /** When the domain was registered, from its registry's public record. */
+  function registration(domain: string): Promise<number | undefined> {
+    let found = registeredAt.get(domain);
+    if (!found) {
+      found = registered(domain).catch(() => undefined);
+      registeredAt.set(domain, found);
+      if (registeredAt.size > 300) registeredAt.delete(registeredAt.keys().next().value!);
+    }
+    return found;
+  }
+  /** Days since a website's domain was registered, if the registry says. */
+  async function daysOld(domain: string): Promise<number | undefined> {
+    const at = await registration(domain);
+    return at === undefined ? undefined : Math.floor((now() - at) / DAY);
+  }
+
+  async function registered(domain: string): Promise<number | undefined> {
     const server = (await registries()).get(domain.split(".").at(-1)!);
     if (!server) return undefined;
     const response = await fetchImpl(`${server}domain/${encodeURIComponent(domain)}`, {
@@ -47,10 +64,15 @@ export function createDomainFacts(fetchImpl: typeof fetch = fetch, now: () => nu
     });
     if (!response.ok) return undefined;
     const data = (await response.json()) as { events?: { eventAction?: string; eventDate?: string }[] };
-    const registered = Date.parse(
+    const at = Date.parse(
       data.events?.find((e) => e.eventAction === "registration")?.eventDate ?? "",
     );
-    if (!Number.isFinite(registered)) return undefined;
+    return Number.isFinite(at) ? at : undefined;
+  }
+
+  async function age(domain: string): Promise<SenderCheck | undefined> {
+    const registered = await registration(domain);
+    if (registered === undefined) return undefined;
     const days = Math.floor((now() - registered) / DAY);
     if (days < 30)
       return { id: "new_domain", tone: "warn", text: `The address's website (${domain}) was set up only ${days === 1 ? "1 day" : `${days} days`} ago. Scammers often use brand-new addresses.` };
@@ -83,5 +105,5 @@ export function createDomainFacts(fetchImpl: typeof fetch = fetch, now: () => nu
     return facts;
   }
 
-  return { lookup };
+  return { lookup, daysOld };
 }

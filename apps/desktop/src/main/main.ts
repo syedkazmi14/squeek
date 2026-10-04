@@ -278,6 +278,7 @@ const linkGuard = new LinkGuard({
     if (panel && !panel.isDestroyed()) panel.webContents.send("squeek:speak", { text });
   },
   open: (url) => void shell.openExternal(url).catch(() => {}),
+  daysOld: (domain) => domainFacts.daysOld(domain),
 });
 const monitor = new Monitoring({
   createSession: () => createObserverClient(resource),
@@ -440,7 +441,8 @@ let hoveredRow: { key: string; since: number; texts: string[] } | undefined;
  */
 function offerToRead(key: string, texts: string[] | undefined) {
   const now = Date.now();
-  if (!texts) {
+  // On a link, the link check speaks instead.
+  if (!texts || linkGuard.hovering) {
     hoveredRow = undefined;
     return;
   }

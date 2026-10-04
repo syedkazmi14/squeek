@@ -1,0 +1,15 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { chromium } from '@playwright/test';
+const server = await chromium.launchServer({ channel: 'msedge', headless: false });
+const pid = server.process().pid;
+const browser = await chromium.connect(server.wsEndpoint());
+const context = await browser.newContext();
+await context.route('**/*', r => r.abort());
+const a = await context.newPage(); await a.setContent('<title>Alpha</title><p>TAB-A</p>');
+const b = await context.newPage(); await b.setContent('<title>Bravo</title><p>TAB-B</p>');
+await a.bringToFront(); await new Promise(r => setTimeout(r, 1000));
+await b.bringToFront(); await new Promise(r => setTimeout(r, 1500));
+const { stdout } = await promisify(execFile)('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/_enum.ps1', String(pid)]);
+console.log(stdout);
+await browser.close(); await server.close();

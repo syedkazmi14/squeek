@@ -22,4 +22,7 @@ Check(ObservationPolicy.Contains(region, new(-50, 20, 100, 100)), true, "contain
 Check(ObservationPolicy.Contains(region, new(-101, 20, 100, 100)), false, "partially outside region");
 Check(ObservationPolicy.Contains(region, new(0, 20, 0, 100)), false, "empty bounds");
 Check(ObservationPolicy.Contains(region, new(double.NaN, 20, 100, 100)), false, "invalid bounds");
+Check(ObservationPolicy.TitleMatchesTab("Bravo", "Bravo - Memory usage - 21.8 MB"), true, "tab name with status suffix");
+Check(ObservationPolicy.TitleMatchesTab("Inbox (3) - a@b.com - Gmail", "Inbox (3) - a@b.com - Gmail"), true, "exact tab title");
+Check(ObservationPolicy.TitleMatchesTab("Alpha", "Bravo"), false, "background tab title");
 Console.WriteLine($"PASS {count} native policy assertions");
