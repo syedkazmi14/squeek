@@ -1,3 +1,4 @@
+import { animateMascot } from "./mascot.ts";
 import { incidentKey, warning } from "./incident.ts";
 interface Assessment {
   source?: {
@@ -39,6 +40,7 @@ function element<T extends HTMLElement = HTMLElement>(id: string): T {
   if (!found) throw new Error("Missing interface control");
   return found as T;
 }
+animateMascot(document.querySelector<HTMLCanvasElement>(".status-mascot")!);
 const monitor = element<HTMLButtonElement>("monitor");
 const browser = element<HTMLSelectElement>("browser");
 const manualText = element<HTMLTextAreaElement>("manual-text");

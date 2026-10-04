@@ -198,10 +198,10 @@ h3 {
 }
 .status-mascot {
   position: relative;
-  width: 144px;
-  height: 144px;
+  width: 136px;
+  height: 136px;
   object-fit: contain;
-  margin-top: -22px;
+  margin-top: -14px;
   transform-origin: 50% 80%;
   animation: mascot-float 3s ease-in-out infinite;
   transition: filter 250ms ease;
@@ -209,7 +209,7 @@ h3 {
 .mascot-shadow {
   position: absolute;
   bottom: 3px;
-  width: 110px;
+  width: 104px;
   height: 10px;
   border-radius: 50%;
   background: radial-gradient(ellipse, rgb(27 26 23 / 18%), transparent 70%);
