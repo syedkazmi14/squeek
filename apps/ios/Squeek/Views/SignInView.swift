@@ -91,10 +91,6 @@ struct EmailSignInView: View {
             Text("Sign in")
               .font(.display(.largeTitle))
               .foregroundStyle(Theme.ink)
-            Text("Type any email. A new one makes a new account, and the same one always opens the same account.")
-              .font(.nunito(.title3))
-              .foregroundStyle(Theme.secondaryInk)
-              .fixedSize(horizontal: false, vertical: true)
           }
 
           VStack(alignment: .leading, spacing: 8) {

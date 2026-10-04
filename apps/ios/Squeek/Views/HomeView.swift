@@ -156,9 +156,6 @@ private struct GuardList: View {
               soft: on ? Theme.accentSoft : Theme.neutralSoft)
             VStack(alignment: .leading, spacing: 2) {
               Text(item.title).font(.nunito(.headline)).foregroundStyle(Theme.ink)
-              Text(on ? item.onSummary : item.offSummary)
-                .font(.nunito(.subheadline))
-                .foregroundStyle(Theme.secondaryInk)
             }
             Spacer(minLength: 8)
             if on {

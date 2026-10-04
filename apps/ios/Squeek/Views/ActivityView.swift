@@ -1,4 +1,3 @@
-import Charts
 import SqueekCore
 import SwiftUI
 
@@ -8,11 +7,20 @@ struct ActivityView: View {
   @EnvironmentObject private var model: AppModel
   @State private var showSignIn = false
 
+  /// Likely scams nobody has looked at yet, from the last few days. They get their own place at the top.
+  private var needsLook: [Incident] {
+    let lately = Date().addingTimeInterval(-3 * 24 * 3600)
+    // Two at most: a screen full of red boxes is alarming, and the rest are still in the list below.
+    return Array(
+      model.incidents.filter { $0.level == .danger && $0.userAction == nil && ($0.date ?? .distantPast) > lately }.prefix(2))
+  }
+
   private var groups: [(title: String, items: [Incident])] {
     let calendar = Calendar.current
+    let pending = Set(needsLook.map(\.id))
     var order: [String] = []
     var buckets: [String: [Incident]] = [:]
-    for incident in model.incidents {
+    for incident in model.incidents where !pending.contains(incident.id) {
       let date = incident.date ?? .distantPast
       let title: String
       if calendar.isDateInToday(date) {
@@ -47,23 +55,31 @@ struct ActivityView: View {
           description: Text("When Squeek blocks a call, filters a text or warns you on your computer, it shows up here."))
       } else {
         ScrollView {
-          VStack(alignment: .leading, spacing: 22) {
-            WeekSummary(incidents: model.incidents)
-            ForEach(groups, id: \.title) { group in
+          VStack(alignment: .leading, spacing: 26) {
+            ActivityHeader(incidents: model.incidents)
+
+            if !needsLook.isEmpty {
               VStack(alignment: .leading, spacing: 10) {
-                Text(group.title).font(.nunito(.headline)).foregroundStyle(Theme.secondaryInk)
-                VStack(spacing: 0) {
-                  ForEach(Array(group.items.enumerated()), id: \.element.id) { index, incident in
-                    NavigationLink { IncidentDetailView(incident: incident) } label: {
-                      IncidentRow(incident: incident)
-                        .padding(.vertical, 12)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    if index < group.items.count - 1 { Divider().padding(.leading, 56) }
+                Text("Worth a look").font(.nunito(.title3, .black)).foregroundStyle(Theme.ink)
+                ForEach(needsLook) { incident in
+                  NavigationLink { IncidentDetailView(incident: incident) } label: {
+                    AttentionCard(incident: incident)
                   }
+                  .buttonStyle(.plain)
                 }
-                .card(padding: 14)
+              }
+            }
+
+            ForEach(groups, id: \.title) { group in
+              VStack(alignment: .leading, spacing: 0) {
+                Text(group.title).font(.nunito(.title3, .black)).foregroundStyle(Theme.ink).padding(.bottom, 4)
+                ForEach(Array(group.items.enumerated()), id: \.element.id) { index, incident in
+                  NavigationLink { IncidentDetailView(incident: incident) } label: {
+                    ActivityRow(incident: incident)
+                  }
+                  .buttonStyle(.plain)
+                  if index < group.items.count - 1 { Rectangle().fill(Theme.hairline).frame(height: 1) }
+                }
               }
             }
           }
@@ -87,53 +103,138 @@ struct ActivityView: View {
   }
 }
 
-/// Count of warnings in the last 7 days, with a small bar chart.
-struct WeekSummary: View {
+/// Squeek says how the week went, in his own words, with the mascot beside it.
+private struct ActivityHeader: View {
   let incidents: [Incident]
 
-  private struct Day: Identifiable {
-    let date: Date
-    let count: Int
-    var id: Date { date }
-  }
-
-  private var days: [Day] {
-    let calendar = Calendar.current
-    let today = calendar.startOfDay(for: Date())
-    return (0..<7).reversed().map { offset in
-      let day = calendar.date(byAdding: .day, value: -offset, to: today)!
-      let count = incidents.filter { $0.date.map { calendar.isDate($0, inSameDayAs: day) } ?? false }.count
-      return Day(date: day, count: count)
-    }
+  private var flagged: Int {
+    let since = Date().addingTimeInterval(-7 * 24 * 3600)
+    return incidents.filter { ($0.level == .danger || $0.level == .caution) && ($0.date ?? .distantPast) > since }.count
   }
 
   var body: some View {
-    let total = days.reduce(0) { $0 + $1.count }
-    HStack(alignment: .bottom, spacing: 18) {
+    HStack(alignment: .center, spacing: 14) {
       VStack(alignment: .leading, spacing: 4) {
-        Text("This week").font(.nunito(.subheadline, .semibold)).foregroundStyle(Theme.secondaryInk)
-        Text("\(total)")
-          .font(.nunito(size: 44, weight: .black))
+        Text(flagged == 0 ? "A quiet week." : flagged == 1 ? "I flagged 1 thing this week." : "I flagged \(flagged) things this week.")
+          .font(.nunito(size: 26, weight: .black))
           .foregroundStyle(Theme.ink)
-          .contentTransition(.numericText(value: Double(total)))
-        Text(total == 1 ? "warning" : "warnings").font(.nunito(.subheadline)).foregroundStyle(Theme.secondaryInk)
+          .fixedSize(horizontal: false, vertical: true)
+        Text("Here's everything I've noticed.")
+          .font(.nunito(.subheadline))
+          .foregroundStyle(Theme.secondaryInk)
       }
-      Chart(days) { day in
-        BarMark(x: .value("Day", day.date, unit: .day), y: .value("Warnings", day.count))
-          .foregroundStyle(day.count > 0 ? Theme.danger : Theme.neutralSoft)
-          .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-      }
-      .chartXAxis {
-        AxisMarks(values: .stride(by: .day)) { _ in
-          AxisValueLabel(format: .dateTime.weekday(.narrow))
-        }
-      }
-      .chartYAxis(.hidden)
-      .frame(height: 90)
+      Spacer(minLength: 0)
+      MascotView(mood: .calm, height: 64)
     }
-    .card(padding: 20)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel("\(total) warnings this week")
+    .accessibilityElement(children: .combine)
+  }
+}
+
+/// How an incident reads in a sentence, shared by the two Activity row styles.
+@MainActor
+private struct IncidentWords {
+  let incident: Incident
+  let model: AppModel
+
+  var isMine: Bool { incident.userId == model.userId }
+
+  /// With its article: "a text", "an email".
+  private var noun: String {
+    switch incident.surface {
+    case "sms": return "text"
+    case "email": return "email"
+    case "call": return "call"
+    case "link", "browser": return "website"
+    case "screenshot": return "screenshot"
+    default: return "message"
+    }
+  }
+
+  private var article: String { noun == "email" ? "An" : "A" }
+
+  var title: String {
+    let who = isMine ? "" : (model.memberName(incident.userId) ?? "Someone you help") + ": "
+    if incident.userAction == "reported" { return "You reported a number" }
+    if incident.isScreenedCall {
+      switch incident.level {
+      case .danger: return who + "Squeek answered a scam call"
+      case .caution: return who + "Squeek answered a call that seemed off"
+      default: return who + "Squeek took a message"
+      }
+    }
+    switch incident.level {
+    case .danger: return who + "\(article) \(noun) that looked like a scam"
+    case .caution: return who + "\(article) \(noun) that seemed off"
+    case .clear: return who + "\(article) \(noun) with no warning signs"
+    case .unknown: return who + "\(article) \(noun) Squeek couldn't fully check"
+    }
+  }
+
+  var detail: String? {
+    guard let text = incident.evidenceRedacted ?? incident.indicatorValue.map({ incident.indicatorKind == "phone" ? PhoneNumbers.display($0) : $0 })
+    else { return nil }
+    return text
+  }
+
+  var when: String {
+    guard let date = incident.date else { return "" }
+    let time = Date().timeIntervalSince(date) < 3600
+      ? date.formatted(.relative(presentation: .named))
+      : date.formatted(date: .omitted, time: .shortened)
+    let place = incident.platform == "windows" ? "on your PC" : nil
+    return [time, place].compactMap { $0 }.joined(separator: " · ")
+  }
+}
+
+/// One line of the feed: a dot for how serious it was, then a sentence. No boxes around each one.
+private struct ActivityRow: View {
+  @EnvironmentObject private var model: AppModel
+  let incident: Incident
+
+  var body: some View {
+    let words = IncidentWords(incident: incident, model: model)
+    let status = Theme.status(incident.level)
+    HStack(alignment: .top, spacing: 14) {
+      Circle().fill(status.tint).frame(width: 10, height: 10).padding(.top, 7).accessibilityHidden(true)
+      VStack(alignment: .leading, spacing: 3) {
+        Text(words.title).font(.nunito(.headline)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+        if let detail = words.detail {
+          Text(detail).font(.nunito(.subheadline)).foregroundStyle(Theme.ink.opacity(0.75)).lineLimit(2)
+        }
+        Text(words.when).font(.nunito(.footnote)).foregroundStyle(Theme.secondaryInk)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(.vertical, 14)
+    .contentShape(Rectangle())
+    .accessibilityElement(children: .combine)
+  }
+}
+
+/// A likely scam nobody has looked at yet: the one place a box earns its keep.
+private struct AttentionCard: View {
+  @EnvironmentObject private var model: AppModel
+  let incident: Incident
+
+  var body: some View {
+    let words = IncidentWords(incident: incident, model: model)
+    VStack(alignment: .leading, spacing: 8) {
+      Text(words.title)
+        .font(.nunito(.title3, .black))
+        .foregroundStyle(Theme.dangerInk)
+        .fixedSize(horizontal: false, vertical: true)
+      if let detail = words.detail {
+        Text(detail).font(.nunito(.body)).foregroundStyle(Theme.ink).lineLimit(3)
+      }
+      HStack {
+        Text(words.when).font(.nunito(.footnote)).foregroundStyle(Theme.secondaryInk)
+        Spacer()
+        Text("See what happened").font(.nunito(.subheadline, .bold)).foregroundStyle(Theme.dangerInk)
+        Image(systemName: "arrow.right").font(.footnote.weight(.bold)).foregroundStyle(Theme.dangerInk)
+      }
+    }
+    .card(padding: 18, tint: Theme.dangerSoft)
+    .accessibilityElement(children: .combine)
   }
 }
 

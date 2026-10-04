@@ -322,18 +322,29 @@ extension MyPersonView {
   }
 }
 
-/// A coloured initial in a circle.
+/// A person's picture if there is one (the demo family has them), otherwise a coloured initial.
 struct Avatar: View {
   let name: String
   var helper = false
+  var size: CGFloat = 46
 
   var body: some View {
-    Text(String(name.prefix(1)).uppercased())
-      .font(.nunito(.title3, .bold))
-      .foregroundStyle(helper ? Theme.ochre : Theme.accentInk)
-      .frame(width: 46, height: 46)
-      .background(helper ? Theme.ochreSoft : Theme.accentSoft, in: Circle())
-      .accessibilityHidden(true)
+    Group {
+      if let picture = UIImage(named: "Avatar\(name.split(separator: " ").first.map(String.init) ?? name)") {
+        Image(uiImage: picture)
+          .resizable()
+          .scaledToFill()
+      } else {
+        Text(String(name.prefix(1)).uppercased())
+          .font(.nunito(.title3, .bold))
+          .foregroundStyle(helper ? Theme.ochre : Theme.accentInk)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background(helper ? Theme.ochreSoft : Theme.accentSoft)
+      }
+    }
+    .frame(width: size, height: size)
+    .clipShape(Circle())
+    .accessibilityHidden(true)
   }
 }
 
