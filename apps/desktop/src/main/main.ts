@@ -23,6 +23,8 @@ import { allowedFrame, validateInput } from "./ipc-policy.ts";
 import { ProviderGate } from "./provider-gate.ts";
 import { createTts } from "./tts.ts";
 import { LinkGuard, type LinkChoice, type LinkView } from "./link-guard.ts";
+import { createConversation } from "./conversation.ts";
+import { PushToTalk, watchTalkKey } from "./push-to-talk.ts";
 import { createJevProvider } from "../../../../packages/providers/src/jev.ts";
 import {
   assess,
@@ -66,6 +68,15 @@ const tts = createTts(
     : undefined,
   (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
 );
+// Voice conversation with the ghost. Speech and the reply context go to OpenAI.
+const conversation = createConversation(
+  !app.isPackaged
+    ? process.env.OPENAI_API_KEY || process.env.OPEN_API
+    : undefined,
+  (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
+);
+let talkKey: { stop: () => void } | undefined;
+let talkAbort: AbortController | undefined;
 let manualAbort: AbortController | undefined;
 let quitting = false;
 let companion: Companion | undefined;
@@ -74,6 +85,7 @@ let state: {
   providerConfigured: boolean;
   cloudEnabled: boolean;
   cloudVoice: boolean;
+  voiceChat: boolean;
   monitoring: boolean;
   health: string;
   revision: number;
@@ -84,6 +96,7 @@ let state: {
   providerConfigured: providerGate.configured,
   cloudEnabled: false,
   cloudVoice: tts.configured,
+  voiceChat: conversation.configured,
   monitoring: false,
   health: "paused",
   revision: 0,
@@ -212,6 +225,58 @@ async function startMonitoring(browser: "chrome" | "msedge") {
   publish();
   await monitor.start(browser);
 }
+/** Shows a line in the ghost's speech bubble, long enough to read. */
+function ghostSays(text: string, ms = 4000 + text.length * 60) {
+  const shown = text.length > 280 ? `${text.slice(0, 279)}…` : text;
+  haloReady()?.webContents.send("squeek:say", {
+    text: shown,
+    ms: Math.min(15000, ms),
+  });
+}
+/** What the ghost can see, for the conversation. Excerpts and verdicts only. */
+function conversationContext(): string {
+  const lines = [
+    state.monitoring
+      ? `Watching the user's ${state.browser === "msedge" ? "Edge" : "Chrome"} window.`
+      : "Not watching any page right now (monitoring is paused).",
+  ];
+  const assessment = state.assessmentCurrent ? state.assessment : undefined;
+  if (assessment?.state === "high_risk" || assessment?.state === "caution")
+    lines.push(
+      `The page shows scam warning signs (${assessment.state === "high_risk" ? "high risk" : "caution"}). Evidence: ${assessment.evidence
+        .map((item) => `"${item.excerpt}"`)
+        .join(", ")}.`,
+    );
+  else if (assessment)
+    lines.push("Nothing suspicious detected on the current page.");
+  const link = linkGuard.recent();
+  if (link)
+    lines.push(
+      `The user recently hovered a link to ${link.host || "an unknown place"}: ${
+        link.state === "high_risk"
+          ? "it looks like a scam"
+          : link.state === "caution"
+            ? "it needs caution"
+            : link.state === "unknown"
+              ? "you couldn't tell where it goes"
+              : "it looked OK"
+      }${link.reasons.length ? ` (${link.reasons.join("; ")})` : ""}.`,
+    );
+  return lines.join("\n");
+}
+/** Tells the panel to start, finish or cancel listening; no mode toggles it. */
+function listen(mode?: "hold" | "finish" | "cancel") {
+  if (!conversation.configured || !panel || panel.isDestroyed()) return;
+  if (mode !== "finish" && mode !== "cancel") conversation.warm();
+  panel.webContents.send("squeek:listen", mode);
+}
+const toggleTalk = () => listen();
+// Hold Ctrl to talk to the ghost; letting go ends the user's turn.
+const pushToTalk = new PushToTalk({
+  start: () => listen("hold"),
+  finish: () => listen("finish"),
+  cancel: () => listen("cancel"),
+});
 function hideSidebar() {
   manualAbort?.abort();
   manualAbort = undefined;
@@ -224,6 +289,11 @@ function refreshTray() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: "Settings", click: () => companion?.showSidebar(true) },
+      {
+        label: "Talk to Squeek (or hold Ctrl)",
+        enabled: conversation.configured,
+        click: toggleTalk,
+      },
       { type: "separator" },
       {
         label: "Start monitoring Chrome",
@@ -278,6 +348,7 @@ function pause() {
     providerConfigured: providerGate.configured,
     cloudEnabled: state.cloudEnabled,
     cloudVoice: tts.configured,
+    voiceChat: conversation.configured,
     monitoring: false,
     health: "paused",
     revision: state.revision + 1,
@@ -370,10 +441,36 @@ const primaryInstance = app.requestSingleInstanceLock();
 if (!primaryInstance) app.quit();
 app.whenReady().then(async () => {
   if (!primaryInstance) return;
+  // The only permission granted anywhere: the panel's microphone, for talking to the ghost.
+  const panelMicrophone = (
+    webContents: Electron.WebContents | null,
+    permission: string,
+    origin: string,
+    mediaTypes: readonly string[] = ["audio"],
+  ) =>
+    conversation.configured &&
+    permission === "media" &&
+    !!panel &&
+    !panel.isDestroyed() &&
+    webContents === panel.webContents &&
+    origin.startsWith("squeek://app") &&
+    mediaTypes.length > 0 &&
+    mediaTypes.every((type) => type === "audio");
   session.defaultSession.setPermissionRequestHandler(
-    (_webContents, _permission, callback) => callback(false),
+    (webContents, permission, callback, details) =>
+      callback(
+        panelMicrophone(
+          webContents,
+          permission,
+          details.requestingUrl,
+          "mediaTypes" in details ? (details.mediaTypes ?? []) : [],
+        ),
+      ),
   );
-  session.defaultSession.setPermissionCheckHandler(() => false);
+  session.defaultSession.setPermissionCheckHandler(
+    (webContents, permission, origin) =>
+      panelMicrophone(webContents, permission, origin),
+  );
   protocol.handle("squeek", (request) => {
     const url = new URL(request.url);
     if (url.hostname === "app" && url.pathname === "/tts")
@@ -422,6 +519,40 @@ app.whenReady().then(async () => {
         ) {
           const input = validateInput(action, value);
           if (action === "state") return structuredClone(state);
+          if (action === "listening") {
+            if (input === "start") ghostSays("I'm listening…", 15000);
+            else if (input === "hold")
+              ghostSays("I'm listening… let go of Ctrl when you're done.", 15000);
+            else if (input === "nothing")
+              ghostSays("I didn't hear anything. Hold Ctrl while you talk, then let go.");
+            else if (input === "cancel")
+              haloReady()?.webContents.send("squeek:say", { clear: true });
+            return undefined;
+          }
+          if (action === "talk") {
+            talkAbort?.abort();
+            const abort = (talkAbort = new AbortController());
+            ghostSays("Let me think…", 15000);
+            try {
+              const turn = await conversation.respond(
+                input as Uint8Array,
+                conversationContext(),
+                abort.signal,
+              );
+              const reply = turn.heard
+                ? turn.reply || "Sorry, I don't have an answer for that."
+                : "Sorry, I didn't catch that. Could you say it again?";
+              ghostSays(reply);
+              return { heard: turn.heard, reply };
+            } catch {
+              if (abort.signal.aborted) return { heard: "", reply: "" };
+              const reply = "Sorry, I can't talk right now. Please try again in a moment.";
+              ghostSays(reply);
+              return { heard: "", reply };
+            } finally {
+              if (talkAbort === abort) talkAbort = undefined;
+            }
+          }
           if (action === "show") {
             companion?.showSidebar(true);
             return undefined;
@@ -623,6 +754,10 @@ app.whenReady().then(async () => {
     },
   });
   companion.start();
+  if (conversation.configured) {
+    talkKey = watchTalkKey(resource, (event) => pushToTalk.key(event));
+    conversation.warm();
+  }
   const icon = nativeImage
     .createFromPath(join(root, "tray-icon.png"))
     .resize({ width: 20, height: 20 });
@@ -635,6 +770,8 @@ app.whenReady().then(async () => {
 app.on("before-quit", () => {
   quitting = true;
   pause();
+  talkAbort?.abort();
+  talkKey?.stop();
   companion?.stop();
   reviews.invalidate();
   tray?.destroy();

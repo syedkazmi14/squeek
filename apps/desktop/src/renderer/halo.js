@@ -93,6 +93,12 @@ window.squeek.onState((state) => {
     bubble.until = Math.min(bubble.until, performance.now() + BUBBLE_FADE_OUT);
 });
 window.squeek.onSay((message) => {
+  // A cancelled question takes back its "I'm listening" bubble.
+  if (message?.clear === true) {
+    if (bubble)
+      bubble.until = Math.min(bubble.until, performance.now() + BUBBLE_FADE_OUT);
+    return;
+  }
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   if (!text || text.length > 300) return;
   const ms =

@@ -4,6 +4,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Squeek.Observer;
 
+// A separate, minimal mode: hold-to-talk key events only (see KeyWatch).
+if (args is ["--keys"]) { KeyWatch.Run(); return; }
 if (args.Length != 2 || args[0] != "--session" || !Guid.TryParseExact(args[1], "D", out _)) return;
 NativeDpi.SetProcessDpiAwarenessContext(new nint(-4));
 var sessionId = args[1];

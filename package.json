@@ -22,9 +22,11 @@
     "desktop:setup": "node node_modules/electron/install.js"
   },
   "devDependencies": {
+    "@ai-sdk/openai": "^4.0.83",
     "@electron/asar": "3.4.1",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.4",
+    "ai": "^7.0.127",
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "electron": "44.5.1",

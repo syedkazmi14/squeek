@@ -31,3 +31,15 @@ test("browser selection requires a string rather than a coercible value", () => 
     validateInput("monitor", { enabled: true, browser: ["chrome"] }),
   );
 });
+
+test("talking accepts only bounded recorded audio and known listening states", () => {
+  const audio = new Uint8Array([1, 2, 3]);
+  assert.equal(validateInput("talk", audio), audio);
+  assert.throws(() => validateInput("talk", new Uint8Array(0)));
+  assert.throws(() => validateInput("talk", new Uint8Array(5 * 1024 * 1024 + 1)));
+  assert.throws(() => validateInput("talk", "base64 audio"));
+  assert.equal(validateInput("listening", "start"), "start");
+  assert.equal(validateInput("listening", "hold"), "hold");
+  assert.throws(() => validateInput("listening", "stop"));
+  assert.throws(() => validateInput("listening", true));
+});

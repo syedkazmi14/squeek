@@ -11,6 +11,10 @@ await build({
   format: "esm",
   external: ["electron"],
   outfile: "dist/desktop/main.mjs",
+  // Bundled CommonJS dependencies (the AI SDK's) call require() for Node built-ins.
+  banner: {
+    js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);',
+  },
 });
 await build({
   entryPoints: ["apps/desktop/src/preload.ts"],

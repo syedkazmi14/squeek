@@ -1,4 +1,5 @@
 import { incidentKey, warning } from "./incident.ts";
+import { record, type Recording } from "./listen.ts";
 interface Assessment {
   source?: {
     processId: number;
@@ -17,14 +18,25 @@ interface AppState {
   providerConfigured?: boolean;
   cloudEnabled?: boolean;
   cloudVoice?: boolean;
+  voiceChat?: boolean;
   browser?: "chrome" | "msedge";
   assessmentCurrent?: boolean;
 }
 interface SqueekApi {
   invoke(
-    action: "state" | "monitor" | "check" | "demo" | "cloud" | "hide" | "show",
+    action:
+      | "state"
+      | "monitor"
+      | "check"
+      | "demo"
+      | "cloud"
+      | "hide"
+      | "show"
+      | "listening"
+      | "talk",
     value?: unknown,
   ): Promise<unknown>;
+  onListen(callback: (mode: unknown) => void): () => void;
   onState(callback: (state: AppState) => void): () => void;
   onHidden(callback: () => void): () => void;
   onSpeak(callback: (message: unknown) => void): () => void;
@@ -52,6 +64,8 @@ const manualText = element<HTMLTextAreaElement>("manual-text");
 const check = element<HTMLButtonElement>("check");
 const mute = element<HTMLButtonElement>("mute");
 const replay = element<HTMLButtonElement>("replay");
+const talk = element<HTMLButtonElement>("talk");
+const talkHeard = element<HTMLParagraphElement>("talk-heard");
 const cancel = element<HTMLButtonElement>("cancel");
 const voiceRate = element<HTMLSelectElement>("voice-rate");
 const demo = element<HTMLButtonElement>("demo");
@@ -71,10 +85,14 @@ const player = new Audio();
 let playing: string | undefined;
 // Bluetooth and HDMI outputs power down when idle and drop the first second or
 // two of the next sound while they wake, which cut the start off the warning.
-// While Squeek is watching, it plays an inaudible hiss (about -80 dB) so the
-// output stays awake. Pure silence would not work: Chromium closes the device
-// when it only receives zeros.
+// While Squeek is watching, talking with the user, or speaking, it plays an
+// inaudible hiss (about -80 dB) so the output stays awake. Pure silence would not
+// work: Chromium closes the device, and many outputs sleep through digital silence.
 let keepAwake: AudioContext | undefined;
+// A conversation keeps the output awake a while after each reply, for follow-ups.
+const AWAKE_AFTER_SPEECH_MS = 20000;
+let spokeAt = -Infinity;
+let awakeTimer: ReturnType<typeof setTimeout> | undefined;
 function setOutputAwake(awake: boolean): void {
   if (awake && !keepAwake) {
     keepAwake = new AudioContext({ latencyHint: "playback" });
@@ -126,6 +144,13 @@ function say(text: string): void {
   }
   speakLocally(text);
 }
+player.addEventListener("ended", () => {
+  playing = undefined;
+  spokeAt = performance.now();
+  if (awakeTimer) clearTimeout(awakeTimer);
+  awakeTimer = setTimeout(refreshControls, AWAKE_AFTER_SPEECH_MS + 50);
+  refreshControls();
+});
 player.addEventListener("error", () => {
   // ElevenLabs unavailable: say the same words with the local voice instead.
   const failed = playing;
@@ -147,7 +172,83 @@ function speakLocally(text: string): void {
   utterance.voice = voice;
   window.speechSynthesis.speak(utterance);
 }
+// Talking to the ghost. The button listens until a pause; holding Ctrl listens until
+// it is let go. The reply is spoken.
+let recording: Recording | undefined;
+// How the current question ended. Opening the microphone takes a moment, so a
+// release or shortcut can arrive before `recording` exists; it is kept here.
+let session: { end?: "stop" | "cancel" } | undefined;
+let thinking = false;
+async function startTalk(auto: boolean): Promise<void> {
+  if (session || !current.voiceChat || thinking) return;
+  // Never listen to Squeek's own voice.
+  cancelSpeech();
+  const start: { end?: "stop" | "cancel" } = (session = {});
+  // Wake the output now, while the user speaks, so the reply's first words play.
+  refreshControls();
+  try {
+    recording = await record(auto);
+  } catch {
+    session = undefined;
+    refreshControls();
+    talkHeard.textContent = "Squeek couldn't use the microphone.";
+    talkHeard.hidden = false;
+    return;
+  }
+  const active = recording;
+  if (start.end === "cancel") active.cancel();
+  else if (start.end === "stop") active.stop();
+  refreshControls();
+  if (start.end !== "cancel")
+    void window.squeek.invoke("listening", auto ? "start" : "hold");
+  const audio = await active.done;
+  recording = undefined;
+  session = undefined;
+  if (!audio) {
+    refreshControls();
+    void window.squeek.invoke("listening", start.end === "cancel" ? "cancel" : "nothing");
+    return;
+  }
+  thinking = true;
+  refreshControls();
+  try {
+    const turn = (await window.squeek.invoke("talk", audio)) as {
+      heard?: unknown;
+      reply?: unknown;
+    };
+    if (typeof turn?.heard === "string" && turn.heard) {
+      talkHeard.textContent = `You said: "${turn.heard}"`;
+      talkHeard.hidden = false;
+    }
+    if (typeof turn?.reply === "string" && turn.reply && !muted) say(turn.reply);
+  } catch {
+    // Main already showed what went wrong in the ghost's bubble.
+  } finally {
+    thinking = false;
+    refreshControls();
+  }
+}
+function endTalk(end: "stop" | "cancel"): void {
+  if (!session || session.end) return;
+  session.end = end;
+  if (end === "cancel") recording?.cancel();
+  else recording?.stop();
+}
+function onListen(mode: unknown): void {
+  if (mode === "hold") void startTalk(false);
+  else if (mode === "finish") endTalk("stop");
+  else if (mode === "cancel") endTalk("cancel");
+  else if (session) endTalk("stop");
+  else void startTalk(true);
+}
 function refreshControls(): void {
+  element("talk-section").hidden = current.voiceChat !== true;
+  talk.disabled = thinking;
+  talk.textContent = recording
+    ? "Stop listening"
+    : thinking
+      ? "Thinking…"
+      : "Talk to Squeek";
   const busy = pendingActions > 0;
   monitor.disabled = busy && !current.monitoring && pendingChecks === 0;
   monitor.textContent =
@@ -170,7 +271,13 @@ function refreshControls(): void {
       !muted &&
       (current.monitoring ||
         pendingActions > 0 ||
-        current.assessment?.state === "high_risk"),
+        current.assessment?.state === "high_risk" ||
+        // Talking with the ghost: from the moment the user starts until the reply
+        // has finished, the reply arrives after seconds of silence otherwise.
+        session !== undefined ||
+        thinking ||
+        playing !== undefined ||
+        performance.now() - spokeAt < AWAKE_AFTER_SPEECH_MS),
   );
 }
 function render(next: AppState): void {
@@ -270,6 +377,7 @@ mute.addEventListener("click", () => {
   refreshControls();
 });
 replay.addEventListener("click", speak);
+talk.addEventListener("click", () => onListen(undefined));
 voiceRate.addEventListener("change", cancelSpeech);
 element("close").addEventListener("click", () => {
   cancelSpeech();
@@ -284,6 +392,7 @@ render(current);
 if (window.squeek) {
   const unsubscribe = window.squeek.onState(render);
   const stopHiddenListener = window.squeek.onHidden(cancelSpeech);
+  const stopListenListener = window.squeek.onListen(onListen);
   // Link warnings from the hover check, spoken even while the panel is hidden.
   const stopSpeakListener = window.squeek.onSpeak((message) => {
     const text =
@@ -306,6 +415,8 @@ if (window.squeek) {
       unsubscribe();
       stopHiddenListener();
       stopSpeakListener();
+      stopListenListener();
+      recording?.stop();
       cancelSpeech();
       setOutputAwake(false);
     },

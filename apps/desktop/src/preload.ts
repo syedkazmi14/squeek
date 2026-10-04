@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld("squeek", {
     ipcRenderer.on("squeek:speak", listener);
     return () => ipcRenderer.removeListener("squeek:speak", listener);
   },
+  onListen: (callback: (mode: unknown) => void) => {
+    const listener = (_event: unknown, mode: unknown) => callback(mode);
+    ipcRenderer.on("squeek:listen", listener);
+    return () => ipcRenderer.removeListener("squeek:listen", listener);
+  },
   onLink: (callback: (link: unknown) => void) => {
     const listener = (_event: unknown, link: unknown) => callback(link);
     ipcRenderer.on("squeek:link", listener);

@@ -481,3 +481,18 @@ details[open] > summary::after {
     transition: none;
   }
 }
+
+.talk {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0;
+}
+.talk-hint,
+.talk-heard {
+  margin: 0;
+  color: #5d584d;
+  font-size: 14px;
+}
+.talk-heard {
+  font-style: italic;
+}

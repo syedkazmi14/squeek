@@ -72,6 +72,7 @@ export class LinkGuard {
   private hovered: Hovered | undefined;
   private confirming = false;
   private card: Rect | undefined;
+  private last: { host: string; result: LinkAssessment; at: number } | undefined;
   private readonly allowed = new Set<string>();
   private readonly announced = new Map<string, number>();
   constructor(options: Options) {
@@ -119,6 +120,7 @@ export class LinkGuard {
     this.confirming = false;
     this.options.show(this.view);
     const now = (this.options.now ?? Date.now)();
+    this.last = { host: result.host, result, at: now };
     const risky = result.state === "caution" || result.state === "high_risk";
     const message = linkMessage(result);
     this.options.say(message, risky ? RISK_BUBBLE_MS : SAFE_BUBBLE_MS);
@@ -127,6 +129,20 @@ export class LinkGuard {
       this.announced.set(link.url, now);
       this.options.speak(message);
     }
+  }
+
+  /**
+   * The most recently hovered link, for the ghost to talk about: its site and
+   * verdict only, never the full address. Forgotten after two minutes.
+   */
+  recent(): { host: string; state: LinkAssessment["state"]; reasons: string[] } | undefined {
+    const last = this.last;
+    if (!last || (this.options.now ?? Date.now)() - last.at > 120000) return undefined;
+    return {
+      host: last.host,
+      state: last.result.state,
+      reasons: last.result.reasons.map((reason) => reason.message),
+    };
   }
 
   /** Where the confirmation card is on screen (DIPs), or undefined when it is closed. */
@@ -174,6 +190,7 @@ export class LinkGuard {
   }
 
   reset(): void {
+    this.last = undefined;
     this.allowed.clear();
     this.announced.clear();
     this.clear();

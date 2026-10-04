@@ -9,6 +9,17 @@ export function validateInput(action: unknown, value: unknown): unknown {
     if (value !== undefined) throw Error("Invalid request");
     return undefined;
   }
+  if (action === "listening") {
+    if (!["start", "hold", "nothing", "cancel"].includes(value as string))
+      throw Error("Invalid request");
+    return value;
+  }
+  if (action === "talk") {
+    // Recorded speech from the panel's microphone, bounded like any other input.
+    if (!(value instanceof Uint8Array) || !value.length || value.length > 5 * 1024 * 1024)
+      throw Error("Invalid request");
+    return value;
+  }
   if (action === "cloud") {
     if (typeof value !== "boolean") throw Error("Invalid request");
     return value;
