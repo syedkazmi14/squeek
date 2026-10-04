@@ -10,6 +10,7 @@
     "observer:probe": "node scripts/observer-probe.ts",
     "build": "node scripts/build-desktop.mjs",
     "start": "electron .",
+    "preview:layout": "npm run build && electron scripts/preview-layout.mjs",
     "tts:start": "node server.js",
     "tts:dev": "node --watch server.js",
     "package:win": "node scripts/package-windows.ts",
