@@ -128,7 +128,7 @@ git commit -m "test: lock current detector output before restructuring"
 Enforces Interface Segregation mechanically, and guards the growing regex set.
 
 **Files:**
-- Create: `tests/import-boundary.test.ts`
+- Create: `tests/import-boundary.test.ts`, `tests/fixtures/observation.ts`
 
 **Interfaces:**
 - Produces: nothing consumed by later tasks. Runs for the life of the project.
@@ -141,7 +141,7 @@ import { test } from 'node:test';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { assess } from '../packages/detection/src/index.ts';
-import { observation } from './detection.test.ts';
+import { observation } from './fixtures/observation.ts';
 
 const root = new URL('../packages/detection/src/', import.meta.url);
 
@@ -283,7 +283,7 @@ Infrastructure only. The transform is the identity in this task, so behaviour ca
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { normalize, sliceOriginal } from '../packages/detection/src/normalize.ts';
-import { observation } from './detection.test.ts';
+import { observation } from './fixtures/observation.ts';
 
 test('normalize preserves text and maps offsets back to the original', () => {
   const result = normalize(observation('Please send $5,000 today'));
@@ -369,7 +369,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { normalize } from '../packages/detection/src/normalize.ts';
 import { extractors } from '../packages/detection/src/signals/registry.ts';
-import { observation } from './detection.test.ts';
+import { observation } from './fixtures/observation.ts';
 
 const run = (text: string) =>
   extractors.flatMap(e => e.extract(normalize(observation(text))));
@@ -501,7 +501,7 @@ import { test } from 'node:test';
 import { normalize } from '../packages/detection/src/normalize.ts';
 import { qualify } from '../packages/detection/src/qualify.ts';
 import { extractors } from '../packages/detection/src/signals/registry.ts';
-import { observation } from './detection.test.ts';
+import { observation } from './fixtures/observation.ts';
 
 const run = (text: string) => {
   const input = normalize(observation(text));
