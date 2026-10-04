@@ -1,6 +1,6 @@
-# Clickey accounts, database and sync
+# Squeek accounts, database and sync
 
-Status: implemented in [supabase/](../../supabase/README.md) (migration, row-level security tests and Edge Functions) and used by [the iPhone app](../../apps/ios/README.md). The Windows app doesn't connect to it yet. Where this page and the code differ, the code wins. This backend serves both the Windows app ([desktop spec](../superpowers/specs/2026-10-03-clickey-scam-protection-design.md)) and the iPhone app ([iOS plan](../mobile/README.md)).
+Status: implemented in [supabase/](../../supabase/README.md) (migration, row-level security tests and Edge Functions) and used by [the iPhone app](../../apps/ios/README.md). The Windows app doesn't connect to it yet. Where this page and the code differ, the code wins. This backend serves both the Windows app ([desktop spec](../superpowers/specs/2026-10-03-squeek-scam-protection-design.md)) and the iPhone app ([iOS plan](../mobile/README.md)).
 
 ## Decision: Supabase
 

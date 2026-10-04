@@ -1,5 +1,5 @@
 import CallKit
-import ClickeyCore
+import SqueekCore
 import Foundation
 
 /// Hands iOS the numbers to block and to label on the incoming-call screen.
@@ -7,7 +7,7 @@ import Foundation
 final class CallDirectoryHandler: CXCallDirectoryProvider {
   override func beginRequest(with context: CXCallDirectoryExtensionContext) {
     context.delegate = self
-    let appGroup = (Bundle.main.object(forInfoDictionaryKey: "ClickeyAppGroup") as? String) ?? ""
+    let appGroup = (Bundle.main.object(forInfoDictionaryKey: "SqueekAppGroup") as? String) ?? ""
     let snapshot = SharedStore(appGroup: appGroup)?.blockList() ?? .empty
     let plan = CallDirectoryPlan.make(snapshot)
 
@@ -29,6 +29,6 @@ final class CallDirectoryHandler: CXCallDirectoryProvider {
 extension CallDirectoryHandler: CXCallDirectoryExtensionContextDelegate {
   func requestFailed(for extensionContext: CXCallDirectoryExtensionContext, withError error: Error) {
     // Usually unsorted or duplicate numbers; CallDirectoryPlan prevents both.
-    NSLog("Clickey call directory request failed: %@", error.localizedDescription)
+    NSLog("Squeek call directory request failed: %@", error.localizedDescription)
   }
 }

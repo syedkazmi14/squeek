@@ -1,4 +1,4 @@
-# Clickey backend (Supabase)
+# Squeek backend (Supabase)
 
 One Supabase project serves the iPhone app and the Windows app: accounts, the shared database, live sync, and the Edge Functions that hold the Jev and Safe Browsing keys. The design is in [docs/backend/README.md](../docs/backend/README.md).
 
@@ -50,15 +50,15 @@ One Supabase project serves the iPhone app and the Windows app: accounts, the sh
    supabase secrets set JEV_API_KEY=... GOOGLE_SAFE_BROWSING_KEY=...
    ```
 
-   `CLICKEY_DAILY_ASSESSMENTS` and `CLICKEY_DAILY_LINK_CHECKS` change the per-user daily limits (defaults 300 and 1000).
+   `SQUEEK_DAILY_ASSESSMENTS` and `SQUEEK_DAILY_LINK_CHECKS` change the per-user daily limits (defaults 300 and 1000).
 
-5. Push the auth settings (the 6-digit code length, and the `clickey://login-callback` redirect the iPhone uses for emailed sign-in links):
+5. Push the auth settings (the 6-digit code length, and the `squeek://login-callback` redirect the iPhone uses for emailed sign-in links):
 
    ```bash
    supabase config push
    ```
 
-   Free projects can't edit email templates without your own SMTP provider, so the default emails contain a sign-in **link**. Tapping it on the iPhone opens Clickey and signs in. To get 6-digit codes instead, add custom SMTP (Authentication › Emails), then add `{{ .Token }}` to the Magic Link and Confirm signup templates. The apps accept either.
+   Free projects can't edit email templates without your own SMTP provider, so the default emails contain a sign-in **link**. Tapping it on the iPhone opens Squeek and signs in. To get 6-digit codes instead, add custom SMTP (Authentication › Emails), then add `{{ .Token }}` to the Magic Link and Confirm signup templates. The apps accept either.
 6. **Authentication › Providers › Apple** (optional): enable it, and add your iOS bundle id under Client IDs.
 
 ## Test locally

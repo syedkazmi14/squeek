@@ -1,4 +1,4 @@
--- Clickey: shared database for the Windows app and the iPhone app.
+-- Squeek: shared database for the Windows app and the iPhone app.
 -- Raw messages, screenshots and call audio are never stored here. See docs/backend/README.md.
 
 create extension if not exists pgcrypto with schema extensions;

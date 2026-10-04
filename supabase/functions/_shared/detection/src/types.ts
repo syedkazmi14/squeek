@@ -1,5 +1,5 @@
 // Shared detection types. Field names match the JSON returned by the Edge Functions,
-// which the iPhone app decodes with the same names (see apps/ios/ClickeyCore).
+// which the iPhone app decodes with the same names (see apps/ios/SqueekCore).
 
 export type Risk = "no_detected_signal" | "caution" | "high_risk" | "unknown";
 export type LinkVerdict = "malicious" | "suspicious" | "no_signal" | "unknown";

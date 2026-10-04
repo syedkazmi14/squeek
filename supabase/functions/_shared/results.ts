@@ -1,4 +1,4 @@
-// JSON shape returned to both apps. The iPhone decodes it as `CheckResult` (apps/ios/ClickeyCore/Models.swift).
+// JSON shape returned to both apps. The iPhone decodes it as `CheckResult` (apps/ios/SqueekCore/Models.swift).
 
 import type { LinkVerdict, Reason, Risk } from "./detection/src/index.ts";
 

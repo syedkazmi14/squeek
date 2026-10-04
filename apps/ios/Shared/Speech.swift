@@ -1,5 +1,5 @@
 import AVFoundation
-import ClickeyCore
+import SqueekCore
 import Combine
 
 /// Speaks warnings on the device. Once per result unless the person taps Replay.
@@ -11,7 +11,7 @@ final class Speech: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, @un
   @Published private(set) var isSpeaking = false
 
   private let synthesizer = AVSpeechSynthesizer()
-  private let queue = DispatchQueue(label: "clickey.speech", qos: .userInitiated)
+  private let queue = DispatchQueue(label: "squeek.speech", qos: .userInitiated)
   private var voice: AVSpeechSynthesisVoice?
 
   override init() {
@@ -20,7 +20,7 @@ final class Speech: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, @un
   }
 
   var settings: SharedSettings {
-    SharedStore(appGroup: ClickeyConfig.appGroup)?.settings() ?? SharedSettings()
+    SharedStore(appGroup: SqueekConfig.appGroup)?.settings() ?? SharedSettings()
   }
 
   func speak(_ text: String, force: Bool = false) {

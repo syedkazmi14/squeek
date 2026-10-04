@@ -1,6 +1,6 @@
 # XcodeGen spec. Generate the project with:  cd apps/ios && xcodegen
-# Clickey.xcodeproj is generated and git-ignored; edit this file instead.
-name: Clickey
+# Squeek.xcodeproj is generated and git-ignored; edit this file instead.
+name: Squeek
 
 options:
   deploymentTarget:
@@ -9,12 +9,12 @@ options:
   developmentLanguage: en
 
 configFiles:
-  Debug: Config/Clickey.xcconfig
-  Release: Config/Clickey.xcconfig
+  Debug: Config/Squeek.xcconfig
+  Release: Config/Squeek.xcconfig
 
 settings:
   base:
-    DEVELOPMENT_TEAM: $(CLICKEY_TEAM_ID)
+    DEVELOPMENT_TEAM: $(SQUEEK_TEAM_ID)
     CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1.0"
@@ -26,37 +26,39 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.55.0"
-  ClickeyCore:
-    path: ClickeyCore
+  SqueekCore:
+    path: SqueekCore
   # Polished transitions and change effects (open source, by Moving Parts / Emerge Tools).
   Pow:
     url: https://github.com/EmergeTools/Pow
     from: "0.3.1"
 
-# Keys every target's Info.plist carries, so Shared/ClickeyConfig.swift works in extensions too.
+# Keys every target's Info.plist carries, so Shared/SqueekConfig.swift works in extensions too.
 x-shared-info: &sharedInfo
-  ClickeySupabaseHost: $(SUPABASE_HOST)
-  ClickeySupabaseAnonKey: $(SUPABASE_ANON_KEY)
-  ClickeyAppGroup: $(CLICKEY_APP_GROUP)
-  ClickeyKeychainGroup: $(AppIdentifierPrefix)$(CLICKEY_BUNDLE_ID).shared
-  ClickeyAppBundleId: $(CLICKEY_BUNDLE_ID)
-  CFBundleDisplayName: Clickey
+  SqueekSupabaseHost: $(SUPABASE_HOST)
+  SqueekSupabaseAnonKey: $(SUPABASE_ANON_KEY)
+  SqueekAppGroup: $(SQUEEK_APP_GROUP)
+  SqueekKeychainGroup: $(AppIdentifierPrefix)$(SQUEEK_BUNDLE_ID).shared
+  SqueekAppBundleId: $(SQUEEK_BUNDLE_ID)
+  CFBundleDisplayName: Squeek
   CFBundleShortVersionString: $(MARKETING_VERSION)
   CFBundleVersion: $(CURRENT_PROJECT_VERSION)
 
 targets:
-  Clickey:
+  Squeek:
     type: application
     platform: iOS
     sources:
-      - Clickey
+      - Squeek
       - Shared
+      - path: Fonts
+        buildPhase: resources
       - path: ../../packages/detection/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: Supabase
         product: Supabase
-      - package: ClickeyCore
+      - package: SqueekCore
       - package: Pow
       - target: CallDirectoryExtension
       - target: MessageFilterExtension
@@ -64,24 +66,24 @@ targets:
       - target: SafariExtension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(CLICKEY_BUNDLE_ID)
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         # Only capabilities a free Personal Team can sign: App Groups and Keychain Sharing.
-        CODE_SIGN_ENTITLEMENTS: Clickey/Clickey.entitlements
+        CODE_SIGN_ENTITLEMENTS: Squeek/Squeek.entitlements
     info:
-      path: Clickey/Info.plist
+      path: Squeek/Info.plist
       properties:
         <<: *sharedInfo
         UILaunchScreen: {}
         CFBundleURLTypes:
-          - CFBundleURLName: Clickey sign-in
-            CFBundleURLSchemes: [clickey]
+          - CFBundleURLName: Squeek sign-in
+            CFBundleURLSchemes: [squeek]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [fetch]
-        BGTaskSchedulerPermittedIdentifiers: [$(CLICKEY_BUNDLE_ID).refresh]
-        NSCameraUsageDescription: Clickey uses the camera to scan the code shown by Clickey on your computer.
-        NSPhotoLibraryUsageDescription: Clickey reads the words in a screenshot you choose, on your iPhone, to check it for scams.
+        BGTaskSchedulerPermittedIdentifiers: [$(SQUEEK_BUNDLE_ID).refresh]
+        NSCameraUsageDescription: Squeek uses the camera to scan the code shown by Squeek on your computer.
+        NSPhotoLibraryUsageDescription: Squeek reads the words in a screenshot you choose, on your iPhone, to check it for scams.
         ITSAppUsesNonExemptEncryption: false
 
   CallDirectoryExtension:
@@ -89,22 +91,22 @@ targets:
     platform: iOS
     sources: [CallDirectoryExtension]
     dependencies:
-      - package: ClickeyCore
+      - package: SqueekCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(CLICKEY_BUNDLE_ID).CallDirectory
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID).CallDirectory
     info:
       path: CallDirectoryExtension/Info.plist
       properties:
         <<: *sharedInfo
-        CFBundleDisplayName: Clickey
+        CFBundleDisplayName: Squeek
         NSExtension:
           NSExtensionPointIdentifier: com.apple.callkit.call-directory
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).CallDirectoryHandler
     entitlements:
       path: CallDirectoryExtension/CallDirectoryExtension.entitlements
       properties:
-        com.apple.security.application-groups: [$(CLICKEY_APP_GROUP)]
+        com.apple.security.application-groups: [$(SQUEEK_APP_GROUP)]
 
   MessageFilterExtension:
     type: app-extension
@@ -114,10 +116,10 @@ targets:
       - path: ../../packages/detection/rules/rules.json
         buildPhase: resources
     dependencies:
-      - package: ClickeyCore
+      - package: SqueekCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(CLICKEY_BUNDLE_ID).MessageFilter
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID).MessageFilter
     info:
       path: MessageFilterExtension/Info.plist
       properties:
@@ -128,7 +130,7 @@ targets:
     entitlements:
       path: MessageFilterExtension/MessageFilterExtension.entitlements
       properties:
-        com.apple.security.application-groups: [$(CLICKEY_APP_GROUP)]
+        com.apple.security.application-groups: [$(SQUEEK_APP_GROUP)]
 
   ShareExtension:
     type: app-extension
@@ -136,20 +138,22 @@ targets:
     sources:
       - ShareExtension
       - Shared
+      - path: Fonts
+        buildPhase: resources
       - path: ../../packages/detection/rules/rules.json
         buildPhase: resources
     dependencies:
       - package: Supabase
         product: Supabase
-      - package: ClickeyCore
+      - package: SqueekCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(CLICKEY_BUNDLE_ID).Share
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID).Share
     info:
       path: ShareExtension/Info.plist
       properties:
         <<: *sharedInfo
-        CFBundleDisplayName: Check with Clickey
+        CFBundleDisplayName: Check with Squeek
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -161,8 +165,8 @@ targets:
     entitlements:
       path: ShareExtension/ShareExtension.entitlements
       properties:
-        com.apple.security.application-groups: [$(CLICKEY_APP_GROUP)]
-        keychain-access-groups: [$(AppIdentifierPrefix)$(CLICKEY_BUNDLE_ID).shared]
+        com.apple.security.application-groups: [$(SQUEEK_APP_GROUP)]
+        keychain-access-groups: [$(AppIdentifierPrefix)$(SQUEEK_BUNDLE_ID).shared]
 
   SafariExtension:
     type: app-extension
@@ -183,10 +187,10 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
-      - package: ClickeyCore
+      - package: SqueekCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: $(CLICKEY_BUNDLE_ID).Safari
+        PRODUCT_BUNDLE_IDENTIFIER: $(SQUEEK_BUNDLE_ID).Safari
     info:
       path: SafariExtension/Info.plist
       properties:
@@ -197,13 +201,13 @@ targets:
     entitlements:
       path: SafariExtension/SafariExtension.entitlements
       properties:
-        com.apple.security.application-groups: [$(CLICKEY_APP_GROUP)]
-        keychain-access-groups: [$(AppIdentifierPrefix)$(CLICKEY_BUNDLE_ID).shared]
+        com.apple.security.application-groups: [$(SQUEEK_APP_GROUP)]
+        keychain-access-groups: [$(AppIdentifierPrefix)$(SQUEEK_BUNDLE_ID).shared]
 
 schemes:
-  Clickey:
+  Squeek:
     build:
       targets:
-        Clickey: all
+        Squeek: all
     run:
       config: Debug

@@ -1,4 +1,4 @@
-import ClickeyCore
+import SqueekCore
 import Foundation
 import SafariServices
 

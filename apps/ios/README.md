@@ -1,24 +1,24 @@
-# Clickey for iPhone
+# Squeek for iPhone
 
-A development build of Clickey for iPhone (not set up for the App Store). The design is in [docs/mobile/README.md](../../docs/mobile/README.md), and the backend it syncs with is in [supabase/README.md](../../supabase/README.md).
+A development build of Squeek for iPhone (not set up for the App Store). The design is in [docs/mobile/README.md](../../docs/mobile/README.md), and the backend it syncs with is in [supabase/README.md](../../supabase/README.md).
 
 ## What's in it
 
 | Feature | Where | Needs |
 | --- | --- | --- |
-| Check a pasted message, a link, or a screenshot; result read aloud | `Clickey/Views/CheckView.swift` | Works offline with local rules; full check when signed in |
-| "Check with Clickey" in the Share sheet (text, links, images) | `ShareExtension/` | Turn on in the Share sheet's app row once |
+| Check a pasted message, a link, or a screenshot; result read aloud | `Squeek/Views/CheckView.swift` | Works offline with local rules; full check when signed in |
+| "Check with Squeek" in the Share sheet (text, links, images) | `ShareExtension/` | Turn on in the Share sheet's app row once |
 | Block and label scam callers | `CallDirectoryExtension/` | Settings › Apps › Phone › Call Blocking & Identification |
 | Move scam texts from unknown senders to Junk | `MessageFilterExtension/` | Settings › Apps › Messages › Unknown & Spam |
 | Warn before dangerous links open in Safari | `SafariExtension/` | Settings › Apps › Safari › Extensions |
 | Block known malicious websites in every app (encrypted DNS) | A configuration profile served by `supabase/functions/dns-profile`, installed from the setup guide | Settings › Profile Downloaded › Install |
-| Sign in (emailed link or code), sync with the PC app | `Clickey/AppModel.swift` | A Supabase project |
-| Family group: shared block lists, opt-in warning sharing, invite codes | `Clickey/Views/FamilyView.swift` | Signed in |
+| Sign in (emailed link or code), sync with the PC app | `Squeek/AppModel.swift` | A Supabase project |
+| Family group: shared block lists, opt-in warning sharing, invite codes | `Squeek/Views/FamilyView.swift` | Signed in |
 | Live warnings from your PC or family, with notifications | Realtime while the app is open; Background App Refresh when it's closed (`AppModel.backgroundRefresh`) | Notifications allowed |
-| Connect the PC by scanning its QR code | `Clickey/Views/PairComputerView.swift` | Signed in; physical iPhone camera |
-| Shortcuts actions: Check a Message / Link / Screenshot | `Clickey/Intents/ClickeyIntents.swift` | Optional Back Tap setup (see the in-app guide) |
+| Connect the PC by scanning its QR code | `Squeek/Views/PairComputerView.swift` | Signed in; physical iPhone camera |
+| Shortcuts actions: Check a Message / Link / Screenshot | `Squeek/Intents/SqueekIntents.swift` | Optional Back Tap setup (see the in-app guide) |
 
-Shared logic lives in the `ClickeyCore` Swift package: rules, redaction, link analysis, phone numbers, models and the App Group store. The app and every extension use it, and it reads the same `packages/detection/rules/rules.json` as the server.
+Shared logic lives in the `SqueekCore` Swift package: rules, redaction, link analysis, phone numbers, models and the App Group store. The app and every extension use it, and it reads the same `packages/detection/rules/rules.json` as the server.
 
 ## Setup
 
@@ -38,7 +38,7 @@ Shared logic lives in the `ClickeyCore` Swift package: rules, redaction, link an
 4. **Generate and open the project:**
 
    ```bash
-   xcodegen && open Clickey.xcodeproj
+   xcodegen && open Squeek.xcodeproj
    ```
 
 5. **Signing:** select each of the five targets › Signing & Capabilities and make sure your team is selected. If Xcode reports a missing App Group or capability, click its fix button so Xcode registers it with your account.
@@ -52,34 +52,34 @@ Skip the Supabase values to run on-device only: checks use local rules, the bloc
 Everything works on a free Personal Team. The app uses only App Groups and Keychain Sharing, the two capabilities free teams can sign. Instead of the paid-only ones:
 - **Sign in:** email link or code (no Sign in with Apple).
 - **Website blocking:** a downloadable DNS configuration profile (no Network Extension).
-- **Family alerts when Clickey is closed:** Background App Refresh (no push notifications).
+- **Family alerts when Squeek is closed:** Background App Refresh (no push notifications).
 
 Free-team installs expire after 7 days, and the iPhone must be connected to the Mac the first time so Xcode can register it.
 
 ### Reviewing screens without an account
 
 Debug builds accept launch arguments (Xcode › Product › Scheme › Edit Scheme › Arguments) that fill the app with sample data for screenshots. Release builds don't include them.
-- `-ClickeyDemo`: sample warnings, block list and family group.
-- `-ClickeyTab warnings`: open a tab (`warnings`, `blocked`, `family` or `settings`).
-- `-ClickeyDemoCheck`: open a sample scam check on launch.
+- `-SqueekDemo`: sample warnings, block list and family group.
+- `-SqueekTab warnings`: open a tab (`warnings`, `blocked`, `family` or `settings`).
+- `-SqueekDemoCheck`: open a sample scam check on launch.
 
 ## Demo script
 
 1. Sign in on the iPhone. In Supabase, run `seed.sql` so the demo numbers and websites exist.
 2. **Message check:** Home › Check a message, and paste: *"This is the IRS. A warrant for your arrest will be issued today. Pay with Google Play gift cards and do not tell anyone."* The result says "This looks like a scam", lists the evidence, and reads it aloud.
 3. **Link check:** check `paypal-account-verify.example/login`. The result says "Don't open this link" because it's on the seed block list.
-4. **Calls:** replace a seed number in `supabase/seed.sql` with a teammate's phone, re-seed, and turn on call blocking. When the teammate calls, the screen shows "Clickey: reported scam". Turn on "Also block numbers reported by others" and the call is blocked.
-5. **Sync:** insert an `incidents` row for your user from the Supabase dashboard, with `platform` set to `windows`. It appears in Warnings within seconds with a "Clickey on your PC" notification. This stands in for the PC app until that exists.
+4. **Calls:** replace a seed number in `supabase/seed.sql` with a teammate's phone, re-seed, and turn on call blocking. When the teammate calls, the screen shows "Squeek: reported scam". Turn on "Also block numbers reported by others" and the call is blocked.
+5. **Sync:** insert an `incidents` row for your user from the Supabase dashboard, with `platform` set to `windows`. It appears in Warnings within seconds with a "Squeek on your PC" notification. This stands in for the PC app until that exists.
 6. **Family:** create a family group, invite a second account, and block a number from either phone. It reaches both phones' call blockers.
 
 ## Verification status
 
 Verified with Xcode 27:
 
-- The app and all four extensions build for the iOS Simulator and for a device (unsigned), with no warnings in Clickey's own code.
+- The app and all four extensions build for the iOS Simulator and for a device (unsigned), with no warnings in Squeek's own code.
 - The built app bundle has the expected layout: four extensions, the Safari files at the root of their extension, and `rules.json` in each target that needs it.
 - In the iPhone Simulator, without a server: the welcome screen, the Home screen, and a message check that flags a scam with evidence and reads it aloud.
-- `ClickeyCore` passes all 33 golden checks (`swift run ClickeyChecks`), which are the same fixtures the TypeScript engine passes.
+- `SqueekCore` passes all 33 golden checks (`swift run SqueekChecks`), which are the same fixtures the TypeScript engine passes.
 
 **Not yet verified:** signing with a real team, anything that talks to Supabase (sign-in, sync, Realtime, Edge Functions), and the on-device features: call blocking, SMS filtering, the Share sheet, Safari warnings, protective DNS, the QR scanner and push notifications.
 

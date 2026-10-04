@@ -1,5 +1,5 @@
 {
-  "_note": "Synthetic examples only. Run by packages/detection/test/golden.test.ts (TypeScript) and apps/ios/ClickeyCore ClickeyChecks (Swift). Both must agree.",
+  "_note": "Synthetic examples only. Run by packages/detection/test/golden.test.ts (TypeScript) and apps/ios/SqueekCore SqueekChecks (Swift). Both must agree.",
   "text": [
     {
       "id": "irs_gift_card",

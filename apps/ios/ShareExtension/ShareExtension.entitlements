@@ -4,11 +4,11 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>$(CLICKEY_APP_GROUP)</string>
+		<string>$(SQUEEK_APP_GROUP)</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)$(CLICKEY_BUNDLE_ID).shared</string>
+		<string>$(AppIdentifierPrefix)$(SQUEEK_BUNDLE_ID).shared</string>
 	</array>
 </dict>
 </plist>

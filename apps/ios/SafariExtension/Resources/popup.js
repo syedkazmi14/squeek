@@ -6,7 +6,7 @@ const button = document.getElementById("check");
 async function showStatus() {
   const status = await browser.runtime.sendMessage({ type: "status" }).catch(() => null);
   if (status && !status.error && !status.signedIn) {
-    detail.textContent = "Open the Clickey app and sign in for the full check, including Google Safe Browsing.";
+    detail.textContent = "Open the Squeek app and sign in for the full check, including Google Safe Browsing.";
   }
 }
 

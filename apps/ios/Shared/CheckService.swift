@@ -1,4 +1,4 @@
-import ClickeyCore
+import SqueekCore
 import Foundation
 
 /// Runs a check on the server when signed in, falling back to on-device rules.
@@ -10,7 +10,7 @@ final class CheckService: @unchecked Sendable {
   let checker: LocalChecker?
 
   private init() {
-    store = SharedStore(appGroup: ClickeyConfig.appGroup)
+    store = SharedStore(appGroup: SqueekConfig.appGroup)
     checker = RuleSet.bundled().map(LocalChecker.init(rules:))
   }
 

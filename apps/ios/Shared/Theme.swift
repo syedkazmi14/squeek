@@ -1,33 +1,44 @@
-import ClickeyCore
+import SqueekCore
+import CoreText
 import SwiftUI
 
 #if canImport(UIKit)
   import UIKit
 #endif
 
-// Clickey's design system: "Calm Glass". Warm ivory ground, forest green, restrained ochre,
-// Apple's own components (Liquid Glass controls, SF Symbols, SF Pro with New York for display).
+// Squeek's design system: two warm neutrals (charcoal and cream) and one bright yellow, taken
+// from the mascot. Yellow is the only colour that asks for attention: it fills the main button,
+// the toggles and the mark, and stays out of body text. Type is Nunito, to match the wordmark.
 // Warning text always sits on solid colour, never on glass, so it stays readable.
 
 enum Theme {
   // MARK: Colour
 
-  static let ground = dynamic(light: 0xF3F0E8, dark: 0x121411)
-  static let card = dynamic(light: 0xFFFFFF, dark: 0x1D201C)
-  static let cardStroke = dynamic(light: 0xFFFFFF, dark: 0x2B2F2A)
-  static let hairline = dynamic(light: 0xE8E3D8, dark: 0x2B2F2A)
-  static let ink = dynamic(light: 0x1C1B19, dark: 0xF2EEE6)
-  static let secondaryInk = dynamic(light: 0x55524C, dark: 0xB9B4AA)
+  /// The two neutrals.
+  static let ground = dynamic(light: 0xF7F4EC, dark: 0x151412)
+  static let ink = dynamic(light: 0x1B1A17, dark: 0xF7F4EC)
+  /// Cards sit a step above the ground in the same neutral family.
+  static let card = dynamic(light: 0xFFFDF8, dark: 0x211F1C)
+  static let cardStroke = dynamic(light: 0xEFEADD, dark: 0x2E2B27)
+  static let hairline = dynamic(light: 0xE9E4D6, dark: 0x2E2B27)
+  static let secondaryInk = dynamic(light: 0x5C5850, dark: 0xB8B2A6)
+  static let neutralSoft = dynamic(light: 0xEFEBDF, dark: 0x2A2723)
 
-  static let forest = dynamic(light: 0x1F4D3A, dark: 0x7BC09F)
-  static let forestSoft = dynamic(light: 0xE3EDE7, dark: 0x22352B)
-  static let onForest = dynamic(light: 0xFFFFFF, dark: 0x0E1F17)
-  static let ochre = dynamic(light: 0x8A5D14, dark: 0xE0B25E)
-  static let ochreSoft = dynamic(light: 0xF6ECD7, dark: 0x3A2F1C)
+  /// The yellow, for fills: buttons, switches, badges. Always paired with `onAccent`.
+  static let accent = Color(rgb: 0xFFC83A)
+  static let onAccent = Color(rgb: 0x1B1A17)
+  /// The yellow as an icon or text colour: deeper on cream so it stays readable.
+  static let accentInk = dynamic(light: 0x9A6500, dark: 0xFFC83A)
+  static let accentSoft = dynamic(light: 0xFFF0C2, dark: 0x3A3220)
+
+  /// Status colours stay functional and distinct from the brand yellow.
+  static let safe = dynamic(light: 0x1F7A4D, dark: 0x6FCF97)
+  static let safeSoft = dynamic(light: 0xE0F1E7, dark: 0x1F3328)
+  static let ochre = dynamic(light: 0xB4500B, dark: 0xFFA55C)
+  static let ochreSoft = dynamic(light: 0xFCE8D6, dark: 0x3D2A1A)
   static let danger = dynamic(light: 0xB3261E, dark: 0xFF8A80)
   static let dangerInk = dynamic(light: 0x7A1A14, dark: 0xFFC9C3)
   static let dangerSoft = dynamic(light: 0xF8E3E1, dark: 0x3A1C1A)
-  static let neutralSoft = dynamic(light: 0xECE8DF, dark: 0x2A2D29)
 
   /// Kept for older call sites.
   static var ivory: Color { ground }
@@ -56,7 +67,7 @@ enum Theme {
     case .caution:
       return Status(tint: ochre, soft: ochreSoft, ink: ochre, symbol: "exclamationmark.circle.fill", label: "Be careful")
     case .clear:
-      return Status(tint: forest, soft: forestSoft, ink: forest, symbol: "checkmark.shield.fill", label: "No warning signs")
+      return Status(tint: safe, soft: safeSoft, ink: safe, symbol: "checkmark.shield.fill", label: "No warning signs")
     case .unknown:
       return Status(tint: secondaryInk, soft: neutralSoft, ink: ink, symbol: "questionmark.circle.fill", label: "Not fully checked")
     }
@@ -93,10 +104,62 @@ extension Color {
 
 // MARK: - Type
 
+extension Theme {
+  /// Registers the bundled Nunito files. Call once at launch, in the app and in extensions.
+  static func registerFonts() {
+    for url in Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? [] {
+      CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+    }
+    #if canImport(UIKit)
+      let title: [NSAttributedString.Key: Any] = [.font: UIFont(name: "Nunito-ExtraBold", size: 17) ?? .boldSystemFont(ofSize: 17)]
+      let large: [NSAttributedString.Key: Any] = [.font: UIFont(name: "Nunito-Black", size: 34) ?? .boldSystemFont(ofSize: 34)]
+      UINavigationBar.appearance().titleTextAttributes = title
+      UINavigationBar.appearance().largeTitleTextAttributes = large
+      UITabBarItem.appearance().setTitleTextAttributes([.font: UIFont(name: "Nunito-Bold", size: 11) ?? .systemFont(ofSize: 11)], for: .normal)
+      UIBarButtonItem.appearance().setTitleTextAttributes([.font: UIFont(name: "Nunito-Bold", size: 17) ?? .systemFont(ofSize: 17)], for: .normal)
+    #endif
+  }
+}
+
 extension Font {
-  /// New York, for the wordmark and the big result headline.
+  private static func face(_ weight: Font.Weight) -> String {
+    switch weight {
+    case .black, .heavy: return "Nunito-Black"
+    case .bold: return "Nunito-ExtraBold"
+    case .semibold: return "Nunito-Bold"
+    case .medium: return "Nunito-SemiBold"
+    default: return "Nunito-Regular"
+    }
+  }
+
+  /// Nunito at a Dynamic Type text style. Weights run a step heavier than SF so Nunito's soft
+  /// strokes stay easy to read.
+  static func nunito(_ style: Font.TextStyle, _ weight: Font.Weight? = nil) -> Font {
+    let (size, defaultWeight): (CGFloat, Font.Weight) = {
+      switch style {
+      case .largeTitle: return (34, .bold)
+      case .title: return (28, .bold)
+      case .title2: return (22, .bold)
+      case .title3: return (20, .semibold)
+      case .headline: return (17, .semibold)
+      case .callout: return (16, .regular)
+      case .subheadline: return (15, .regular)
+      case .footnote: return (13, .regular)
+      case .caption, .caption2: return (12, .regular)
+      default: return (17, .regular)
+      }
+    }()
+    return .custom(face(weight ?? defaultWeight), size: size, relativeTo: style)
+  }
+
+  /// Nunito at a fixed size, for big numbers and glyphs.
+  static func nunito(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+    .custom(face(weight), size: size)
+  }
+
+  /// Nunito Black, for the wordmark and the big headlines.
   static func display(_ style: Font.TextStyle = .largeTitle) -> Font {
-    .system(style, design: .serif).weight(.semibold)
+    nunito(style, .black)
   }
 }
 
@@ -126,7 +189,7 @@ extension View {
   }
 }
 
-/// Ivory page background; lists and forms show it through.
+/// Cream page background; lists and forms show it through.
 struct ScreenBackground: ViewModifier {
   func body(content: Content) -> some View {
     content
@@ -138,15 +201,16 @@ struct ScreenBackground: ViewModifier {
 extension View {
   func screenBackground() -> some View { modifier(ScreenBackground()) }
 
-  /// Full-width Liquid Glass button tinted forest: the one main action on a screen.
+  /// Full-width Liquid Glass button in the brand yellow: the one main action on a screen.
   func primaryAction() -> some View {
     self
       .font(.title3.weight(.semibold))
+      .foregroundStyle(Theme.onAccent)
       .buttonSizing(.flexible)
       .buttonStyle(.glassProminent)
       .buttonBorderShape(.roundedRectangle(radius: 22))
       .controlSize(.extraLarge)
-      .tint(Theme.forest)
+      .tint(Theme.accent)
   }
 
   /// Full-width clear glass button for secondary actions.
@@ -163,14 +227,14 @@ extension View {
 
 // Old style names, used by the extensions; they now map to Liquid Glass.
 struct PrimaryButtonStyle: ButtonStyle {
-  var tint: Color = Theme.forest
+  var tint: Color = Theme.accent
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.title3.weight(.semibold))
       .frame(maxWidth: .infinity, minHeight: 60)
       .padding(.horizontal, 16)
-      .foregroundStyle(Theme.onForest)
+      .foregroundStyle(Theme.onAccent)
       .background(tint.opacity(configuration.isPressed ? 0.82 : 1), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
       .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
   }
@@ -194,8 +258,8 @@ struct SecondaryButtonStyle: ButtonStyle {
 /// An SF Symbol on a soft rounded square, used in rows and tiles.
 struct IconBadge: View {
   let symbol: String
-  var tint: Color = Theme.forest
-  var soft: Color = Theme.forestSoft
+  var tint: Color = Theme.accentInk
+  var soft: Color = Theme.accentSoft
   var size: CGFloat = 42
 
   var body: some View {
@@ -293,21 +357,16 @@ struct FlowLayout: Layout {
   }
 }
 
-/// Clickey's mark: an incomplete forest ring with an ochre dot.
-struct ClickeyEmblem: View {
+/// Squeek's mascot. `size` is the height; the artwork keeps its proportions.
+struct SqueekEmblem: View {
   var size: CGFloat = 30
 
   var body: some View {
-    ZStack {
-      Circle()
-        .trim(from: 0.08, to: 0.92)
-        .stroke(Theme.forest, style: StrokeStyle(lineWidth: size * 0.13, lineCap: .round))
-        .rotationEffect(.degrees(-30))
-      Circle().fill(Theme.ochre).frame(width: size * 0.22, height: size * 0.22)
-        .offset(x: size * 0.36, y: -size * 0.2)
-    }
-    .frame(width: size, height: size)
-    .accessibilityHidden(true)
+    Image("SqueekMark")
+      .resizable()
+      .scaledToFit()
+      .frame(height: size)
+      .accessibilityHidden(true)
   }
 }
 
@@ -320,7 +379,7 @@ enum Labels {
     case "sms": return "Text message"
     case "call": return "Phone call"
     case "link": return "Link"
-    case "share": return "Shared to Clickey"
+    case "share": return "Shared to Squeek"
     case "screenshot": return "Screenshot"
     case "browser": return "Web page"
     default: return "Message"
@@ -368,7 +427,7 @@ enum Labels {
     case "user": return "You"
     case "household": return "Family"
     case "community": return "Community"
-    case "seed": return "Clickey list"
+    case "seed": return "Squeek list"
     default: return source
     }
   }

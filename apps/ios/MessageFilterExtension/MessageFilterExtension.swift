@@ -1,4 +1,4 @@
-import ClickeyCore
+import SqueekCore
 import Foundation
 import IdentityLookup
 
@@ -20,7 +20,7 @@ extension MessageFilterExtension: ILMessageFilterQueryHandling {
   private static let checker: LocalChecker? = RuleSet.bundled().map(LocalChecker.init(rules:))
 
   static func decide(sender: String?, body: String?) -> ILMessageFilterAction {
-    let appGroup = (Bundle.main.object(forInfoDictionaryKey: "ClickeyAppGroup") as? String) ?? ""
+    let appGroup = (Bundle.main.object(forInfoDictionaryKey: "SqueekAppGroup") as? String) ?? ""
     let snapshot = SharedStore(appGroup: appGroup)?.blockList() ?? .empty
 
     if let sender, let e164 = PhoneNumbers.normalizeE164(sender),

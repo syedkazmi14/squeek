@@ -19,7 +19,7 @@ function randomCode(): string {
 }
 
 function normalizeCode(input: string): string {
-  return input.trim().toUpperCase().replace(/^CLICKEY-PAIR:/, "").replace(/[^A-Z0-9]/g, "");
+  return input.trim().toUpperCase().replace(/^SQUEEK-PAIR:/, "").replace(/[^A-Z0-9]/g, "");
 }
 
 serve("pair-device", async (req) => {
@@ -37,7 +37,7 @@ serve("pair-device", async (req) => {
         expires_at: expiresAt,
       });
       if (error) throw new Error(`pairing create: ${error.message}`);
-      return json({ code, qr: `clickey-pair:${code}`, pollSecret, expiresAt });
+      return json({ code, qr: `squeek-pair:${code}`, pollSecret, expiresAt });
     }
 
     case "claim": {

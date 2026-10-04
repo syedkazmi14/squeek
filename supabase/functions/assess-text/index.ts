@@ -28,7 +28,7 @@ import { assessWithJev } from "../_shared/jev.ts";
 import { checkLink } from "../_shared/linkcheck.ts";
 import { type CheckResult, levelForRisk, type LinkSummary } from "../_shared/results.ts";
 
-// Must match LocalChecker.suspiciousLinkWeight in apps/ios/ClickeyCore.
+// Must match LocalChecker.suspiciousLinkWeight in apps/ios/SqueekCore.
 const SUSPICIOUS_LINK_WEIGHT = 2;
 // Only the first links get network checks, to bound latency and cost.
 const NETWORK_LINK_CHECKS = 2;

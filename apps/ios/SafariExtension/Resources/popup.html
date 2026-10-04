@@ -3,24 +3,24 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Clickey</title>
+    <title>Squeek</title>
     <style>
-      :root { color-scheme: light dark; --bg: #FAF6EE; --ink: #1C1B19; --muted: #55524C; --forest: #1F4D3A; --on-forest: #fff; }
+      :root { color-scheme: light dark; --bg: #F7F4EC; --ink: #1B1A17; --muted: #5C5850; --forest: #1B1A17; --on-forest: #1B1A17; --accent: #FFC83A; }
       @media (prefers-color-scheme: dark) {
-        :root { --bg: #1B1C1A; --ink: #F2EEE6; --muted: #B9B4AA; --forest: #7BC09F; --on-forest: #0E1F17; }
+        :root { --bg: #151412; --ink: #F7F4EC; --muted: #B8B2A6; --forest: #FFC83A; --on-forest: #1B1A17; }
       }
       body { margin: 0; padding: 18px; min-width: 280px; background: var(--bg); color: var(--ink);
         font: 17px/1.4 -apple-system, system-ui, sans-serif; }
       .brand { font-weight: 600; color: var(--forest); margin-bottom: 8px; }
       h1 { font-size: 22px; font-weight: 500; margin: 0 0 8px; }
       p, li { color: var(--muted); }
-      button { width: 100%; min-height: 52px; border: none; border-radius: 12px; background: var(--forest);
-        color: var(--on-forest); font: 600 18px -apple-system, system-ui; margin-top: 8px; }
+      button { width: 100%; min-height: 52px; border: none; border-radius: 12px; background: var(--accent);
+        color: #1B1A17; font: 600 18px -apple-system, system-ui; margin-top: 8px; }
     </style>
   </head>
   <body>
-    <div class="brand">Clickey</div>
-    <h1 id="headline">Clickey checks links in Safari</h1>
+    <div class="brand">Squeek</div>
+    <h1 id="headline">Squeek checks links in Safari</h1>
     <p id="detail">It warns you before a scam or dangerous link opens.</p>
     <ul id="reasons"></ul>
     <button id="check">Check this page</button>

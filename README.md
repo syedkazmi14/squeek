@@ -1,6 +1,6 @@
 # squeek
 
-Home of **Clickey**, a companion that helps older adults notice scams while using their computer or phone. It spots suspicious messages, explains what looks wrong, and speaks the warning out loud.
+Home of **Squeek**, a companion that helps older adults notice scams while using their computer or phone. It spots suspicious messages, explains what looks wrong, and speaks the warning out loud.
 
 Status: the iPhone app ([apps/ios](apps/ios/README.md)) and the shared backend ([supabase](supabase/README.md)) are built as development versions. The Windows app is still a design.
 
@@ -27,8 +27,8 @@ tests/fixtures         synthetic scam / legitimate / adversarial examples
 
 ## Docs
 
-- [Clickey explained](docs/clickey-explained.md): plain-language overview
-- [Desktop design and build proposal](docs/superpowers/specs/2026-10-03-clickey-scam-protection-design.md)
+- [Squeek explained](docs/squeek-explained.md): plain-language overview
+- [Desktop design and build proposal](docs/superpowers/specs/2026-10-03-squeek-scam-protection-design.md)
 - [iPhone hackathon build plan](docs/mobile/README.md)
 - [Accounts, database and sync](docs/backend/README.md)
 - [Design concepts](docs/design/): mockups and prompts (v5 "mature" is the current direction)

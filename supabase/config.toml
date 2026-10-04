@@ -3,7 +3,7 @@ project_id = "squeek"
 
 [auth]
 # The iPhone app signs in from the emailed link, which reopens the app at this URL.
-additional_redirect_urls = ["clickey://login-callback"]
+additional_redirect_urls = ["squeek://login-callback"]
 
 [auth.email]
 # Codes are 6 digits if an email template ever shows {{ .Token }}. Free projects can't edit

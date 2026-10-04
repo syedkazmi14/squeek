@@ -77,7 +77,7 @@ async function expandRedirects(start: string): Promise<{ finalUrl: string; statu
       res = await fetch(current, {
         method: "GET",
         redirect: "manual",
-        headers: { "User-Agent": "ClickeyLinkCheck/0.1" },
+        headers: { "User-Agent": "SqueekLinkCheck/0.1" },
         signal: AbortSignal.timeout(3000),
       });
     } catch {
@@ -104,7 +104,7 @@ async function safeBrowsing(urls: string[]): Promise<SafeBrowsingStatus> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        client: { clientId: "clickey", clientVersion: "0.1.0" },
+        client: { clientId: "squeek", clientVersion: "0.1.0" },
         threatInfo: {
           threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
           platformTypes: ["ANY_PLATFORM"],

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Check with Clickey</string>
+	<string>Check with Squeek</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -20,15 +20,15 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>ClickeyAppBundleId</key>
-	<string>$(CLICKEY_BUNDLE_ID)</string>
-	<key>ClickeyAppGroup</key>
-	<string>$(CLICKEY_APP_GROUP)</string>
-	<key>ClickeyKeychainGroup</key>
-	<string>$(AppIdentifierPrefix)$(CLICKEY_BUNDLE_ID).shared</string>
-	<key>ClickeySupabaseAnonKey</key>
+	<key>SqueekAppBundleId</key>
+	<string>$(SQUEEK_BUNDLE_ID)</string>
+	<key>SqueekAppGroup</key>
+	<string>$(SQUEEK_APP_GROUP)</string>
+	<key>SqueekKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)$(SQUEEK_BUNDLE_ID).shared</string>
+	<key>SqueekSupabaseAnonKey</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
-	<key>ClickeySupabaseHost</key>
+	<key>SqueekSupabaseHost</key>
 	<string>$(SUPABASE_HOST)</string>
 	<key>NSExtension</key>
 	<dict>

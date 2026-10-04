@@ -1,4 +1,4 @@
-import ClickeyCore
+import SqueekCore
 import Foundation
 import Supabase
 
@@ -7,10 +7,10 @@ import Supabase
 /// app's own keychain if the group isn't available (for example an unsigned simulator build).
 struct SharedAuthStorage: AuthLocalStorage {
   private let shared: KeychainLocalStorage?
-  private let local = KeychainLocalStorage(service: "clickey.auth")
+  private let local = KeychainLocalStorage(service: "squeek.auth")
 
   init(accessGroup: String) {
-    shared = accessGroup.isEmpty ? nil : KeychainLocalStorage(service: "clickey.auth", accessGroup: accessGroup)
+    shared = accessGroup.isEmpty ? nil : KeychainLocalStorage(service: "squeek.auth", accessGroup: accessGroup)
   }
 
   func store(key: String, value: Data) throws {
@@ -36,8 +36,8 @@ enum BackendError: LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .notConfigured: return "Clickey isn't connected to its server yet."
-    case .signedOut: return "Please sign in to Clickey first."
+    case .notConfigured: return "Squeek isn't connected to its server yet."
+    case .signedOut: return "Please sign in to Squeek first."
     case .server(let message): return message
     }
   }
@@ -50,16 +50,16 @@ final class Backend: @unchecked Sendable {
   let client: SupabaseClient?
 
   private init() {
-    guard let url = ClickeyConfig.supabaseURL, ClickeyConfig.isBackendConfigured else {
+    guard let url = SqueekConfig.supabaseURL, SqueekConfig.isBackendConfigured else {
       client = nil
       return
     }
     client = SupabaseClient(
       supabaseURL: url,
-      supabaseKey: ClickeyConfig.supabaseAnonKey,
+      supabaseKey: SqueekConfig.supabaseAnonKey,
       options: SupabaseClientOptions(
         auth: .init(
-          storage: SharedAuthStorage(accessGroup: ClickeyConfig.keychainGroup),
+          storage: SharedAuthStorage(accessGroup: SqueekConfig.keychainGroup),
           emitLocalSessionAsInitialSession: true)))
   }
 

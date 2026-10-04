@@ -1,7 +1,7 @@
 // GET -> a configuration profile that turns on Cloudflare's malware-blocking encrypted DNS
 // (1.1.1.2, "security.cloudflare-dns.com") for the whole iPhone. Installing a profile needs no
 // paid Apple developer capability, unlike setting DNS from inside the app.
-// Opened from Clickey's setup guide in Safari; the person installs it in Settings.
+// Opened from Squeek's setup guide in Safari; the person installs it in Settings.
 // JWT verification is off for this function (see supabase/config.toml): Safari sends no token.
 
 const PROFILE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -26,9 +26,9 @@ const PROFILE = `<?xml version="1.0" encoding="UTF-8"?>
         </array>
       </dict>
       <key>PayloadDisplayName</key>
-      <string>Clickey protective DNS</string>
+      <string>Squeek protective DNS</string>
       <key>PayloadIdentifier</key>
-      <string>dev.squeek.clickey.dns.settings</string>
+      <string>dev.squeek.squeek.dns.settings</string>
       <key>PayloadType</key>
       <string>com.apple.dnsSettings.managed</string>
       <key>PayloadUUID</key>
@@ -40,9 +40,9 @@ const PROFILE = `<?xml version="1.0" encoding="UTF-8"?>
   <key>PayloadDescription</key>
   <string>Blocks known malware and phishing websites in every app using Cloudflare's free security DNS. Remove it any time in Settings › General › VPN &amp; Device Management.</string>
   <key>PayloadDisplayName</key>
-  <string>Clickey protective DNS</string>
+  <string>Squeek protective DNS</string>
   <key>PayloadIdentifier</key>
-  <string>dev.squeek.clickey.dns</string>
+  <string>dev.squeek.squeek.dns</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
   <key>PayloadType</key>
@@ -60,7 +60,7 @@ Deno.serve((req) => {
   return new Response(req.method === "HEAD" ? null : PROFILE, {
     headers: {
       "Content-Type": "application/x-apple-aspen-config",
-      "Content-Disposition": 'attachment; filename="Clickey-protective-DNS.mobileconfig"',
+      "Content-Disposition": 'attachment; filename="Squeek-protective-DNS.mobileconfig"',
       "Cache-Control": "public, max-age=3600",
     },
   });

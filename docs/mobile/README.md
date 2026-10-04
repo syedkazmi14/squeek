@@ -1,6 +1,6 @@
-# Clickey for iPhone: hackathon build plan
+# Squeek for iPhone: hackathon build plan
 
-Status: implemented as a development build in [apps/ios](../../apps/ios/README.md), with the backend in [supabase/](../../supabase/README.md). See the app README for what has been verified. The plan below is what the build follows; where they differ, the code wins. It sits alongside the desktop design in [the Clickey scam protection spec](../superpowers/specs/2026-10-03-clickey-scam-protection-design.md) and shares an account system and database with it; see [Accounts, database and sync](../backend/README.md).
+Status: implemented as a development build in [apps/ios](../../apps/ios/README.md), with the backend in [supabase/](../../supabase/README.md). See the app README for what has been verified. The plan below is what the build follows; where they differ, the code wins. It sits alongside the desktop design in [the Squeek scam protection spec](../superpowers/specs/2026-10-03-squeek-scam-protection-design.md) and shares an account system and database with it; see [Accounts, database and sync](../backend/README.md).
 
 Goal: a working hackathon demo. It doesn't need to be perfect, but every claim made to judges must match what the build actually does.
 
@@ -8,23 +8,23 @@ Goal: a working hackathon demo. It doesn't need to be perfect, but every claim m
 
 - **Native SwiftUI app** in this repo at `apps/ios`. It's iOS-only, and almost every protection is a separate Apple extension written in Swift, so React Native would add friction and little value.
 - **The protections iOS actually allows:**
-  - **Calls:** a Call Directory extension blocks numbers and shows a "Clickey: reported scam" label on the incoming-call screen, using a blocklist synced from the database.
+  - **Calls:** a Call Directory extension blocks numbers and shows a "Squeek: reported scam" label on the incoming-call screen, using a blocklist synced from the database.
   - **Text messages:** a Message Filter extension sorts SMS from unknown senders into Junk.
-  - **Dangerous links:** a Safari Web Extension warns before scam links open, a protective-DNS toggle blocks known malicious domains in every app, and the user can share any link to Clickey to have it checked.
-  - **Anything else:** the Share sheet or a screenshot check. The user sends a message, email or screenshot to Clickey, which reads it, warns and speaks the result.
-- **What iOS does not allow:** no third-party app can listen to calls, read other apps' screens, or read notifications. Clickey can't "hear" a scam call while it's happening. Apple's own Call Screening (iOS 26) handles unknown callers; Clickey adds synced, family-shared blocklists and labels on top of it.
+  - **Dangerous links:** a Safari Web Extension warns before scam links open, a protective-DNS toggle blocks known malicious domains in every app, and the user can share any link to Squeek to have it checked.
+  - **Anything else:** the Share sheet or a screenshot check. The user sends a message, email or screenshot to Squeek, which reads it, warns and speaks the result.
+- **What iOS does not allow:** no third-party app can listen to calls, read other apps' screens, or read notifications. Squeek can't "hear" a scam call while it's happening. Apple's own Call Screening (iOS 26) handles unknown callers; Squeek adds synced, family-shared blocklists and labels on top of it.
 - **Sync:** Supabase (Postgres, Auth, Realtime, Edge Functions) is the single backend for both PC and iPhone. The Jev key lives in an Edge Function, never in either app.
 
 ## What each protection really does
 
 | Use case | iOS mechanism | Automatic? | What the user sees | Limits |
 | --- | --- | --- | --- | --- |
-| Scam calls | Call Directory extension (CallKit) | Yes, for numbers on the list | Call blocked silently, or incoming-call screen shows "Clickey: reported scam" | Only numbers already on the list. No audio, no real-time lookup. List refreshes only when the app runs |
+| Scam calls | Call Directory extension (CallKit) | Yes, for numbers on the list | Call blocked silently, or incoming-call screen shows "Squeek: reported scam" | Only numbers already on the list. No audio, no real-time lookup. List refreshes only when the app runs |
 | Scam calls, live lookup (stretch) | Live Caller ID Lookup extension (iOS 18+) | Yes | Label from a server lookup | Needs a private-information-retrieval server (Apple has an example service) and registration in the CloudKit Console; forum reports call it flaky. Not for the hackathon unless everything else is done |
 | Scam SMS | Message Filter extension (IdentityLookup) | Yes | Message goes to Junk | Unknown senders only; never iMessage or contacts. Use local rules only (server deferral needs your own domain) |
 | Dangerous links in Safari | Safari Web Extension (content script that checks the page and marks risky links; native handler) | Yes, once enabled in Settings | Warning page before a flagged link opens; known-bad domains blocked | Safari only; user must enable it in Settings. Approved for iOS only; the desktop "no browser extension" rule still applies on Windows |
-| Dangerous links in every app | Protective DNS via a downloadable configuration profile (DNS over HTTPS; `NEDNSSettingsManager` needs a paid account) | Yes | Known malicious sites fail to load | No Clickey explanation, just a failed load. Uses a public filtering resolver, not our own list |
-| Link from Messages, Mail or WhatsApp | Share extension: share link to "Check with Clickey" | No, one tap | Verdict sheet with reasons, spoken aloud | User has to think to check |
+| Dangerous links in every app | Protective DNS via a downloadable configuration profile (DNS over HTTPS; `NEDNSSettingsManager` needs a paid account) | Yes | Known malicious sites fail to load | No Squeek explanation, just a failed load. Uses a public filtering resolver, not our own list |
+| Link from Messages, Mail or WhatsApp | Share extension: share link to "Check with Squeek" | No, one tap | Verdict sheet with reasons, spoken aloud | User has to think to check |
 | Suspicious message or email | Share extension (text) or screenshot check (Vision OCR) | No, one tap | Warning, evidence, speech; synced to the account | Same |
 | One-press check | App Intent for Shortcuts, Action button or Back Tap: "Check my screen" | No, one press | Same as above | Needs one-time Shortcut setup |
 
@@ -62,15 +62,15 @@ Database details, row-level security and conflict rules: [docs/backend/README.md
 
 ```
 apps/ios/
-  Clickey.xcodeproj
-  Clickey/                 SwiftUI app: onboarding, sign-in, pairing scanner, home, incident
+  Squeek.xcodeproj
+  Squeek/                 SwiftUI app: onboarding, sign-in, pairing scanner, home, incident
                            history, report number, link checker, settings, speech
   CallDirectoryExtension/  CXCallDirectoryProvider reading App Group blocklist
   MessageFilterExtension/  ILMessageFilterQueryHandling with local rules.json
   ShareExtension/          SwiftUI sheet, Vision OCR, assess-text / check-link
   SafariExtension/         manifest v3, content script, declarativeNetRequest rules, native handler
-  Clickey/Intents/         App Intents: Check a Message / Link / Screenshot (in the app target)
-  ClickeyCore/             Swift package: models, redaction, rule interpreter for rules.json,
+  Squeek/Intents/         App Intents: Check a Message / Link / Screenshot (in the app target)
+  SqueekCore/             Swift package: models, redaction, rule interpreter for rules.json,
                            link heuristics, App Group store (builds and tests on macOS)
   Shared/                  Supabase client, check service, speech, OCR, result screen
 supabase/                  migrations, RLS policies, seed, Edge Functions (shared with desktop)
@@ -100,7 +100,7 @@ Build in this order and stop wherever time runs out. Each step works as its own 
 
 - **A free Apple account is enough.** The build avoids the paid-only capabilities (push, Sign in with Apple, Network Extension); see `apps/ios/README.md`.
 - **A physical iPhone.** The Call Directory and Message Filter extensions can't be meaningfully tested in the Simulator. Use a second team phone to place test calls and send SMS. Never use real scam numbers; seed the blocklist with team-owned numbers, labeled as test data.
-- **Enable steps the user must do once:** Settings → Phone → Call Blocking & Identification → Clickey; Settings → Messages → Unknown & Spam → Clickey; Settings → Safari → Extensions → Clickey; approve the DNS profile. Onboarding should walk through each, with large text and one step per screen.
+- **Enable steps the user must do once:** Settings → Phone → Call Blocking & Identification → Squeek; Settings → Messages → Unknown & Spam → Squeek; Settings → Safari → Extensions → Squeek; approve the DNS profile. Onboarding should walk through each, with large text and one step per screen.
 - **Seed data:** the FTC publishes reported Do Not Call complaint data; consider a small seed of reported numbers, after checking its terms. Label community and seed data as "reported", not "confirmed scam".
 
 ## UX and accessibility
@@ -119,8 +119,8 @@ Build in this order and stop wherever time runs out. Each step works as its own 
 
 ## Honest claims for judges
 
-- "Clickey blocks and labels calls from numbers reported by you, your family or the community." Not: "Clickey detects scam calls."
-- "Clickey filters SMS from unknown senders and warns on links in Safari and anything you share." Not: "Clickey reads all your messages."
+- "Squeek blocks and labels calls from numbers reported by you, your family or the community." Not: "Squeek detects scam calls."
+- "Squeek filters SMS from unknown senders and warns on links in Safari and anything you share." Not: "Squeek reads all your messages."
 - "The PC and phone share one account; a scam spotted on one shows up on the other."
 
 ## Sources

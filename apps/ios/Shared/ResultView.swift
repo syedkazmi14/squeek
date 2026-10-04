@@ -1,4 +1,4 @@
-import ClickeyCore
+import SqueekCore
 import SwiftUI
 
 /// A check result. A solid tinted header says what to do in one line, then the original message
@@ -85,7 +85,7 @@ struct ResultView<Actions: View>: View {
             Image(systemName: "speaker.wave.3.fill")
               .symbolEffect(.variableColor.iterative, isActive: speech.isSpeaking)
           }
-          .font(.headline)
+          .font(.nunito(.headline))
           .foregroundStyle(status.ink)
         }
         .buttonStyle(.glass)
@@ -93,7 +93,7 @@ struct ResultView<Actions: View>: View {
       }
 
       Label {
-        Text(status.label).font(.headline).foregroundStyle(status.ink)
+        Text(status.label).font(.nunito(.headline)).foregroundStyle(status.ink)
       } icon: {
         Image(systemName: status.symbol)
           .font(.system(size: 17, weight: .bold))
@@ -112,7 +112,7 @@ struct ResultView<Actions: View>: View {
 
       if let detail {
         Text(detail)
-          .font(.title3)
+          .font(.nunito(.title3))
           .foregroundStyle(Theme.ink.opacity(0.85))
           .fixedSize(horizontal: false, vertical: true)
       }
@@ -156,12 +156,12 @@ struct ResultView<Actions: View>: View {
   private func messageCard(_ text: String) -> some View {
     VStack(alignment: .leading, spacing: 10) {
       Text("The message")
-        .font(.caption.weight(.bold))
+        .font(.nunito(.caption, .bold))
         .textCase(.uppercase)
         .kerning(0.6)
         .foregroundStyle(Theme.secondaryInk)
       Text(highlighted(text))
-        .font(.title3)
+        .font(.nunito(.title3))
         .lineSpacing(3)
         .foregroundStyle(Theme.ink)
         .textSelection(.enabled)
@@ -180,7 +180,7 @@ struct ResultView<Actions: View>: View {
       while let range = attributed[searchRange].range(of: phrase, options: [.caseInsensitive]) {
         attributed[range].backgroundColor = status.soft
         attributed[range].foregroundColor = status.ink
-        attributed[range].font = .title3.weight(.semibold)
+        attributed[range].font = .nunito(.title3, .semibold)
         searchRange = range.upperBound..<attributed.endIndex
       }
     }
@@ -190,19 +190,19 @@ struct ResultView<Actions: View>: View {
   private var linkCard: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("The link")
-        .font(.caption.weight(.bold))
+        .font(.nunito(.caption, .bold))
         .textCase(.uppercase)
         .kerning(0.6)
         .foregroundStyle(Theme.secondaryInk)
       Text(result.domain ?? result.url ?? "")
-        .font(.title2.weight(.semibold))
+        .font(.nunito(.title2, .semibold))
         .foregroundStyle(Theme.ink)
       if let url = result.url {
-        Text(url).font(.callout).foregroundStyle(Theme.secondaryInk).lineLimit(2)
+        Text(url).font(.nunito(.callout)).foregroundStyle(Theme.secondaryInk).lineLimit(2)
       }
       if let final = result.finalUrl {
         Label("Actually goes to \(final)", systemImage: "arrow.turn.down.right")
-          .font(.callout.weight(.semibold))
+          .font(.nunito(.callout, .semibold))
           .foregroundStyle(status.ink)
       }
     }
@@ -212,7 +212,7 @@ struct ResultView<Actions: View>: View {
   private func linksCard(_ links: [LinkSummary]) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Links in this message")
-        .font(.caption.weight(.bold))
+        .font(.nunito(.caption, .bold))
         .textCase(.uppercase)
         .kerning(0.6)
         .foregroundStyle(Theme.secondaryInk)
@@ -220,9 +220,9 @@ struct ResultView<Actions: View>: View {
         let linkStatus = Theme.status(Level(verdict: link.verdict))
         HStack(spacing: 12) {
           IconBadge(symbol: linkStatus.symbol, tint: linkStatus.tint, soft: linkStatus.soft, size: 34)
-          Text(link.domain ?? link.url).font(.body.weight(.semibold)).foregroundStyle(Theme.ink)
+          Text(link.domain ?? link.url).font(.nunito(.body, .semibold)).foregroundStyle(Theme.ink)
           Spacer()
-          Text(linkStatus.label).font(.footnote).foregroundStyle(Theme.secondaryInk)
+          Text(linkStatus.label).font(.nunito(.footnote)).foregroundStyle(Theme.secondaryInk)
         }
         .accessibilityElement(children: .combine)
       }
@@ -235,9 +235,9 @@ struct ResultView<Actions: View>: View {
       if result.isLocal {
         Label("Checked on this phone only", systemImage: "iphone")
       } else if result.checks?.ai == "used" {
-        Label("Checked with Clickey's rules and AI", systemImage: "checkmark.seal")
+        Label("Checked with Squeek's rules and AI", systemImage: "checkmark.seal")
       } else {
-        Label("Checked with Clickey's rules", systemImage: "checkmark.seal")
+        Label("Checked with Squeek's rules", systemImage: "checkmark.seal")
       }
       if result.checks?.ai == "unavailable" {
         Text("The AI check wasn't available this time.")
@@ -249,7 +249,7 @@ struct ResultView<Actions: View>: View {
         Text("No warning signs doesn't prove something is safe.")
       }
     }
-    .font(.footnote)
+    .font(.nunito(.footnote))
     .foregroundStyle(Theme.secondaryInk)
     .frame(maxWidth: .infinity, alignment: .leading)
   }

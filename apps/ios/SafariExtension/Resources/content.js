@@ -1,4 +1,4 @@
-// Clickey in Safari: checks the page you're on, marks risky links, and asks before you open one.
+// Squeek in Safari: checks the page you're on, marks risky links, and asks before you open one.
 // All UI lives in a shadow root so page styles can't change it; page text is only ever set as text.
 
 (() => {
@@ -17,11 +17,11 @@
     :host { all: initial; }
     .backdrop { position: fixed; inset: 0; z-index: 2147483647; background: rgba(20, 20, 18, 0.55);
       display: flex; align-items: flex-end; justify-content: center; font: 18px/1.4 -apple-system, system-ui, sans-serif; }
-    .panel { background: #FAF6EE; color: #1C1B19; width: 100%; max-width: 560px; box-sizing: border-box;
+    .panel { background: #F7F4EC; color: #1B1A17; width: 100%; max-width: 560px; box-sizing: border-box;
       border-radius: 16px 16px 0 0; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); }
-    .rule { width: 48px; height: 3px; background: #9A6A1E; margin-bottom: 14px; }
+    .rule { width: 48px; height: 3px; background: #FFC83A; margin-bottom: 14px; }
     .danger .rule { background: #9B2C2C; }
-    .brand { font: 600 15px -apple-system, system-ui; color: #1F4D3A; margin-bottom: 8px; }
+    .brand { font: 600 15px -apple-system, system-ui; color: #1B1A17; margin-bottom: 8px; }
     h1 { font-size: 27px; font-weight: 500; margin: 0 0 10px; line-height: 1.25; }
     p { margin: 0 0 12px; }
     ul { margin: 0 0 18px; padding-left: 22px; }
@@ -29,10 +29,10 @@
     .domain { font-weight: 600; word-break: break-all; }
     button { display: block; width: 100%; min-height: 56px; border-radius: 12px; font: 600 19px -apple-system, system-ui;
       margin-top: 10px; cursor: pointer; }
-    .primary { background: #1F4D3A; color: #fff; border: none; }
-    .secondary { background: #fff; color: #1C1B19; border: 1.5px solid #DCD5C8; font-weight: 400; }
-    .banner { position: fixed; left: 8px; right: 8px; top: 8px; z-index: 2147483647; background: #FAF6EE; color: #1C1B19;
-      border: 1.5px solid #9A6A1E; border-radius: 12px; padding: 12px 14px; font: 17px/1.35 -apple-system, system-ui;
+    .primary { background: #FFC83A; color: #1B1A17; border: none; }
+    .secondary { background: #fff; color: #1B1A17; border: 1.5px solid #DCD5C8; font-weight: 400; }
+    .banner { position: fixed; left: 8px; right: 8px; top: 8px; z-index: 2147483647; background: #F7F4EC; color: #1B1A17;
+      border: 1.5px solid #FFC83A; border-radius: 12px; padding: 12px 14px; font: 17px/1.35 -apple-system, system-ui;
       display: flex; gap: 12px; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
     .banner button { width: auto; min-height: 44px; margin: 0; padding: 0 16px; font-size: 17px; }
     @media (prefers-color-scheme: dark) {
@@ -45,7 +45,7 @@
 
   function root() {
     if (host) return host.shadowRoot;
-    host = document.createElement("clickey-warning");
+    host = document.createElement("squeek-warning");
     const shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("style");
     style.textContent = STYLE;
@@ -73,7 +73,7 @@
       clearUI();
       const backdrop = el("div", { class: `backdrop ${level}`, role: "alertdialog", "aria-modal": "true", "aria-label": headline });
       const panel = el("div", { class: "panel" });
-      panel.append(el("div", { class: "rule" }), el("div", { class: "brand" }, "Clickey"), el("h1", {}, headline));
+      panel.append(el("div", { class: "rule" }), el("div", { class: "brand" }, "Squeek"), el("h1", {}, headline));
       if (domain) {
         const p = el("p", {}, "Website: ");
         p.append(el("span", { class: "domain" }, domain));
@@ -128,7 +128,7 @@
         else location.replace("about:blank");
       }
     } else if (result.level === "caution") {
-      showBanner(`Clickey: ${result.headline}. ${result.reasons?.[0] ?? ""}`);
+      showBanner(`Squeek: ${result.headline}. ${result.reasons?.[0] ?? ""}`);
     }
   }
 
@@ -155,9 +155,9 @@
     for (const [href, info] of Object.entries(reply?.results ?? {})) {
       flagged.set(href, info);
       document.querySelectorAll(`a[href="${CSS.escape(href)}"]`).forEach((a) => {
-        a.style.outline = info.verdict === "malicious" ? "2px solid #9B2C2C" : "2px solid #9A6A1E";
+        a.style.outline = info.verdict === "malicious" ? "2px solid #9B2C2C" : "2px solid #B4500B";
         a.style.outlineOffset = "2px";
-        a.title = "Clickey: this link has warning signs";
+        a.title = "Squeek: this link has warning signs";
       });
     }
   }

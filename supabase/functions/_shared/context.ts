@@ -50,8 +50,8 @@ export function parseSurface(value: unknown, fallback: Surface): Surface {
   return SURFACES.includes(value as Surface) ? (value as Surface) : fallback;
 }
 
-const DAILY_ASSESSMENTS = Number(Deno.env.get("CLICKEY_DAILY_ASSESSMENTS") ?? 300);
-const DAILY_LINK_CHECKS = Number(Deno.env.get("CLICKEY_DAILY_LINK_CHECKS") ?? 1000);
+const DAILY_ASSESSMENTS = Number(Deno.env.get("SQUEEK_DAILY_ASSESSMENTS") ?? 300);
+const DAILY_LINK_CHECKS = Number(Deno.env.get("SQUEEK_DAILY_LINK_CHECKS") ?? 1000);
 
 /** Counts one request against today's quota and rejects it when the limit is reached. */
 export async function chargeUsage(userId: string, kind: "assessment" | "link", tokens = 0) {

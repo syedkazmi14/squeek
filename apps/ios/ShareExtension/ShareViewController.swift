@@ -1,12 +1,13 @@
-import ClickeyCore
+import SqueekCore
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// "Check with Clickey" in the Share sheet: text, a link, or a screenshot from any app.
+/// "Check with Squeek" in the Share sheet: text, a link, or a screenshot from any app.
 final class ShareViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
+    Theme.registerFonts()
     let model = ShareModel()
     let root = ShareRootView(model: model) { [weak self] in
       Speech.shared.stop()
@@ -47,7 +48,7 @@ final class ShareModel: ObservableObject {
         guard let image = await Self.loadImage(provider) else { continue }
         let text = (try? await TextRecognizer.recognize(image)) ?? ""
         guard !text.isEmpty else {
-          state = .failed("Clickey couldn't find any words in that picture.")
+          state = .failed("Squeek couldn't find any words in that picture.")
           return
         }
         state = .working("Checking…")
@@ -83,7 +84,7 @@ final class ShareModel: ObservableObject {
     } else if let url = sharedURL {
       state = .done(await CheckService.shared.checkLink(url.absoluteString, surface: .share))
     } else {
-      state = .failed("Clickey can check text, links and screenshots. Try sharing one of those.")
+      state = .failed("Squeek can check text, links and screenshots. Try sharing one of those.")
     }
   }
 
@@ -105,15 +106,15 @@ struct ShareRootView: View {
       switch model.state {
       case .working(let message):
         VStack(spacing: 16) {
-          ClickeyEmblem(size: 44)
-          ProgressView(message).font(.title3)
+          SqueekEmblem(size: 44)
+          ProgressView(message).font(.nunito(.title3))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.ground.ignoresSafeArea())
       case .failed(let message):
         VStack(spacing: 18) {
           Image(systemName: "questionmark.circle.fill").font(.system(size: 44)).foregroundStyle(Theme.secondaryInk)
-          Text(message).font(.title3).multilineTextAlignment(.center)
+          Text(message).font(.nunito(.title3)).multilineTextAlignment(.center)
           Button("Close", action: done).primaryAction()
         }
         .padding(Theme.pagePadding)
@@ -123,13 +124,14 @@ struct ShareRootView: View {
         ResultView(result: result, original: result.kind == "link" ? nil : model.checkedText, onClose: done) {
           Button("Done", action: done).primaryAction()
           if !Backend.shared.isSignedIn {
-            Text("Open Clickey and sign in for the full check, including AI and Google Safe Browsing.")
-              .font(.footnote)
+            Text("Open Squeek and sign in for the full check, including AI and Google Safe Browsing.")
+              .font(.nunito(.footnote))
               .foregroundStyle(Theme.secondaryInk)
           }
         }
       }
     }
-    .tint(Theme.forest)
+    .tint(Theme.accentInk)
+    .font(.nunito(.body))
   }
 }

@@ -1,6 +1,6 @@
 // Message redaction, rule signals and policy. Pure TypeScript: no Node, Deno or DOM APIs,
 // so the same file runs in Edge Functions and in Electron. Mirrored in Swift by
-// apps/ios/ClickeyCore/Sources/ClickeyCore/Engine.swift; tests/fixtures/golden.json keeps them in step.
+// apps/ios/SqueekCore/Sources/SqueekCore/Engine.swift; tests/fixtures/golden.json keeps them in step.
 
 import type { LocalAssessment, Reason, Risk, RuleSet, SignalMatch } from "./types.ts";
 

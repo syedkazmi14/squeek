@@ -451,12 +451,12 @@
     "no_detected_signal": {
       "headline": "No warning signs found",
       "speech": "I didn't find warning signs. That doesn't prove it's safe, so stay careful with any request for money or codes.",
-      "detail": "Clickey didn't find scam signs. Stay careful with any request for money or codes."
+      "detail": "Squeek didn't find scam signs. Stay careful with any request for money or codes."
     },
     "unknown": {
       "headline": "Couldn't fully check this",
       "speech": "I couldn't fully check this. Please treat it carefully.",
-      "detail": "Clickey couldn't fully check this. Treat it carefully."
+      "detail": "Squeek couldn't fully check this. Treat it carefully."
     },
     "link_malicious": {
       "headline": "Don't open this link",
@@ -471,12 +471,12 @@
     "link_no_signal": {
       "headline": "No warning signs in this link",
       "speech": "I didn't find warning signs in this link. That doesn't prove it's safe.",
-      "detail": "Clickey didn't find warning signs. That doesn't prove it's safe."
+      "detail": "Squeek didn't find warning signs. That doesn't prove it's safe."
     },
     "link_unknown": {
       "headline": "Couldn't check this link",
       "speech": "I couldn't check this link. Please be careful with it.",
-      "detail": "Clickey couldn't check this link. Be careful with it."
+      "detail": "Squeek couldn't check this link. Be careful with it."
     },
     "reasons_prefix": "Warning signs:"
   }

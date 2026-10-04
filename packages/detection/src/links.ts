@@ -61,7 +61,7 @@ export function analyzeLink(input: string, rules: RuleSet, blockedDomains: Itera
   const add = (id: string, label: string, weight: number) => findings.push({ id, label, weight });
 
   if (isBlockedDomain(host, blockedDomains)) {
-    add("blocked_domain", "This website is on your Clickey block list", 10);
+    add("blocked_domain", "This website is on your Squeek block list", 10);
   }
   if (url.protocol === "http:") add("not_https", "Not a secure (https) link", 1);
   if (IPV4.test(host) || host.includes(":")) add("ip_host", "Goes to a number address instead of a website name", 3);
