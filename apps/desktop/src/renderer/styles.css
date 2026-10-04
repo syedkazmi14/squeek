@@ -139,11 +139,6 @@ h3 {
   position: relative;
   z-index: 1;
 }
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
 .header-actions {
   display: flex;
   gap: 4px;
@@ -191,44 +186,107 @@ h3 {
   overflow-wrap: anywhere;
 }
 .status-card {
-  border: 1px solid var(--hairline);
-  border-radius: var(--card-radius);
-  background: var(--card);
-  box-shadow: var(--shadow);
-  padding: 16px;
   position: relative;
+  text-align: center;
+}
+.mascot-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 110px;
+  margin-bottom: 6px;
 }
 .status-mascot {
-  width: 60px;
-  height: 60px;
+  position: relative;
+  width: 144px;
+  height: 144px;
   object-fit: contain;
-  float: right;
-  margin: 0 0 8px 8px;
+  margin-top: -22px;
+  transform-origin: 50% 80%;
+  animation: mascot-float 3s ease-in-out infinite;
+  transition: filter 250ms ease;
 }
-.status-card .eyebrow {
-  padding-top: 4px;
-  margin-bottom: 8px;
+.mascot-shadow {
+  position: absolute;
+  bottom: 3px;
+  width: 110px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgb(27 26 23 / 18%), transparent 70%);
+  animation: mascot-shadow 3s ease-in-out infinite;
 }
-.status-card h2 {
-  margin-bottom: 8px;
+#status-heading {
+  display: inline-block;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--neutral-soft);
+  color: var(--secondary);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
 }
-.status-card > .secondary {
-  clear: both;
-  font-size: 14px;
+[data-mascot-status="watching"] .status-mascot {
+  filter: hue-rotate(65deg) saturate(0.8);
 }
-.status-card[data-tone="warning"],
+[data-mascot-status="checking"] .status-mascot {
+  filter: hue-rotate(155deg) saturate(0.75);
+}
+[data-mascot-status="caution"] .status-mascot,
+[data-mascot-status="unavailable"] .status-mascot {
+  filter: hue-rotate(-22deg) saturate(1.25);
+}
+[data-mascot-status="risk"] .status-mascot {
+  filter: hue-rotate(-42deg) saturate(1.5);
+}
+[data-mascot-status="unknown"] .status-mascot {
+  filter: grayscale(1);
+}
+[data-mascot-status="risk"] #status-heading {
+  color: var(--danger-ink);
+  background: var(--danger-soft);
+}
+[data-mascot-status="watching"] #status-heading {
+  color: #185d3c;
+  background: #e2eee5;
+}
+@keyframes mascot-float {
+  0%,
+  100% {
+    transform: translateY(3px) rotate(-1deg) scale(1.015, 0.985);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1deg) scale(0.99, 1.01);
+  }
+}
+@keyframes mascot-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scaleX(0.8);
+    opacity: 0.45;
+  }
+}
 .finding-summary[data-tone="warning"] {
   background: var(--danger-soft);
   border-color: transparent;
 }
-[data-tone="warning"] h2,
-[data-tone="warning"] .eyebrow {
+.finding-summary[data-tone="warning"] h2,
+.finding-summary[data-tone="warning"] .eyebrow {
   color: var(--danger-ink);
 }
 .protection-controls {
   margin-top: 12px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
 }
 .protection-controls > * {
   grid-column: 1 / -1;
@@ -236,12 +294,15 @@ h3 {
 .browser-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
 }
+.browser-copy {
+  flex: 1;
+  min-width: 0;
+}
 .browser-row label {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
 }
 select {
   color: var(--ink);
@@ -251,7 +312,9 @@ select {
   max-width: 75%;
 }
 #monitoring-state {
-  margin: 4px 0 8px;
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.3;
 }
 #monitoring-state[data-active="true"] {
   color: var(--active);
@@ -273,23 +336,58 @@ select {
 #monitor.quiet-protection:hover:not(:disabled) {
   background: var(--hairline);
 }
-.protection-controls:has(#see-finding:not([hidden])) #monitoring-state {
+.protection-controls:has(#see-finding:not([hidden])) #see-finding {
   grid-column: 1;
   grid-row: 2;
-  align-self: center;
+  font-size: 13px;
 }
 .protection-controls:has(#see-finding:not([hidden])) #monitor {
   grid-column: 2;
   grid-row: 2;
   width: auto;
   font-size: 13px;
-  background: transparent;
+}
+.section-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--neutral-soft);
+  color: var(--secondary);
+}
+.section-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.browser-row select {
+  max-width: 43%;
+  padding: 6px 22px 6px 8px;
+  font-size: 13px;
+  background: var(--ground);
+}
+.empty-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .activity {
-  margin-top: 12px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
 }
 .activity h3 {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--secondary);
 }
 .activity-row {
   background: transparent;
@@ -297,7 +395,7 @@ select {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px 0;
+  padding: 2px 0;
   text-align: left;
   font-size: 14px;
 }
@@ -329,11 +427,22 @@ select {
   font-weight: 400;
 }
 #open-manual {
-  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 6px 10px;
   text-align: left;
-  padding-inline: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  font-size: 14px;
 }
-#open-manual span,
+#open-manual .manual-label {
+  flex: 1;
+}
+#open-manual .manual-arrow {
+  font-size: 20px;
+}
 #see-finding span {
   float: right;
 }
@@ -450,15 +559,12 @@ textarea {
   .app-header {
     flex-wrap: wrap;
   }
-  .status-mascot {
-    float: none;
-    display: block;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
   }
 }

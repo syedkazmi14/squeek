@@ -14,7 +14,7 @@
   <body>
     <div class="app-shell">
       <header class="app-header" title="Drag to move Squeek">
-        <h1><img class="brand-mark" src="./mark.png" alt="" />Squeek</h1>
+        <h1>Squeek</h1>
         <div class="header-actions">
           <button
             id="mute"
@@ -55,24 +55,35 @@
             aria-live="polite"
             aria-atomic="true"
           >
-            <img class="status-mascot" src="./mark.png" alt="" />
-            <p class="eyebrow" id="status-label">YOUR DESKTOP COMPANION</p>
-            <h2 id="status-heading">Ready when you are.</h2>
-            <p id="status-description" class="secondary">
-              Start a check or turn on protection for your browser.
-            </p>
+            <div class="mascot-stage" aria-hidden="true">
+              <span class="mascot-shadow"></span>
+              <img class="status-mascot" src="./mark.png" alt="" />
+            </div>
+            <div id="status-copy">
+              <p class="eyebrow" id="status-label"></p>
+              <h2 id="status-heading">Ready when you are.</h2>
+              <p id="status-description" class="secondary"></p>
+            </div>
           </div>
           <div class="protection-controls">
             <div class="browser-row">
-              <label for="browser">Browser</label>
-              <select id="browser">
+              <span class="section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" />
+                  <path d="m8 12 3 3 5-6" />
+                </svg>
+              </span>
+              <div class="browser-copy">
+                <label for="browser">Browser protection</label>
+                <p id="monitoring-state" class="small secondary">
+                  Protection paused
+                </p>
+              </div>
+              <select id="browser" aria-label="Browser">
                 <option value="chrome">Chrome</option>
                 <option value="msedge">Microsoft Edge</option>
               </select>
             </div>
-            <p id="monitoring-state" class="small secondary">
-              Protection paused
-            </p>
             <button
               id="see-finding"
               class="primary-button full-width"
@@ -91,9 +102,16 @@
           </div>
           <section class="activity" aria-labelledby="activity-heading">
             <h3 id="activity-heading">Latest check</h3>
-            <p id="empty-activity" class="small secondary">
-              No checks yet. Findings will appear here after a check.
-            </p>
+            <div id="empty-activity" class="empty-check">
+              <span class="section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M8 3h8v4H8zM8 5H5v16h14V5h-3M8 12h8M8 16h5" />
+                </svg>
+              </span>
+              <p class="small secondary">
+                No checks yet.<br />Your next check will appear here.
+              </p>
+            </div>
             <button id="latest-check" class="activity-row" type="button" hidden>
               <span id="activity-icon" class="activity-icon" aria-hidden="true"
                 >!</span
@@ -106,7 +124,14 @@
             </button>
           </section>
           <button id="open-manual" class="text-button full-width" type="button">
-            Check something <span aria-hidden="true">→</span>
+            <span class="section-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 4h16v12H9l-5 4V4Z" />
+                <path d="M8 8h8M8 12h5" />
+              </svg>
+            </span>
+            <span class="manual-label">Check something</span>
+            <span class="manual-arrow" aria-hidden="true">→</span>
           </button>
         </section>
         <section id="manual-view" aria-labelledby="manual-heading" hidden>

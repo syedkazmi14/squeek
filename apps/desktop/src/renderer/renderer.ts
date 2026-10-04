@@ -182,8 +182,8 @@ function refreshControls(): void {
 function refreshStatus(): void {
   const name = browser.value === "msedge" ? "Microsoft Edge" : "Chrome";
   let title = "Ready when you are.";
-  let description = "Start a check or turn on protection for your browser.";
-  let label = "YOUR DESKTOP COMPANION";
+  let description = "";
+  let label = "";
   let monitoringText = "Protection paused";
   if (current.monitoring) {
     monitoringText = availableMonitoring()
@@ -222,10 +222,42 @@ function refreshStatus(): void {
     label = "CHECK IN PROGRESS";
     monitoringText = "Protection paused during this check";
   }
+  const idle =
+    !current.monitoring &&
+    !current.assessment &&
+    current.health === "paused" &&
+    pendingChecks === 0;
+  element("status-copy").hidden = false;
+  const mascotStatus =
+    pendingChecks > 0
+      ? "checking"
+      : current.assessmentCurrent === false && current.assessment
+        ? "unknown"
+        : current.assessment
+          ? ((
+              {
+                high_risk: "risk",
+                caution: "caution",
+                no_detected_signal: "neutral",
+                unknown: "unknown",
+              } as Record<string, string>
+            )[current.assessment.state] ?? "unknown")
+          : current.health === "unavailable" ||
+              (current.monitoring && !availableMonitoring())
+            ? "unavailable"
+            : current.monitoring
+              ? current.health === "starting"
+                ? "checking"
+                : "watching"
+              : "neutral";
+  element("status-card").dataset.mascotStatus = mascotStatus;
+  element("status-heading").title = description;
+  element("status-description").hidden = true;
+  element("status-card").dataset.idle = String(idle);
   element("status-heading").textContent = title;
   element("status-description").textContent = description;
   element("status-label").textContent = label;
-  element("status-label").hidden = !!current.assessment && pendingChecks === 0;
+  element("status-label").hidden = true;
   element("status-card").dataset.tone =
     suspicious() && pendingChecks === 0 ? "warning" : "neutral";
   element("monitoring-state").textContent = monitoringText;

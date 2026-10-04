@@ -72,6 +72,8 @@ try {
   await expect(page.locator("#status-heading")).toHaveText(
     "Ready when you are.",
   );
+  await expect(page.locator(".app-header img")).toHaveCount(0);
+  await expect(page.locator(".status-mascot")).toBeVisible();
   await expect(page.locator("#empty-activity")).toBeVisible();
   await page.locator("#browser").focus();
   await expect(page.locator("#browser")).toBeFocused();
@@ -224,6 +226,10 @@ try {
   );
   await expect(page.locator("#monitor")).toHaveText("Pause");
   await overviewFits();
+  await expect(page.locator("#status-card")).toHaveAttribute(
+    "data-mascot-status",
+    "watching",
+  );
   await capture("monitoring-fixture");
   await fixture({ monitoring: true, health: "watching", browser: "msedge" });
   await expect(page.locator("#monitoring-state")).toHaveText(
@@ -265,6 +271,10 @@ try {
   await fixture({ assessment, assessmentCurrent: true });
   await expect(page.locator("#status-heading")).toHaveText(
     "I need a little more context.",
+  );
+  await expect(page.locator("#status-card")).toHaveAttribute(
+    "data-mascot-status",
+    "unknown",
   );
   await capture("unknown-fixture");
   await overviewFits();
