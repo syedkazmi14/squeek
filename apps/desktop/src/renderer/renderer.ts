@@ -14,6 +14,8 @@ interface Assessment {
   providerHealth?: string;
 }
 interface SyncView {
+  /** True in development builds, which always show the iPhone section. */
+  available?: boolean;
   configured: boolean;
   connected: boolean;
   email?: string;
@@ -483,9 +485,21 @@ const phoneKinds: Record<string, string> = {
 function renderPhone(view: SyncView | undefined): void {
   const details = element<HTMLDetailsElement>("phone-details");
   const card = element("phone-link");
-  details.hidden = !view?.configured;
-  if (!view?.configured) {
+  const show = !!(view?.configured || view?.available);
+  details.hidden = !show;
+  if (!show || !view) {
     details.open = false;
+    return;
+  }
+  if (!view.configured) {
+    // A development build without the backend settings: say what is missing rather than hiding the section.
+    details.open = true;
+    element<HTMLFormElement>("phone-form").hidden = true;
+    element("phone-disconnect").hidden = true;
+    element("phone-warning").hidden = true;
+    element("phone-error").hidden = true;
+    element("phone-link-copy").textContent =
+      "This build isn't set up to link to your iPhone. Add SQUEEK_SUPABASE_URL and SQUEEK_SUPABASE_ANON_KEY to the .env file in the Squeek folder, then restart Squeek.";
     return;
   }
   if (view.phoneWarning) details.open = true;

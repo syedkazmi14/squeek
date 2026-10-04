@@ -212,7 +212,12 @@ let pageObservation: Observation | undefined;
 let focusKey: string | undefined;
 let focusTimer: ReturnType<typeof setInterval> | undefined;
 /** What the panel sees: the app's state plus the link to the iPhone. */
-const snapshot = () => ({ ...structuredClone(state), sync: sync.view() });
+// `available` is true in development builds, so the iPhone section is always shown there, with a hint
+// when the backend settings are missing, instead of silently not being in the sidebar.
+const snapshot = () => ({
+  ...structuredClone(state),
+  sync: { ...sync.view(), available: !app.isPackaged },
+});
 const publish = () => {
   if (panel && !panel.isDestroyed())
     panel.webContents.send("squeek:state", snapshot());
