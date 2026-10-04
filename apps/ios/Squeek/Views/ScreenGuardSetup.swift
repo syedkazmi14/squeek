@@ -36,7 +36,12 @@ private struct BroadcastPicker: UIViewRepresentable {
 }
 
 enum ScreenGuardInfo {
-  static var extensionBundleId: String { SqueekConfig.appBundleId + ".ScreenGuard" }
+  /// The broadcast extension the picker offers. Read from Info.plist so a build can point at the
+  /// extension under a different, already-registered bundle id (see scripts/device-build.sh).
+  static var extensionBundleId: String {
+    (Bundle.main.object(forInfoDictionaryKey: "SqueekScreenGuardBundleId") as? String).flatMap { $0.isEmpty ? nil : $0 }
+      ?? SqueekConfig.appBundleId + ".ScreenGuard"
+  }
 }
 
 /// The Screen Guard steps in the setup list: what it does, what it keeps, and the start button.

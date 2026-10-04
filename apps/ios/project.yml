@@ -80,6 +80,7 @@ targets:
         <<: *sharedInfo
         UILaunchScreen: {}
         NSSupportsLiveActivities: true
+        SqueekScreenGuardBundleId: $(SQUEEK_BUNDLE_ID).ScreenGuard
         CFBundleURLTypes:
           - CFBundleURLName: Squeek sign-in
             CFBundleURLSchemes: [squeek]

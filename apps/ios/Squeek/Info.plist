@@ -47,6 +47,8 @@
 	<string>$(SQUEEK_APP_GROUP)</string>
 	<key>SqueekKeychainGroup</key>
 	<string>$(AppIdentifierPrefix)$(SQUEEK_BUNDLE_ID).shared</string>
+	<key>SqueekScreenGuardBundleId</key>
+	<string>$(SQUEEK_BUNDLE_ID).ScreenGuard</string>
 	<key>SqueekSupabaseAnonKey</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SqueekSupabaseHost</key>
