@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { assess } from '../packages/detection/src/index.ts';
 import { redact } from '../packages/detection/src/redact.ts';
-import type { Observation } from '../packages/contracts/src/observation.ts';
-export const observation = (text: string, revision = 1): Observation => ({version:1, sessionId:'test',kind:'observation',source:{processId:1,windowHandle:'1',processStartedAt:1},revision,observedAt:0,provenance:'accessibility',coverage:'complete',spans:[{text,rect:{x:0,y:0,width:1,height:1}}]});
+import { observation } from './fixtures/observation.ts';
 test('gift cards alone are insufficient; combinations have observed evidence', async () => {
  assert.equal((await assess(observation('gift card'))).state,'no_detected_signal');
  const result = await assess(observation('IRS agent: pay immediately using gift cards'));
