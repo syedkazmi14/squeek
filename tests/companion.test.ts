@@ -11,6 +11,14 @@ class Window {
   visible = false;
   positions: { x: number; y: number }[] = [];
   bounds: unknown;
+  getBounds() {
+    return this.bounds as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+  }
   hide() {
     this.visible = false;
   }
@@ -80,6 +88,19 @@ test("startup shows a display overlay that streams the cursor without assessment
   const n = pointers.length;
   move({ x: -500, y: 250 });
   assert.equal(pointers.length, n, "an idle cursor sends nothing");
+  shell.stop();
+});
+test("reopening preserves the dragged position and redocks at fixed size on another display", () => {
+  const { shell, panel, move } = setup();
+  shell.start();
+  shell.showSidebar();
+  panel.setBounds({ x: -900, y: 100, width: 360, height: 520 });
+  shell.hideSidebar();
+  shell.showSidebar();
+  assert.deepEqual(panel.bounds, { x: -900, y: 100, width: 360, height: 520 });
+  move({ x: 100, y: 100 });
+  shell.showSidebar();
+  assert.deepEqual(panel.bounds, { x: 1228, y: 12, width: 360, height: 520 });
   shell.stop();
 });
 test("crossing displays moves the overlay and snaps the ghost", () => {
@@ -162,4 +183,23 @@ test("companion visibility is separately controllable and the sidebar is bounded
   assert.ok(bounds.x + bounds.width <= area.x + area.width);
   assert.ok(bounds.y + bounds.height <= area.y + area.height);
   shell.stop();
+});
+test("compact sidebar keeps its footprint and clamps on small and offset displays", () => {
+  assert.deepEqual(sidebarBounds(area), {
+    x: -372,
+    y: 12,
+    width: 360,
+    height: 520,
+  });
+  for (const display of [
+    { x: 200, y: -600, width: 320, height: 480 },
+    { x: -20, y: 10, width: 20, height: 16 },
+    { x: 0, y: 0, width: 1, height: 1 },
+  ]) {
+    const bounds = sidebarBounds(display);
+    assert.ok(bounds.x >= display.x && bounds.y >= display.y);
+    assert.ok(bounds.x + bounds.width <= display.x + display.width);
+    assert.ok(bounds.y + bounds.height <= display.y + display.height);
+    assert.ok(bounds.width <= 360 && bounds.height <= 520);
+  }
 });
