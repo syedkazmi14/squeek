@@ -15,15 +15,23 @@ public struct ScreenGuardAlert: Codable, Sendable, Identifiable, Equatable {
   public let reasons: [String]
   /// True when the extension already showed a notification, so the app doesn't repeat it.
   public var notified: Bool
+  /// "danger" for a likely scam, "caution" for something that may be one. Older alerts have none.
+  public var level: String?
 
-  public init(id: String = UUID().uuidString.lowercased(), date: Date = Date(), headline: String, excerpt: String?, reasons: [String], notified: Bool) {
+  public init(
+    id: String = UUID().uuidString.lowercased(), date: Date = Date(), headline: String, excerpt: String?, reasons: [String],
+    notified: Bool, level: String? = nil
+  ) {
     self.id = id
     self.date = date
     self.headline = headline
     self.excerpt = excerpt
     self.reasons = reasons
     self.notified = notified
+    self.level = level
   }
+
+  public var isCaution: Bool { level == "caution" }
 }
 
 /// Written by the extension each time it looks at the screen. Beyond "it's alive" it records what
@@ -38,13 +46,19 @@ public struct ScreenGuardStatus: Codable, Sendable, Equatable {
   public var lastCharacters: Int?
   /// "clear", "caution", "danger", "own_screen", "little_text", "no_rules", "image_failed" or "no_text".
   public var lastResult: String?
+  /// What the last look noticed, in the rules' own wording ("Asks for gift cards"), never the screen's words.
+  public var lastSigns: [String]?
 
-  public init(startedAt: Date, lastFrameAt: Date, looks: Int? = nil, lastCharacters: Int? = nil, lastResult: String? = nil) {
+  public init(
+    startedAt: Date, lastFrameAt: Date, looks: Int? = nil, lastCharacters: Int? = nil, lastResult: String? = nil,
+    lastSigns: [String]? = nil
+  ) {
     self.startedAt = startedAt
     self.lastFrameAt = lastFrameAt
     self.looks = looks
     self.lastCharacters = lastCharacters
     self.lastResult = lastResult
+    self.lastSigns = lastSigns
   }
 
   /// The extension looks every 30 seconds, so a beat in the last 90 means it's still running.

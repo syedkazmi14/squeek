@@ -27,7 +27,7 @@ final class SampleHandler: RPBroadcastSampleHandler {
   private let imageContext = CIContext(options: [.cacheIntermediates: false])
 
   /// The longer side of the picture handed to text recognition. Plenty to read body text on a phone.
-  private static let longestSide: CGFloat = 1400
+  private static let longestSide: CGFloat = 1800
 
   override func broadcastStarted(withSetupInfo setupInfo: [String: NSObject]?) {
     startedAt = Date()
@@ -79,25 +79,27 @@ final class SampleHandler: RPBroadcastSampleHandler {
     guard let checker else { return record("no_rules", characters: text.count) }
     let blocked = store?.blockList().domains.map(\.domain) ?? []
     let result = checker.checkText(text, blockedDomains: blocked)
-    record(result.level.rawValue, characters: text.count)
-    // Only a likely scam interrupts. A cautious reading of whatever happens to be on screen would
-    // nag far too often.
-    guard result.level == .danger, policy.shouldAlert(fingerprint: text.hashValue) else { return }
+    record(result.level.rawValue, characters: text.count, signs: result.reasons.map(\.label))
+    // A likely scam or something that may be one speaks up; clear screens stay quiet. The same screen
+    // and back-to-back alerts are held back by the policy, so it doesn't nag.
+    guard result.level == .danger || result.level == .caution, policy.shouldAlert(fingerprint: text.hashValue) else { return }
 
     let excerpt = result.reasons.compactMap(\.excerpt).first
     var alert = ScreenGuardAlert(
-      headline: result.headline, excerpt: excerpt, reasons: result.reasons.map(\.label), notified: false)
-    alert.notified = notify(headline: result.headline)
+      headline: result.headline, excerpt: excerpt, reasons: result.reasons.map(\.label), notified: false,
+      level: result.level.rawValue)
+    alert.notified = notify(headline: result.headline, likely: result.level == .danger)
     store?.addScreenGuardAlert(alert)
   }
 
   /// Leaves a note of what the last look found (counts and a verdict, never the words) for the app.
-  private func record(_ result: String, characters: Int) {
+  private func record(_ result: String, characters: Int, signs: [String]? = nil) {
     statusLock.lock()
     status.lastFrameAt = Date()
     status.looks = (status.looks ?? 0) + 1
     status.lastCharacters = characters
     status.lastResult = result
+    status.lastSigns = signs.map { Array($0.prefix(4)) }
     let snapshot = status
     statusLock.unlock()
     store?.saveScreenGuardStatus(snapshot)
@@ -105,10 +107,12 @@ final class SampleHandler: RPBroadcastSampleHandler {
 
   /// Posts a notification and waits briefly for iOS to accept it. If a broadcast extension isn't
   /// allowed to, the alert still goes to the app, which shows the notification itself.
-  private func notify(headline: String) -> Bool {
+  private func notify(headline: String, likely: Bool) -> Bool {
     let content = UNMutableNotificationContent()
-    content.title = "This screen looks like a scam"
-    content.body = "Squeek: \(headline). Don't pay, send codes or click anything yet."
+    content.title = likely ? "This screen looks like a scam" : "This screen may be a scam"
+    content.body = likely
+      ? "Squeek: \(headline). Don't pay, send codes or click anything yet."
+      : "Squeek: \(headline). Be careful, and check with someone you trust before you act."
     content.sound = .default
     let done = DispatchSemaphore(value: 0)
     var accepted = false

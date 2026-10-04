@@ -516,11 +516,16 @@ final class AppModel: ObservableObject {
     let keepsHistory = store.settings().historySync
     for alert in alerts {
       if !alert.notified {
-        Notifications.post(title: "This screen looks like a scam", body: "Squeek: \(alert.headline). Don't pay, send codes or click anything yet.")
+        Notifications.post(
+          title: alert.isCaution ? "This screen may be a scam" : "This screen looks like a scam",
+          body: alert.isCaution
+            ? "Squeek: \(alert.headline). Be careful, and check with someone you trust before you act."
+            : "Squeek: \(alert.headline). Don't pay, send codes or click anything yet.")
       }
       if isSignedIn, keepsHistory {
         await Backend.shared.recordLocalIncident(
-          surface: .text, domain: nil, evidence: alert.excerpt, categories: [], deviceId: deviceId)
+          surface: .text, domain: nil, evidence: alert.excerpt, categories: [], risk: alert.isCaution ? "caution" : "high_risk",
+          deviceId: deviceId)
       }
     }
     await loadRecentIncidents()

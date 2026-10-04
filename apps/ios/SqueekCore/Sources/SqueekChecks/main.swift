@@ -136,6 +136,12 @@ store.addScreenGuardAlert(ScreenGuardAlert(id: "a", date: t0, headline: "First",
 let taken = store.takeScreenGuardAlerts()
 check("alerts come back oldest first", taken.map(\.headline) == ["First", "Second"], "\(taken.map(\.headline))")
 check("alerts are deleted once taken", store.takeScreenGuardAlerts().isEmpty, "")
+check("a caution alert is told apart", ScreenGuardAlert(headline: "h", excerpt: nil, reasons: [], notified: false, level: "caution").isCaution, "")
+check("an alert without a level is a likely scam", !ScreenGuardAlert(headline: "h", excerpt: nil, reasons: [], notified: false).isCaution, "")
+let signs = ScreenGuardStatus(startedAt: t0, lastFrameAt: t0, looks: 1, lastCharacters: 90, lastResult: "caution", lastSigns: ["Asks for gift cards"])
+let signsStore = SharedStore(directory: tempDir)
+signsStore.saveScreenGuardStatus(signs)
+check("what the last look noticed round-trips", signsStore.screenGuardStatus()?.lastSigns == ["Asks for gift cards"], "")
 try? FileManager.default.removeItem(at: tempDir)
 
 print("SqueekChecks: \(passed) passed, \(failures.count) failed")

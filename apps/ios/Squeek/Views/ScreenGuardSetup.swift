@@ -83,13 +83,14 @@ struct ScreenGuardActions: View {
     let outcome: String
     switch result {
     case "clear": outcome = "no scam signs found."
-    case "caution": outcome = "a few things looked odd, not enough to warn."
+    case "caution": outcome = "this may be a scam, so I warned you."
     case "danger": outcome = "that looked like a scam. Check your notifications and Activity."
     case "own_screen": outcome = "skipped, that was a Squeek screen."
     case "little_text": outcome = "too little text to judge."
     case "no_rules": outcome = "setup problem: the scam rules are missing."
     default: outcome = "couldn't read the screen."
     }
-    return "Last looked \(when)\(read): \(outcome) (\(status.looks ?? 0) looks so far)"
+    let signs = (status.lastSigns ?? []).isEmpty ? "" : " Noticed: " + (status.lastSigns ?? []).joined(separator: "; ") + "."
+    return "Last looked \(when)\(read): \(outcome)\(signs) (\(status.looks ?? 0) looks so far)"
   }
 }
