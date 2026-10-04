@@ -160,6 +160,17 @@ final class Backend: @unchecked Sendable {
     }
   }
 
+  /// A sentence in Squeek's ElevenLabs voice, as MP3 (supabase/functions/speak). The key stays on the
+  /// server. `Speech` falls back to the phone's own voice if this fails or is slow.
+  func speak(text: String, speed: Double) async throws -> Data {
+    struct Request: Encodable {
+      let text: String
+      let speed: Double
+    }
+    let client = try requireClient()
+    return try await client.functions.invoke("speak", options: FunctionInvokeOptions(body: Request(text: text, speed: speed)))
+  }
+
   /// Phones the person's helpers once after "Continue anyway" on a likely scam (supabase/functions/notify-helpers).
   func notifyHelpers(incidentId: String) async throws {
     struct Request: Encodable { let incidentId: String }

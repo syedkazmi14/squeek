@@ -98,6 +98,15 @@ check("trusted caller is recognised", call("Trusted caller · Mike, the grandson
 check("a taken message is not a trusted caller", !call("Dr. Lee's office · to confirm", "clear").isTrustedCaller, "")
 check("a scam call is never a trusted caller", !call("Trusted caller · fake", "high_risk").isTrustedCaller, "")
 
+// The phone's speaking speed lines up with ElevenLabs' at "normal" and stays inside its limits.
+check("normal speed is normal", VoiceRequest.speed(forRate: 0.45) == 1.0, "\(VoiceRequest.speed(forRate: 0.45))")
+check("the slowest setting is the slowest voice", VoiceRequest.speed(forRate: 0.1) == 0.7, "")
+check("the fastest setting is the fastest voice", VoiceRequest.speed(forRate: 1.0) == 1.2, "")
+check("out-of-range settings are clamped", VoiceRequest.speed(forRate: 5) == 1.2 && VoiceRequest.speed(forRate: -1) == 0.7, "")
+check("a faster setting is a faster voice", VoiceRequest.speed(forRate: 0.7) > VoiceRequest.speed(forRate: 0.3), "")
+check("same sentence and speed share a recording", VoiceRequest.cacheKey(text: "Hi", speed: 1) == VoiceRequest.cacheKey(text: "Hi", speed: 1), "")
+check("a different sentence or speed does not", VoiceRequest.cacheKey(text: "Hi", speed: 1) != VoiceRequest.cacheKey(text: "Hi!", speed: 1) && VoiceRequest.cacheKey(text: "Hi", speed: 1) != VoiceRequest.cacheKey(text: "Hi", speed: 1.1), "")
+
 // Screen Guard: sampling, alert cooldowns, and the hand-off through the App Group.
 let guardPolicy = ScreenGuardPolicy()
 let t0 = Date(timeIntervalSince1970: 1_000_000)

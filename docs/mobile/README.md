@@ -85,6 +85,7 @@ In development builds the Windows app signs in with the same email as the iPhone
 
 ## Privacy
 
+- When signed in, the sentence the app is about to read aloud (a warning headline or Home's greeting) is sent through the `speak` function to ElevenLabs to be turned into speech, and is not stored. Signed out, or if that fails, the phone's own voice is used and nothing leaves the phone.
 - Raw messages, screenshots, screen contents, audio and transcripts are never stored. Incidents keep a category, risk, rule IDs and at most ~280 characters of redacted excerpt, and only if the person keeps a history.
 - Screenshots and Screen Guard frames are read on the phone with Vision and discarded. Only redacted text leaves the phone, and only when a check needs the server.
 - Phone numbers on block lists are stored as E.164 because CallKit needs exact numbers. They are the person's or family's own data, protected by row-level security.
