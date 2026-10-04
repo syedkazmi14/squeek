@@ -51,7 +51,10 @@ final class Speech: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AVA
         let recording = await Self.recording(of: text, speed: speed)
         self.queue.async { [self] in
           guard mine == generation else { return }
-          if let recording, play(recording) { return }
+          if let recording {
+            if play(recording) { return }
+            NSLog("[voice] could not play the recording (%d bytes)", recording.count)
+          }
           speakLocally(text, rate: s.voiceRate)
         }
       }
@@ -72,9 +75,19 @@ final class Speech: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AVA
     let file = cacheFile(for: VoiceRequest.cacheKey(text: text, speed: speed))
     if let cached = try? Data(contentsOf: file), !cached.isEmpty { return cached }
     let fetched: Data? = await withTaskGroup(of: Data?.self) { group in
-      group.addTask { try? await Backend.shared.speak(text: text, speed: speed) }
+      group.addTask {
+        do {
+          let data = try await Backend.shared.speak(text: text, speed: speed)
+          NSLog("[voice] server voice: %d bytes", data.count)
+          return data
+        } catch {
+          NSLog("[voice] server voice failed: %@", String(describing: error))
+          return nil
+        }
+      }
       group.addTask {
         try? await Task.sleep(for: waitForVoice)
+        NSLog("[voice] gave up waiting for the server voice")
         return nil
       }
       let first = await group.next() ?? nil
