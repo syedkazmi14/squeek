@@ -53,3 +53,14 @@ The macOS follow-up used the existing native Electron Playwright harness plus a 
 The packaging tool's transitive `http-cache-semantics` dependency has an open high-severity advisory with no patched release. `npm audit` reports eight affected build-time packages in that chain. These are development-only and excluded from the desktop bundle. No shared HTTP cache handling private user responses is used by Squeek. Recheck upstream before distributing releases; do not interpret this note as a clean dependency audit.
 
 Reference: [GitHub advisory GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp), checked during development.
+
+## Linking to the iPhone (development builds)
+
+The PC and the iPhone share one account, so a scam found on one shows up on the other.
+
+- **Setup:** put the project's public URL and anon key in `.env` as `SQUEEK_SUPABASE_URL` and `SQUEEK_SUPABASE_ANON_KEY` (see `.env.example`). Without them the "Your iPhone" card is hidden. Packaged builds never load `.env`, so the feature is off there until the packaged-cloud gate is lifted.
+- **Connect:** in the sidebar, type the same email as on the iPhone. This uses the `demo-sign-in` function, which is for testing only: anyone who knows an email can sign in as that person. The login is saved encrypted with Electron's `safeStorage`, and Disconnect forgets it.
+- **What leaves the PC:** only when connected, a warning row (kind of warning, whether it came from a page or a manual check, the rule ids, and at most 280 characters of excerpt passed through `redact`). The same warning within ten minutes is sent once. Nothing is sent if the account's history is off. Page text is never uploaded.
+- **What comes back:** every 20 seconds the PC asks for the newest high-risk warning the iPhone recorded in the last 30 minutes, and the ghost says so once per warning.
+- **Device:** the PC registers as a `windows` device (name, version, monitoring or paused) and checks in every minute, so the iPhone's My Person tab lists it.
+- **Code:** `apps/desktop/src/main/sync.ts` is plain `fetch` with no dependencies and is tested in `tests/sync.test.ts` with a fake backend.

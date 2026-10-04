@@ -123,6 +123,44 @@
               <span aria-hidden="true">›</span>
             </button>
           </section>
+          <section
+            id="phone-link"
+            class="phone-link"
+            aria-labelledby="phone-link-heading"
+            hidden
+          >
+            <h3 id="phone-link-heading">Your iPhone</h3>
+            <p id="phone-link-copy" class="small secondary"></p>
+            <p id="phone-warning" class="phone-warning" role="status" hidden></p>
+            <form id="phone-form" class="phone-form">
+              <label for="phone-email">Email you use on your iPhone</label>
+              <input
+                id="phone-email"
+                type="email"
+                autocomplete="email"
+                inputmode="email"
+                maxlength="254"
+                spellcheck="false"
+              />
+              <button
+                id="phone-connect"
+                class="primary-button full-width"
+                type="submit"
+                disabled
+              >
+                Connect
+              </button>
+            </form>
+            <button
+              id="phone-disconnect"
+              class="outlined-button full-width"
+              type="button"
+              hidden
+            >
+              Disconnect
+            </button>
+            <p id="phone-error" class="small phone-error" role="alert" hidden></p>
+          </section>
           <button id="open-manual" class="text-button full-width" type="button">
             <span class="section-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">

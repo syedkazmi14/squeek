@@ -9,12 +9,15 @@ import {
   Menu,
   screen,
   nativeImage,
+  safeStorage,
   shell,
 } from "electron";
 import { randomUUID } from "node:crypto";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { hostname } from "node:os";
 import { createObserverClient } from "./observer-client.ts";
 import { Monitoring } from "./monitoring.ts";
 import { Companion } from "./companion.ts";
@@ -25,6 +28,7 @@ import { createTts } from "./tts.ts";
 import { LinkGuard, type LinkChoice, type LinkView } from "./link-guard.ts";
 import { createConversation } from "./conversation.ts";
 import { PushToTalk, watchTalkKey } from "./push-to-talk.ts";
+import { createSync, incidentFor } from "./sync.ts";
 import { createJevProvider } from "../../../../packages/providers/src/jev.ts";
 import {
   assess,
@@ -75,6 +79,40 @@ const conversation = createConversation(
     : undefined,
   (input, init) => net.fetch(input instanceof URL ? input.href : input, init),
 );
+// Links this PC to the iPhone's account: the same email on both is the same account, so a scam
+// found on one shows up on the other. Development builds only until the packaged-cloud gate is lifted.
+const syncFile = join(app.getPath("userData"), "iphone-link.bin");
+const sync = createSync(
+  !app.isPackaged &&
+    process.env.SQUEEK_SUPABASE_URL &&
+    process.env.SQUEEK_SUPABASE_ANON_KEY
+    ? {
+        url: process.env.SQUEEK_SUPABASE_URL,
+        anonKey: process.env.SQUEEK_SUPABASE_ANON_KEY,
+      }
+    : undefined,
+  (input, init) => net.fetch(input, init),
+  {
+    // The saved login is encrypted with Windows' own user-bound protection, or not saved at all.
+    async load() {
+      if (!safeStorage.isEncryptionAvailable()) return undefined;
+      try {
+        return safeStorage.decryptString(await readFile(syncFile));
+      } catch {
+        return undefined;
+      }
+    },
+    async save(value) {
+      if (safeStorage.isEncryptionAvailable())
+        await writeFile(syncFile, safeStorage.encryptString(value));
+    },
+    async clear() {
+      await rm(syncFile, { force: true });
+    },
+  },
+  { deviceName: hostname(), appVersion: app.getVersion() },
+);
+let announcedPhoneWarning: string | undefined;
 let talkKey: { stop: () => void } | undefined;
 let talkAbort: AbortController | undefined;
 let manualAbort: AbortController | undefined;
@@ -103,9 +141,11 @@ let state: {
   browser: "chrome",
 };
 let scheduler: AssessmentScheduler | undefined;
+/** What the panel sees: the app's state plus the link to the iPhone. */
+const snapshot = () => ({ ...structuredClone(state), sync: sync.view() });
 const publish = () => {
   if (panel && !panel.isDestroyed())
-    panel.webContents.send("squeek:state", state);
+    panel.webContents.send("squeek:state", snapshot());
   if (halo && !halo.isDestroyed())
     halo.webContents.send("squeek:state", {
       status:
@@ -208,6 +248,12 @@ function acceptAssessment(assessment: Assessment) {
   state.revision++;
   publish();
   companion?.assessment(assessment);
+  // Tell the iPhone too. Only a short redacted warning is sent, and a failure never affects the PC.
+  const forPhone = incidentFor(
+    assessment,
+    state.health === "manual" ? "text" : "browser",
+  );
+  if (forPhone) void sync.reportIncident(forPhone);
   reviewExpiry = setTimeout(() => {
     delete state.assessment;
     state.assessmentCurrent = false;
@@ -346,6 +392,27 @@ function setCloudEnabled(enabled: boolean) {
   pause();
   providerGate.setEnabled(enabled);
   state.cloudEnabled = enabled;
+  publish();
+}
+const monitoringStatus = () => (state.monitoring ? "monitoring" : "paused");
+/** What the ghost says when the iPhone has just caught a scam, once per warning. */
+function phoneWarningLine(surface: string): string {
+  const what =
+    surface === "call"
+      ? "a scam call"
+      : surface === "sms"
+        ? "a scam text"
+        : surface === "browser" || surface === "link"
+          ? "a risky website"
+          : "a likely scam";
+  return `Your iPhone just caught ${what}. Please talk to someone you trust before you pay anyone.`;
+}
+async function pollPhone() {
+  const warning = await sync.checkPhone();
+  if (warning && warning.id !== announcedPhoneWarning) {
+    announcedPhoneWarning = warning.id;
+    ghostSays(phoneWarningLine(warning.surface), 12000);
+  }
   publish();
 }
 async function openDemo() {
@@ -553,7 +620,7 @@ app.whenReady().then(async () => {
           allowedFrame(url ?? "", mainFrame)
         ) {
           const input = validateInput(action, value);
-          if (action === "state") return structuredClone(state);
+          if (action === "state") return snapshot();
           if (action === "listening") {
             if (input === "start") ghostSays("I'm listening…", 15000);
             else if (input === "hold")
@@ -604,11 +671,26 @@ app.whenReady().then(async () => {
             if (settings.enabled) {
               await startMonitoring(settings.browser);
             } else pause();
-            return structuredClone(state);
+            return snapshot();
           }
           if (action === "cloud") {
             setCloudEnabled(input as boolean);
-            return structuredClone(state);
+            return snapshot();
+          }
+          if (action === "sync-signin") {
+            // A failure shows on the panel through the sync view; it is not thrown.
+            await sync
+              .signIn(input as string, monitoringStatus())
+              .catch(() => {});
+            void pollPhone();
+            publish();
+            return snapshot();
+          }
+          if (action === "sync-signout") {
+            await sync.signOut();
+            announcedPhoneWarning = undefined;
+            publish();
+            return snapshot();
           }
           if (action === "check") {
             pause();
@@ -628,7 +710,7 @@ app.whenReady().then(async () => {
             if (generation === state.revision) {
               acceptAssessment(assessment);
             }
-            return structuredClone(state);
+            return snapshot();
           }
           if (action === "demo") {
             await openDemo();
@@ -778,6 +860,9 @@ app.whenReady().then(async () => {
     },
   });
   companion.start();
+  void sync.restore(monitoringStatus()).then(() => pollPhone());
+  setInterval(() => void sync.heartbeat(monitoringStatus()), 60_000).unref();
+  setInterval(() => void pollPhone(), 20_000).unref();
   if (conversation.configured) {
     talkKey = watchTalkKey(resource, (event) => pushToTalk.key(event));
     conversation.warm();
@@ -793,6 +878,7 @@ app.whenReady().then(async () => {
 });
 app.on("before-quit", () => {
   quitting = true;
+  void sync.heartbeat("offline");
   pause();
   talkAbort?.abort();
   talkKey?.stop();

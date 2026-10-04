@@ -2,7 +2,7 @@
 
 Home of **Squeek**, a companion that helps older adults notice scams while using their computer or phone. It spots suspicious messages, explains what looks wrong, and speaks the warning out loud.
 
-Status: the iPhone app ([apps/ios](apps/ios/README.md)) and the shared backend ([supabase](supabase/README.md)) are built as development versions. The Windows app ([apps/desktop](docs/development/desktop.md)) is in active development and doesn't connect to the backend yet.
+Status: the iPhone app ([apps/ios](apps/ios/README.md)) and the shared backend ([supabase](supabase/README.md)) are built as development versions. The Windows app ([apps/desktop](docs/development/desktop.md)) is in active development. In development builds it can sign in to the same account as the iPhone (same email) and send it warnings; packaged builds don't connect yet.
 
 ## How it works
 

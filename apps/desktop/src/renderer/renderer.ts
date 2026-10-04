@@ -13,7 +13,15 @@ interface Assessment {
   assessedAt?: number;
   providerHealth?: string;
 }
+interface SyncView {
+  configured: boolean;
+  connected: boolean;
+  email?: string;
+  error?: string;
+  phoneWarning?: { surface: string; evidence: string | null; minutesAgo: number };
+}
 interface AppState {
+  sync?: SyncView;
   monitoring: boolean;
   health: string;
   assessment?: Assessment;
@@ -36,7 +44,9 @@ interface SqueekApi {
       | "hide"
       | "show"
       | "listening"
-      | "talk",
+      | "talk"
+      | "sync-signin"
+      | "sync-signout",
     value?: unknown,
   ): Promise<unknown>;
   onListen(callback: (mode: unknown) => void): () => void;
@@ -442,6 +452,34 @@ function refreshStatus(): void {
     current.monitoring && current.health === "watching",
   );
 }
+const phoneKinds: Record<string, string> = {
+  call: "a scam call",
+  sms: "a scam text",
+  browser: "a risky website",
+  link: "a risky website",
+};
+/** The "Your iPhone" card: sign in with the phone's email, or see that it's linked. */
+function renderPhone(view: SyncView | undefined): void {
+  const card = element("phone-link");
+  card.hidden = !view?.configured;
+  if (!view?.configured) return;
+  const form = element<HTMLFormElement>("phone-form");
+  const connected = view.connected;
+  form.hidden = connected;
+  element("phone-disconnect").hidden = !connected;
+  element("phone-link-copy").textContent = connected
+    ? `Connected as ${view.email ?? "your account"}. When Squeek finds a likely scam here, your iPhone is told too, with private details removed.`
+    : "Use the same email as on your iPhone. Warnings then show up on both. Nothing else leaves this PC.";
+  const warning = element("phone-warning");
+  warning.hidden = !view.phoneWarning;
+  if (view.phoneWarning) {
+    const { surface, minutesAgo } = view.phoneWarning;
+    warning.textContent = `Your iPhone caught ${phoneKinds[surface] ?? "a likely scam"} ${minutesAgo} minute${minutesAgo === 1 ? "" : "s"} ago. Talk to someone you trust before you pay anyone.`;
+  }
+  const error = element("phone-error");
+  error.hidden = !view.error;
+  error.textContent = view.error ?? "";
+}
 function render(next: AppState): void {
   if (
     !next ||
@@ -458,6 +496,7 @@ function render(next: AppState): void {
   if (changed || paused || sourceLost) cancelSpeech();
   current = next;
   assessmentKey = nextKey;
+  renderPhone(next.sync);
   if (current.browser) browser.value = current.browser;
   element("assessment-heading").textContent = result().title;
   element("finding-description").textContent =
@@ -607,6 +646,35 @@ window.speechSynthesis?.addEventListener("voiceschanged", () => {
   refreshControls();
   if (pendingSpeech !== undefined && localVoice()) speakLocally(pendingSpeech);
 });
+const phoneEmail = element<HTMLInputElement>("phone-email");
+const phoneConnect = element<HTMLButtonElement>("phone-connect");
+phoneEmail.addEventListener("input", () => {
+  phoneConnect.disabled = !phoneEmail.value.includes("@");
+});
+element<HTMLFormElement>("phone-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (phoneConnect.disabled) return;
+  phoneConnect.disabled = true;
+  phoneConnect.textContent = "Connecting…";
+  void window.squeek
+    .invoke("sync-signin", phoneEmail.value.trim())
+    .then((state) => {
+      render(state as AppState);
+      phoneEmail.value = "";
+    })
+    .catch(() => {})
+    .finally(() => {
+      phoneConnect.textContent = "Connect";
+      phoneConnect.disabled = !phoneEmail.value.includes("@");
+    });
+});
+element("phone-disconnect").addEventListener("click", () => {
+  void window.squeek
+    .invoke("sync-signout")
+    .then((state) => render(state as AppState))
+    .catch(() => {});
+});
+
 render(current);
 if (window.squeek) {
   const unsubscribe = window.squeek.onState(render);

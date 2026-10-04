@@ -43,3 +43,11 @@ test("talking accepts only bounded recorded audio and known listening states", (
   assert.throws(() => validateInput("listening", "stop"));
   assert.throws(() => validateInput("listening", true));
 });
+
+test("linking to the iPhone takes only a plausible email, and signing out takes nothing", () => {
+  assert.equal(validateInput("sync-signin", "  syed@example.com "), "syed@example.com");
+  for (const bad of ["", "no-at-sign", "a b@c.co", `${"x".repeat(250)}@c.co`, 5, undefined, { email: "a@b.co" }])
+    assert.throws(() => validateInput("sync-signin", bad));
+  assert.equal(validateInput("sync-signout", undefined), undefined);
+  assert.throws(() => validateInput("sync-signout", true));
+});

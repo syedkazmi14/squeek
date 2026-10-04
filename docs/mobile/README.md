@@ -79,7 +79,7 @@ SwiftUI app ── supabase-swift ──────────► Auth, Postgr
 3. A number reported on the iPhone joins the block list, and the person's helpers get it too.
 4. Voice, text size and allow-lists follow the account.
 
-The Windows app doesn't connect to the backend yet. Database details, row-level security and conflict rules: [docs/backend/README.md](../backend/README.md).
+In development builds the Windows app signs in with the same email as the iPhone, registers itself as a device, sends the iPhone a short redacted warning when it finds a likely scam, and shows a notice when the iPhone has caught one in the last half hour. Packaged builds don't connect yet, and the PC doesn't yet warn on bank and payment sites. Database details, row-level security and conflict rules: [docs/backend/README.md](../backend/README.md).
 
 ## Privacy
 

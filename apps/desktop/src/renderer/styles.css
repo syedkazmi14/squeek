@@ -583,3 +583,49 @@ textarea {
 .talk-heard {
   font-style: italic;
 }
+
+/* Linking this PC to the iPhone's account. */
+.phone-link {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--card);
+}
+.phone-link h3 {
+  margin: 0;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.phone-link p {
+  margin: 0;
+}
+.phone-form {
+  display: grid;
+  gap: 8px;
+}
+.phone-form label {
+  font-weight: 700;
+  font-size: 13px;
+}
+.phone-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--button-radius);
+  color: var(--ink);
+  background: var(--ground);
+}
+.phone-warning {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  color: var(--danger-ink);
+  background: var(--danger-soft);
+}
+.phone-error {
+  color: var(--danger-ink);
+}

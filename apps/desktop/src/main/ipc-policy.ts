@@ -4,7 +4,7 @@ export function allowedFrame(url: string, mainFrame: boolean): boolean {
 export function validateInput(action: unknown, value: unknown): unknown {
   if (
     typeof action === "string" &&
-    ["state", "demo", "show", "hide"].includes(action)
+    ["state", "demo", "show", "hide", "sync-signout"].includes(action)
   ) {
     if (value !== undefined) throw Error("Invalid request");
     return undefined;
@@ -19,6 +19,16 @@ export function validateInput(action: unknown, value: unknown): unknown {
     if (!(value instanceof Uint8Array) || !value.length || value.length > 5 * 1024 * 1024)
       throw Error("Invalid request");
     return value;
+  }
+  if (action === "sync-signin") {
+    // The email the iPhone account uses, so the PC opens the same account.
+    if (
+      typeof value !== "string" ||
+      value.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+    )
+      throw Error("Invalid request");
+    return value.trim();
   }
   if (action === "cloud") {
     if (typeof value !== "boolean") throw Error("Invalid request");
