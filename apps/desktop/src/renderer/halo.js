@@ -58,9 +58,45 @@ function snap() {
   }
 }
 
+// Speech bubble: shown above the ghost whenever it speaks.
+const BUBBLE_MS = 8000;
+const BUBBLE_FADE_IN = 180;
+const BUBBLE_FADE_OUT = 300;
+const BUBBLE_FONT = "600 14px system-ui, 'Segoe UI', sans-serif";
+const BUBBLE_MAX = 230;
+const BUBBLE_PAD_X = 12;
+const BUBBLE_PAD_Y = 9;
+const BUBBLE_LINE = 19;
+const BUBBLE_TAIL = 8;
+let bubble;
+
+function wrap(text) {
+  ctx.font = BUBBLE_FONT;
+  const lines = [];
+  let line = "";
+  for (const word of text.split(/\s+/)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(next).width > BUBBLE_MAX) {
+      lines.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 window.squeek.onState((state) => {
   if (["paused", "monitoring", "unknown", "risk"].includes(state.status))
     document.body.dataset.state = state.status;
+  // The warning no longer applies once the risk is gone.
+  if (state.status !== "risk" && bubble)
+    bubble.until = Math.min(bubble.until, performance.now() + BUBBLE_FADE_OUT);
+});
+window.squeek.onSay((message) => {
+  const text = typeof message?.text === "string" ? message.text.trim() : "";
+  if (!text || text.length > 200) return;
+  const now = performance.now();
+  bubble = { lines: wrap(text), born: now, until: now + BUBBLE_MS };
 });
 window.squeek.onPointer((pointer) => {
   if (!Number.isFinite(pointer?.x) || !Number.isFinite(pointer?.y)) return;
@@ -179,7 +215,7 @@ function draw(t) {
   // Only clear around the ghost: the canvas spans a whole display.
   if (dirty) ctx.clearRect(dirty.x, dirty.y, dirty.w, dirty.h);
   else ctx.clearRect(0, 0, W, H);
-  dirty = {
+  let box = {
     x: Math.floor(pos.x - PAD),
     y: Math.floor(pos.y - PAD),
     w: Math.ceil(PAD * 2),
@@ -243,6 +279,89 @@ function draw(t) {
     );
     ctx.fill();
   }
+  dirty = drawBubble(t, box);
+}
+
+function drawBubble(t, box) {
+  if (!bubble) return box;
+  const age = t - bubble.born,
+    left = bubble.until - t;
+  if (left <= 0) {
+    bubble = undefined;
+    return box;
+  }
+  const alpha = Math.min(
+    1,
+    age / BUBBLE_FADE_IN,
+    Math.max(0, left / BUBBLE_FADE_OUT),
+  );
+  ctx.font = BUBBLE_FONT;
+  const w =
+      Math.ceil(Math.max(...bubble.lines.map((l) => ctx.measureText(l).width))) +
+      BUBBLE_PAD_X * 2,
+    h = bubble.lines.length * BUBBLE_LINE + BUBBLE_PAD_Y * 2 - 4;
+  const margin = 10;
+  const x = Math.max(margin, Math.min(pos.x - w / 2, W - w - margin));
+  // Sit above the ghost, rising slightly as it fades in; flip below at the top of the screen.
+  const rise = (1 - Math.min(1, age / BUBBLE_FADE_IN)) * 6;
+  const above = pos.y - R - BUBBLE_TAIL - 6 - h + rise >= margin;
+  const y = above
+    ? pos.y - R - BUBBLE_TAIL - 6 - h + rise
+    : pos.y + R + BUBBLE_TAIL + 6 - rise;
+  const tipX = Math.max(x + 16, Math.min(pos.x, x + w - 16));
+  const baseY = above ? y + h : y;
+  const tipY = above ? y + h + BUBBLE_TAIL : y - BUBBLE_TAIL;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = "rgba(27, 26, 23, 0.22)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = "#FFFDF8";
+  ctx.strokeStyle = "#E9E4D6";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, 12);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.stroke();
+  // Tail pointing at the ghost, drawn over the bubble edge so there is no seam.
+  ctx.beginPath();
+  ctx.moveTo(tipX - 7, baseY);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(tipX + 7, baseY);
+  ctx.closePath();
+  ctx.fillStyle = "#FFFDF8";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(tipX - 7, baseY);
+  ctx.lineTo(tipX, tipY);
+  ctx.lineTo(tipX + 7, baseY);
+  ctx.stroke();
+  ctx.fillStyle = "#FFFDF8";
+  ctx.fillRect(tipX - 6, baseY - 1, 12, 2);
+  ctx.fillStyle = "#1B1A17";
+  ctx.textBaseline = "middle";
+  bubble.lines.forEach((line, i) =>
+    ctx.fillText(
+      line,
+      x + BUBBLE_PAD_X,
+      y + BUBBLE_PAD_Y - 2 + BUBBLE_LINE * (i + 0.5),
+    ),
+  );
+  ctx.restore();
+
+  const pad = 16;
+  const top = Math.min(box.y, y - BUBBLE_TAIL - pad, tipY - pad),
+    bottom = Math.max(box.y + box.h, y + h + BUBBLE_TAIL + pad, tipY + pad);
+  const lx = Math.min(box.x, x - pad),
+    rx = Math.max(box.x + box.w, x + w + pad);
+  return {
+    x: Math.floor(lx),
+    y: Math.floor(top),
+    w: Math.ceil(rx - lx),
+    h: Math.ceil(bottom - top),
+  };
 }
 
 let lastFrame = performance.now(),

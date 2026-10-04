@@ -1,4 +1,4 @@
-import { incidentKey } from "./incident.ts";
+import { incidentKey, warning } from "./incident.ts";
 interface Assessment {
   source?: {
     processId: number;
@@ -33,7 +33,6 @@ declare global {
   }
 }
 
-const warning = "Hey, this is a scam, don't click on it";
 const stateLabels: Record<string, string> = {
   high_risk: warning,
   caution: "Caution",

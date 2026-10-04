@@ -17,6 +17,7 @@ import { existsSync } from "node:fs";
 import { createObserverClient } from "./observer-client.ts";
 import { Monitoring } from "./monitoring.ts";
 import { Companion } from "./companion.ts";
+import { warning } from "../renderer/incident.ts";
 import { allowedFrame, validateInput } from "./ipc-policy.ts";
 import { ProviderGate } from "./provider-gate.ts";
 import { createJevProvider } from "../../../../packages/providers/src/jev.ts";
@@ -497,6 +498,10 @@ app.whenReady().then(async () => {
     pointer: (value) => {
       if (halo && !halo.isDestroyed())
         halo.webContents.send("squeek:pointer", value);
+    },
+    alert: (alertState) => {
+      if (alertState === "high_risk" && halo && !halo.isDestroyed())
+        halo.webContents.send("squeek:say", { text: warning });
     },
   });
   companion.start();

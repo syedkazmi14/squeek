@@ -27,6 +27,8 @@ interface Options {
   workArea: (point: Point) => Area;
   /** Receives the cursor relative to the overlay; the renderer animates toward it. */
   pointer: (value: Pointer) => void;
+  /** Called once per incident, at the moment the sidebar opens for it. */
+  alert?: (state: string) => void;
   setInterval?: (callback: () => void, ms: number) => unknown;
   clearInterval?: (handle: unknown) => void;
   now?: () => number;
@@ -115,6 +117,7 @@ export class Companion {
     this.alertKey = key;
     this.alertedAt = now;
     this.showSidebar();
+    this.options.alert?.(value.state);
   }
   private tick() {
     const { halo } = this.options;

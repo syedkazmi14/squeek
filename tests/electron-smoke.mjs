@@ -107,6 +107,31 @@ try {
     ghostPixels.painted < ghostPixels.total * 0.01,
     "the overlay stays transparent apart from the ghost",
   );
+  await application.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()
+      .find((w) => w.webContents.getURL() === "squeek://app/halo.html")
+      .webContents.send("squeek:say", {
+        text: "Hey, this is a scam, don't click on it",
+      }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const withBubble = await haloPage.evaluate(() => {
+    const canvas = document.querySelector("canvas");
+    const data = canvas
+      .getContext("2d")
+      .getImageData(0, 0, canvas.width, canvas.height).data;
+    let painted = 0;
+    for (let i = 3; i < data.length; i += 4) if (data[i] > 0) painted++;
+    return painted;
+  });
+  assert.ok(
+    withBubble > ghostPixels.painted * 3,
+    "a speech bubble appears next to the ghost when it speaks",
+  );
+  await haloPage.screenshot({
+    path: "artifacts/qa/companion-speaking.png",
+    omitBackground: true,
+  });
   await haloPage.screenshot({
     path: "artifacts/qa/companion.png",
     omitBackground: true,

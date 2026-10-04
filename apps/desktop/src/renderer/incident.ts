@@ -8,6 +8,8 @@ interface Incident {
     processStartedAt: number;
   };
 }
+/** What Squeek says, aloud in the panel and in the ghost's speech bubble. */
+export const warning = "Hey, this is a scam, don't click on it";
 /** Bookkeeping updates must not replay the same spoken incident. */
 export function incidentKey(assessment: Incident | undefined): string {
   if (!assessment) return "unknown";

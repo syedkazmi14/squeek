@@ -38,12 +38,14 @@ function setup() {
   let tick: (() => void) | undefined;
   let cleared = false;
   const pointers: Pointer[] = [];
+  const alerts: string[] = [];
   const shell = new Companion({
     panel,
     halo,
     cursor: () => point,
     workArea: (p) => (p.x < 0 ? area : second),
     pointer: (value) => pointers.push(value),
+    alert: (state) => alerts.push(state),
     setInterval: (fn) => {
       tick = fn;
       return 1;
@@ -57,6 +59,7 @@ function setup() {
     panel,
     halo,
     pointers,
+    alerts,
     move: (p: { x: number; y: number }) => {
       point = p;
       tick?.();
@@ -113,6 +116,24 @@ test("suspicious results open sidebar once per incident and close preserves comp
   shell.stop();
   assert.equal(cleared(), true);
   assert.equal(halo.visible, false);
+});
+test("the ghost is told to speak once per incident, not on every repeat", () => {
+  const { shell, alerts } = setup();
+  shell.start();
+  const result = {
+    source: { processId: 1, windowHandle: "2", processStartedAt: 3 },
+    state: "high_risk",
+    coverage: "partial",
+    evidence: [{ excerpt: "technical signal" }],
+  };
+  shell.assessment(result);
+  shell.assessment({ ...result });
+  assert.deepEqual(alerts, ["high_risk"]);
+  shell.assessment({ ...result, evidence: [{ excerpt: "new signal" }] });
+  assert.deepEqual(alerts, ["high_risk", "high_risk"]);
+  shell.assessment({ ...result, state: "unknown" });
+  assert.equal(alerts.length, 2, "unknown readings never alert");
+  shell.stop();
 });
 test("caution opens review while unknown and clean readings do not", () => {
   const { shell, panel } = setup();
