@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squeek</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e2e5ea;
+    --text: #15181d;
+    --muted: #6b7280;
+    --accent: #2f6df6;
+    --error: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --border: #272b34;
+      --text: #e8eaee;
+      --muted: #9aa1ad;
+      --accent: #5b8cff;
+      --error: #ff7b6b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #272b34;
+    --text: #e8eaee;
+    --muted: #9aa1ad;
+    --accent: #5b8cff;
+    --error: #ff7b6b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  main { width: 100%; max-width: 620px; }
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 96px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+  textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  select {
+    flex: 1 1 180px;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+  }
+
+  .hint { font-size: 13px; color: var(--muted); }
+
+  kbd {
+    font: inherit;
+    font-size: 12px;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--bg);
+  }
+
+  .bar {
+    height: 4px;
+    margin-top: 16px;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width 120ms linear;
+  }
+
+  .status {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .status.error { color: var(--error); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Squeek</h1>
+  <p class="sub">Type something and press Enter. Playback starts as the first bytes arrive.</p>
+
+  <div class="panel">
+    <textarea id="text" autofocus maxlength="2000" placeholder="Say something&hellip;"></textarea>
+
+    <div class="row">
+      <select id="voice" aria-label="Voice">
+        <option value="">Default voice</option>
+      </select>
+      <span class="hint"><kbd>Enter</kbd> to speak &middot; <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line</span>
+    </div>
+
+    <div class="bar"><span id="progress"></span></div>
+    <div class="status" id="statusRow">
+      <span id="status">Ready</span>
+      <span id="latency"></span>
+    </div>
+  </div>
+
+  <!-- Hidden: the browser's own media stack does the progressive MP3 playback. -->
+  <audio id="player" hidden></audio>
+</main>
+
+<script>
+const textEl     = document.getElementById("text");
+const voiceEl    = document.getElementById("voice");
+const progressEl = document.getElementById("progress");
+const statusEl   = document.getElementById("status");
+const latencyEl  = document.getElementById("latency");
+const statusRow  = document.getElementById("statusRow");
+const player     = document.getElementById("player");
+
+let requestId = 0;
+let startedAt = 0;
+let gotFirstAudio = false;
+
+function setStatus(message, isError = false) {
+  statusEl.textContent = message;
+  statusRow.classList.toggle("error", isError);
+}
+
+function speak(text) {
+  const id = ++requestId;
+  startedAt = performance.now();
+  gotFirstAudio = false;
+
+  progressEl.style.width = "0%";
+  latencyEl.textContent = "";
+  setStatus("Connecting…");
+
+  // Stop whatever is currently playing and drop its connection.
+  player.pause();
+  player.removeAttribute("src");
+  player.load();
+
+  const params = new URLSearchParams({ text });
+  if (voiceEl.value) params.set("voiceId", voiceEl.value);
+
+  // Pointing the element at a GET URL lets the browser stream the MP3 itself:
+  // it starts playing on the first decodable frames instead of waiting for the
+  // whole file. play() is called from the Enter keypress's call stack, which is
+  // what satisfies the autoplay policy — no separate start button needed.
+  player.src = `/api/tts?${params.toString()}`;
+
+  player.play().catch((err) => {
+    if (id !== requestId) return;
+    // A real failure surfaces through the element's 'error' event; an aborted
+    // play() just means a newer request replaced this one.
+    if (err.name !== "AbortError") {
+      console.warn("play() rejected:", err);
+    }
+  });
+}
+
+player.addEventListener("playing", () => {
+  if (!gotFirstAudio) {
+    gotFirstAudio = true;
+    latencyEl.textContent = `first audio in ${Math.round(performance.now() - startedAt)} ms`;
+  }
+  setStatus("Playing…");
+});
+
+player.addEventListener("waiting", () => {
+  if (gotFirstAudio) setStatus("Buffering…");
+});
+
+player.addEventListener("timeupdate", () => {
+  if (player.duration && isFinite(player.duration)) {
+    progressEl.style.width = `${(player.currentTime / player.duration) * 100}%`;
+  }
+});
+
+player.addEventListener("ended", () => {
+  progressEl.style.width = "100%";
+  setStatus("Done");
+});
+
+player.addEventListener("error", async () => {
+  if (!player.getAttribute("src")) return; // cleared on purpose
+  progressEl.style.width = "0%";
+
+  // The element only reports "it broke". Re-request the same URL to read the
+  // server's actual JSON error and show something useful.
+  try {
+    const res = await fetch(player.src);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setStatus(body.detail || body.error || `Server returned ${res.status}`, true);
+      return;
+    }
+  } catch { /* fall through to the generic message */ }
+
+  setStatus("Playback failed", true);
+});
+
+textEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+  event.preventDefault();
+  const text = textEl.value.trim();
+  if (!text) return;
+  speak(text);
+});
+
+async function init() {
+  try {
+    const configRes = await fetch("/api/config");
+    if (configRes.ok) {
+      const config = await configRes.json();
+      if (!config.hasApiKey) {
+        setStatus("ELEVENLABS_API_KEY is not set on the server", true);
+        return;
+      }
+    }
+
+    const voicesRes = await fetch("/api/voices");
+    if (!voicesRes.ok) return; // keep the default-voice option
+    const { voices } = await voicesRes.json();
+    for (const voice of voices) {
+      const option = document.createElement("option");
+      option.value = voice.voiceId;
+      option.textContent = voice.name;
+      voiceEl.append(option);
+    }
+  } catch {
+    // A missing voice list is not fatal — the server still has a default voice.
+  }
+}
+
+init();
+</script>
+</body>
+</html>

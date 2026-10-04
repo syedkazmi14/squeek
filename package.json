@@ -10,6 +10,8 @@
     "observer:probe": "node scripts/observer-probe.ts",
     "build": "node scripts/build-desktop.mjs",
     "start": "electron .",
+    "tts:start": "node server.js",
+    "tts:dev": "node --watch server.js",
     "package:win": "node scripts/package-windows.ts",
     "release:audit": "node scripts/audit-package.ts",
     "release:inspect-desktop": "npm run build && node scripts/inspect-desktop.ts",
@@ -23,9 +25,12 @@
     "@electron/asar": "3.4.1",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.4",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
+    "express": "^5.2.1",
     "typescript": "7.0.2"
   },
   "engines": {
